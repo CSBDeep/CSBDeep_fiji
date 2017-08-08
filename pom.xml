@@ -83,6 +83,10 @@
 		<main-class>com.mycompany.imagej.GaussFiltering</main-class>
 		<license.licenseName>bsd_2</license.licenseName>
 		<license.copyrightOwners>My Company, Inc.</license.copyrightOwners>
+		<tensorflow.version>1.2.0</tensorflow.version>
+		<scijava-common.version>2.65.0</scijava-common.version>
+		<scijava-io-http.version>0.1.0</scijava-io-http.version>
+		<scijava-ui-swing.version>0.9.3</scijava-ui-swing.version>
 	</properties>
 
 	<repositories>
@@ -101,6 +105,21 @@
 			<groupId>org.tensorflow</groupId>
 			<artifactId>tensorflow</artifactId>
 			<version>1.2.1</version>
+		</dependency>
+		<dependency>
+			<groupId>net.imagej</groupId>
+			<artifactId>imagej-tensorflow</artifactId>
+			<version>0.1.2-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<!--
+			NB: For HTTP access to remote Inception model.
+			If this dependency is bothersome, we could consider separating
+			the image classification demo from the ImageJ-TensorFlow library.
+			-->
+			<groupId>org.scijava</groupId>
+			<artifactId>scijava-io-http</artifactId>
+			<version>${scijava-io-http.version}</version>
 		</dependency>
 	</dependencies>
 </project>
