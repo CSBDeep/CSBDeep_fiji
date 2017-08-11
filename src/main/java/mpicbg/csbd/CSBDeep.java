@@ -53,6 +53,9 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
     @Parameter(label = "Input node name", callback = "inputNodeNameChanged", initializer = "inputNodeNameChanged")
     private String inputNodeName = "input_1";
     
+    @Parameter(label = "Output node name")
+    private String outputNodeName = "output";
+    
     @Parameter(label = "Adjust image <-> tensorflow mapping", callback = "openTFMappingDialog")
 	private Button changeTFMapping;
     
@@ -227,12 +230,20 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 	private Dataset executeInceptionGraph(final Graph g, final Tensor image)
 		{	
 		
+		System.out.println("executeInceptionGraph");
+		
 		try (
 				Session s = new Session(g);
-				Tensor output_t = s.runner().feed(inputNodeName, image).fetch("output").run().get(0);
+				Tensor output_t = s.runner().feed(inputNodeName, image).fetch(outputNodeName).run().get(0);
 		) {
 			
+			System.out.println("Output tensor with " + output_t.numDimensions() + " dimensions");
+			
 			float[][][][][] outputarr = bridge.createFakeTFArray();
+			
+			for(int i = 0; i < output_t.numDimensions(); i++){
+				System.out.println("output dim " + i + ": " + output_t.shape()[i]);
+			}
 			
 			if(output_t.numDimensions() == 5){
 				output_t.copyTo(outputarr);
@@ -245,6 +256,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 						output_t.copyTo(outputarr[0][0]);
 						//ugly hack to make sure that the z axis gets deleted
 						boolean shift = false;
+						bridge.printMapping();
 						for(int i = bridge.numDimensions(); i > 0; i--){
 							if(input.dimensionIndex(Axes.Z) == bridge.getMapping(i)){
 								shift = true;
@@ -253,14 +265,15 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 								bridge.setMapping(i, bridge.getMapping(i-1));									
 							}
 						}
+						bridge.printMapping();
 					}
 				}
 			}
 			
 			return arrayToDataset(outputarr);
 		}
-		catch(IllegalArgumentException e){
-			System.out.println("TFModel: Could not run model. Please ensure that you selected the correct model import file for your input data.");
+		catch (Exception e) {
+			System.out.println("could not load output tensor");
 			e.printStackTrace();
 		}
 		return null;
