@@ -106,20 +106,5 @@
 			<artifactId>tensorflow</artifactId>
 			<version>1.2.1</version>
 		</dependency>
-		<dependency>
-			<groupId>net.imagej</groupId>
-			<artifactId>imagej-tensorflow</artifactId>
-			<version>0.1.2-SNAPSHOT</version>
-		</dependency>
-		<dependency>
-			<!--
-			NB: For HTTP access to remote Inception model.
-			If this dependency is bothersome, we could consider separating
-			the image classification demo from the ImageJ-TensorFlow library.
-			-->
-			<groupId>org.scijava</groupId>
-			<artifactId>scijava-io-http</artifactId>
-			<version>${scijava-io-http.version}</version>
-		</dependency>
 	</dependencies>
 </project>
