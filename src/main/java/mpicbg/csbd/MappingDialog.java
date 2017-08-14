@@ -20,12 +20,12 @@ public class MappingDialog {
 			List<JComboBox<String>> drops = new ArrayList<>();
 			
 			JPanel dialogPanel = new JPanel();
-			JPanel modelDimPanel = new JPanel();
+			JPanel inputDimPanel = new JPanel();
 			JPanel imgDimPanel = new JPanel();
 			JPanel mappingPanel = new JPanel();
 			
 			imgDimPanel.setBorder(BorderFactory.createTitledBorder("Image"));
-			modelDimPanel.setBorder(BorderFactory.createTitledBorder("Model input"));
+			inputDimPanel.setBorder(BorderFactory.createTitledBorder("Model input"));
 			mappingPanel.setBorder(BorderFactory.createTitledBorder("Mapping"));
 			
 			List<String> dimStringsLength = new ArrayList<>();
@@ -42,15 +42,15 @@ public class MappingDialog {
 			for(int i = 0; i < bridge.numDimensions(); i++){
 				if(bridge.getMapping(i) >= 0){
 					JTextField field = new JTextField();
-			        field.setText(String.valueOf(bridge.getTensorShape().size(dimCount)));
+			        field.setText(String.valueOf(bridge.getInputTensorShape().size(dimCount)));
 			        field.setEditable(false);
-			        modelDimPanel.add(new JLabel(dimCount + ":", SwingConstants.RIGHT));
-			        modelDimPanel.add(field);
-			        modelDimPanel.add(field);
+			        inputDimPanel.add(new JLabel(dimCount + ":", SwingConstants.RIGHT));
+			        inputDimPanel.add(field);
+			        inputDimPanel.add(field);
 					
 					JComboBox<String> dimDrop = new JComboBox(dimStringsLength.toArray());
 					dimDrop.setSelectedIndex(bridge.getMapping(i));
-					mappingPanel.add(new JLabel(dimCount + " [" + bridge.getTensorShape().size(dimCount) + "] :", SwingConstants.RIGHT));
+					mappingPanel.add(new JLabel(dimCount + " [" + bridge.getInputTensorShape().size(dimCount) + "] :", SwingConstants.RIGHT));
 					mappingPanel.add(dimDrop);
 					drops.add(dimDrop);
 					
@@ -63,11 +63,11 @@ public class MappingDialog {
 			col5Layout.setHgap(15);
 			col1Layout.setVgap(15);
 			imgDimPanel.setLayout(col5Layout);
-			modelDimPanel.setLayout(col5Layout);
+			inputDimPanel.setLayout(col5Layout);
 			mappingPanel.setLayout(col5Layout);
 			dialogPanel.setLayout(col1Layout);
 			dialogPanel.add(imgDimPanel);
-			dialogPanel.add(modelDimPanel);
+			dialogPanel.add(inputDimPanel);
 			dialogPanel.add(mappingPanel);
 			
 			int result = JOptionPane.showConfirmDialog(null, dialogPanel, 

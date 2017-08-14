@@ -11,9 +11,10 @@ package mpicbg.csbd;
 import java.io.File;
 import java.io.IOException;
 
+import javax.swing.JOptionPane;
+
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
-import net.imagej.axis.Axes;
 import net.imagej.ops.OpService;
 import net.imglib2.Cursor;
 import net.imglib2.type.numeric.RealType;
@@ -53,7 +54,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
     @Parameter(label = "Input node name", callback = "inputNodeNameChanged", initializer = "inputNodeNameChanged")
     private String inputNodeName = "input_1";
     
-    @Parameter(label = "Output node name")
+    @Parameter(label = "Output node name", persist = false)
     private String outputNodeName = "output";
     
     @Parameter(label = "Adjust image <-> tensorflow mapping", callback = "openTFMappingDialog")
@@ -112,7 +113,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 		
 		Operation input_op = graph.operation(inputName);
 		if(input_op != null){
-			bridge.setTensorShape(input_op.output(0).shape());
+			bridge.setInputTensorShape(input_op.output(0).shape());
 			return true;			
 		}
 		System.out.println("input node with name " + inputName + " not found");
@@ -149,7 +150,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 		if(graph != null){
 			loadModelInputShape(inputNodeName);
 		}
-		if(bridge.getTensorShape() != null){
+		if(bridge.getInputTensorShape() != null){
 			if(!bridge.isMappingInitialized()){
 				bridge.setMappingDefaults();
 			}
@@ -160,7 +161,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 		
 		imageChanged();
 		
-		if(bridge.getTensorShape() == null){
+		if(bridge.getInputTensorShape() == null){
 			modelChanged();
 		}
 		
@@ -221,7 +222,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 	}
 	
 	private Tensor arrayToTensor(float[][][][][] array){
-		if(bridge.getTensorShape().numDimensions() == 4){
+		if(bridge.getInputTensorShape().numDimensions() == 4){
 			return Tensor.create(array[0]);
 		}		
 		return Tensor.create(array);
@@ -239,10 +240,22 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 			
 			System.out.println("Output tensor with " + output_t.numDimensions() + " dimensions");
 			
-			float[][][][][] outputarr = bridge.createFakeTFArray();
+			if(output_t.numDimensions() == 0){
+				showError("Output tensor has no dimensions");
+				return null;
+			}
+			
+			float[][][][][] outputarr = bridge.createFakeTFArray(output_t);
 			
 			for(int i = 0; i < output_t.numDimensions(); i++){
 				System.out.println("output dim " + i + ": " + output_t.shape()[i]);
+			}
+			
+			if(output_t.numDimensions() -1 == bridge.getInputTensorShape().numDimensions()){
+				//model reduces dim by 1
+				//assume z gets reduced -> move it to front and ignore first dimension
+				System.out.println("model reduces dimension, z dimension reduction assumed");
+				bridge.moveZMappingToFront();
 			}
 			
 			if(output_t.numDimensions() == 5){
@@ -252,38 +265,23 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 					output_t.copyTo(outputarr[0]);					
 				}else{
 					if(output_t.numDimensions() == 3){
-						// 4D -> 3D reduction
 						output_t.copyTo(outputarr[0][0]);
-						//ugly hack to make sure that the z axis gets deleted
-						boolean shift = false;
-						bridge.printMapping();
-						for(int i = bridge.numDimensions(); i > 0; i--){
-							if(input.dimensionIndex(Axes.Z) == bridge.getMapping(i)){
-								shift = true;
-							}
-							if(shift&& i > 1){
-								bridge.setMapping(i, bridge.getMapping(i-1));									
-							}
-						}
-						bridge.printMapping();
 					}
 				}
 			}
 			
-			return arrayToDataset(outputarr);
+			return arrayToDataset(outputarr, output_t.shape());
 		}
 		catch (Exception e) {
-			System.out.println("could not load output tensor");
+			System.out.println("could not create output dataset");
 			e.printStackTrace();
 		}
 		return null;
 	}
 	
-	private Dataset arrayToDataset(final float[][][][][] outputarr){
+	private Dataset arrayToDataset(final float[][][][][] outputarr, long[] shape){
 		
-		long[] dimensions = new long[input.numDimensions()];
-		input.dimensions(dimensions);
-		Dataset img_out = input.factory().create(dimensions, input.firstElement());
+		Dataset img_out = bridge.createFromTFDims(shape);
 		
 		double _min = normalizeInput ? min : 0;
 		double _max = normalizeInput ? max : 1;
@@ -301,6 +299,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 					pos[i] = cursor.getIntPosition(imgIndex);
 				}
 			}
+//			System.out.println("pos " + pos[0] + " " + pos[1] + " " + pos[2] + " " + pos[3] + " " + pos[4]);
 			val.setReal(outputarr[pos[0]][pos[1]][pos[2]][pos[3]][pos[4]]*(_max-_min)+_min);
 			
 		}
@@ -336,6 +335,11 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
             ij.command().run(CSBDeep.class, true);
         }
 
+    }
+    
+    public void showError(String errorMsg) {
+    	JOptionPane.showMessageDialog(null, errorMsg, "Error",
+                JOptionPane.ERROR_MESSAGE);
     }
 
 	@Override
