@@ -228,7 +228,7 @@ public class DatasetTensorBridge {
 				
 //		System.out.println("dims length: " + dims.length);
 //		System.out.println("dataset length: " + dataset.numDimensions());
-		Dataset img_out = dataset.factory().create(dims, new UnsignedByteType());
+		Dataset img_out = dataset.factory().create(dims, dataset.firstElement());
 //		System.out.println("img dims length: " + img_out.numDimensions());
 		img_out.setAxes(axes);
 		return img_out;
