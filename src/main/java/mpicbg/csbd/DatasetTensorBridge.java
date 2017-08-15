@@ -174,64 +174,64 @@ public class DatasetTensorBridge {
 //			System.out.println("tfdims " + i + ": " + tfdims[i]);
 //		}
 		
-		int tfDimLength = tfdims.length;
+		long[] _dims = {-1,-1,-1,-1,-1};
 		
-		int count = 0;
-		for(int i = numDimensions()-tfDimLength; i < numDimensions(); i++){
-			int dataset_i = getDatasetDimIndexByTFIndex(i);
+//		printMapping();
+		
+		for(int i = 0; i < datasetDimIndices.size(); i++){
+			int dataset_i = datasetDimIndices.get(i);
 			if(dataset_i >= 0){
-				count ++;
-			}
-		}
-		
-		long[] _dims = new long[numDimensions()];
-		CalibratedAxis[] _axes = new CalibratedAxis[numDimensions()];
-		
-		printMapping();
-		
-		int tfi = 0;
-		for(int i = 0; i < numDimensions(); i++){
-			int dataset_i = getDatasetDimIndexByTFIndex(i);
-//			System.out.println("i: " + i + " dataset_i " + dataset_i);
-			if(i >= numDimensions() - tfDimLength){
-				if(dataset_i >= 0){
-					_dims[dataset_i] = tfdims[tfi];
-					_axes[dataset_i] = dataset.axis(dataset_i);
-//					System.out.println("set dataset dim " + dataset_i + " from tf dim " + i);
+				//input image includes this dimension
+				for(int j = 0; j < dimMapping.length; j++){
+					if(dimMapping[j] == dataset_i){
+						//tf mapping exists
+//						System.out.println("found mapping, " + i + ": " + i + " j: " + j + " tfindex: " + findIndexNotNegative(dimMapping, j));
+						_dims[dataset_i] = tfdims[findIndexNotNegative(dimMapping, j)];
+					}
 				}
-				tfi++;
+				if(_dims[dataset_i] == -1){
+					_dims[dataset_i] = 1;
+				}
 			}
 			
 		}
 		
-//		System.out.println("count: " + count);
-//		
 //		for(int i = 0; i < _dims.length; i++){
-//			System.out.println("_dataset output dim " + i + ": " + _axes[i] + " -> " + _dims[i]);
+//			System.out.println("_dataset output dim " + i + ": " + _dims[i]);
 //		}
 		
-		long[] dims = new long[count];
-		CalibratedAxis[] axes = new CalibratedAxis[count];
+		long[] dims = new long[dataset.numDimensions()];
 		
 		int j = 0;
 		for(int i = 0; i < _dims.length; i++){
 			if(_dims[i] > 0){
 				dims[j] = _dims[i];
-				axes[j] = _axes[i];
 				j++;
 			}
 		}
 		
 //		for(int i = 0; i < dims.length; i++){
-//			System.out.println("dataset output dim " + i + ": " + axes[i] + " -> " + dims[i]);
+//			System.out.println("dataset output dim " + i + ": " + dims[i]);
 //		}
-				
+//				
 //		System.out.println("dims length: " + dims.length);
 //		System.out.println("dataset length: " + dataset.numDimensions());
 		Dataset img_out = dataset.factory().create(dims, dataset.firstElement());
 //		System.out.println("img dims length: " + img_out.numDimensions());
-		img_out.setAxes(axes);
 		return img_out;
+	}
+	
+	private int findIndexNotNegative(int[] dimMapping2, int index){
+		int count = 0;
+		for(int i = 0; i < dimMapping2.length; i++){
+			if(i == index){
+				return count;
+			}
+			if(dimMapping2[i] >= 0){
+				count++;
+			}
+		}
+		return -1;
 	}
 
 }
