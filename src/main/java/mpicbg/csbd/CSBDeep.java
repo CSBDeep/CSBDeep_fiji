@@ -8,19 +8,10 @@
 
 package mpicbg.csbd;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 import java.io.File;
 import java.io.IOException;
 
 import javax.swing.JOptionPane;
-
-import net.imagej.Dataset;
-import net.imagej.ImageJ;
-import net.imagej.ops.OpService;
-import net.imagej.tensorflow.TensorFlowService;
-import net.imglib2.Cursor;
-import net.imglib2.type.numeric.RealType;
 
 import org.scijava.Cancelable;
 import org.scijava.ItemIO;
@@ -42,13 +33,22 @@ import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
+import net.imagej.Dataset;
+import net.imagej.ImageJ;
+import net.imagej.ops.OpService;
+import net.imagej.tensorflow.TensorFlowService;
+import net.imglib2.Cursor;
+import net.imglib2.type.numeric.RealType;
+
 /**
  */
 @Plugin(type = Command.class, menuPath = "Plugins>CSBDeep", headless = true)
 public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Cancelable {
 	
 	@Parameter(visibility = ItemVisibility.MESSAGE)
-	private final String header = "This command removes noise from your images.";
+	private String header = "This command removes noise from your images.";
 
     @Parameter(label = "input data", type = ItemIO.INPUT, callback = "imageChanged", initializer = "imageChanged")
     private Dataset input = null;
@@ -132,7 +132,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 				graph = tensorFlowService2.loadGraph(modelfile);
 //				graph = tensorFlowService.loadGraph(source, "", "");
 				hasSavedModel = false;
-			} catch (IOException e2) {
+			} catch (final IOException e2) {
 				e2.printStackTrace();
 				return false;
 			}
@@ -140,12 +140,12 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 		return true;
 	}
 	
-	protected boolean loadModelInputShape(String inputName){
+	protected boolean loadModelInputShape(final String inputName){
 		
 //		System.out.println("loadModelInputShape");
 		
 		if(getGraph() != null){
-			Operation input_op = getGraph().operation(inputName);
+			final Operation input_op = getGraph().operation(inputName);
 			if(input_op != null){
 				bridge.setInputTensorShape(input_op.output(0).shape());
 				return true;			
@@ -188,7 +188,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 				try {
 					sig = MetaGraphDef.parseFrom(model.metaGraphDef())
 						.getSignatureDefOrThrow(DEFAULT_SERVING_SIGNATURE_DEF_KEY);
-				} catch (InvalidProtocolBufferException e) {
+				} catch (final InvalidProtocolBufferException e) {
 //					e.printStackTrace();
 					hasSavedModel = false;
 				}
@@ -259,22 +259,22 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 	
 	private float[][][][][] datasetToArray(final Dataset d) {
 				
-		float[][][][][] inputarr = bridge.createFakeTFArray();
+		final float[][][][][] inputarr = bridge.createFakeTFArray();
 
 		//copy input data to array
 		
 		final Cursor<T> cursor = (Cursor<T>) d.localizingCursor();
 		while( cursor.hasNext() )
 		{
-			int[] pos = {0,0,0,0,0};
+			final int[] pos = {0,0,0,0,0};
 			final T val = cursor.next();
 			for(int i = 0; i < pos.length; i++){
-				int imgIndex = bridge.getDatasetDimIndexByTFIndex(i);
+				final int imgIndex = bridge.getDatasetDimIndexByTFIndex(i);
 				if(imgIndex >= 0){
 					pos[i] = cursor.getIntPosition(imgIndex);
 				}
 			}
-			float fval = val.getRealFloat();
+			final float fval = val.getRealFloat();
 //			System.out.println("pos " + pos[0] + " " + pos[1] + " " + pos[2] + " " + pos[3] + " " + pos[4]);
 			inputarr[pos[0]][pos[1]][pos[2]][pos[3]][pos[4]] = fval;
 			
@@ -283,7 +283,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 		return inputarr;
 	}
 	
-	private Tensor arrayToTensor(float[][][][][] array){
+	private Tensor arrayToTensor(final float[][][][][] array){
 		if(bridge.getInputTensorShape().numDimensions() == 4){
 			return Tensor.create(array[0]);
 		}		
@@ -305,20 +305,20 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 //			System.out.println("output array size: " + size);
 			Tensor output_t = null;
 			if(graph.operation("dropout_1/keras_learning_phase") != null){
-				Tensor learning_phase = Tensor.create(false);
+				final Tensor learning_phase = Tensor.create(false);
 				try{
-					Tensor output_t2 = s.runner().feed(inputNodeName, image).feed("dropout_1/keras_learning_phase", learning_phase).fetch(outputNodeName).run().get(0);
+					final Tensor output_t2 = s.runner().feed(inputNodeName, image).feed("dropout_1/keras_learning_phase", learning_phase).fetch(outputNodeName).run().get(0);
 					output_t = output_t2;
 				}
-				catch(Exception e){
+				catch(final Exception e){
 					e.printStackTrace();
 				}
 			}else{
 				try{
-					Tensor output_t2 = s.runner().feed(inputNodeName, image).fetch(outputNodeName).run().get(0);
+					final Tensor output_t2 = s.runner().feed(inputNodeName, image).fetch(outputNodeName).run().get(0);
 					output_t = output_t2;
 				}
-				catch(Exception e){
+				catch(final Exception e){
 					e.printStackTrace();
 				}
 			}
@@ -331,7 +331,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 					return null;
 				}
 				
-				float[][][][][] outputarr = bridge.createFakeTFArray(output_t);
+				final float[][][][][] outputarr = bridge.createFakeTFArray(output_t);
 				
 				for(int i = 0; i < output_t.numDimensions(); i++){
 					System.out.println("output dim " + i + ": " + output_t.shape()[i]);
@@ -362,26 +362,26 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 			
 			
 		}
-		catch (Exception e) {
+		catch (final Exception e) {
 			System.out.println("could not create output dataset");
 			e.printStackTrace();
 		}
 		return null;
 	}
 	
-	private Dataset arrayToDataset(final float[][][][][] outputarr, long[] shape){
+	private Dataset arrayToDataset(final float[][][][][] outputarr, final long[] shape){
 		
-		Dataset img_out = bridge.createFromTFDims(shape);
+		final Dataset img_out = bridge.createFromTFDims(shape);
 		
 		//write ouput dataset and undo normalization
 		
 		final Cursor<T> cursor = (Cursor<T>) img_out.localizingCursor();
 		while( cursor.hasNext() )
 		{
-			int[] pos = {0,0,0,0,0};
+			final int[] pos = {0,0,0,0,0};
 			final T val = cursor.next();
 			for(int i = 0; i < pos.length; i++){
-				int imgIndex = bridge.getDatasetDimIndexByTFIndex(i);
+				final int imgIndex = bridge.getDatasetDimIndexByTFIndex(i);
 				if(imgIndex >= 0){
 					pos[i] = cursor.getIntPosition(imgIndex);
 				}
@@ -423,7 +423,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 
     }
     
-    public void showError(String errorMsg) {
+    public void showError(final String errorMsg) {
     	JOptionPane.showMessageDialog(null, errorMsg, "Error",
                 JOptionPane.ERROR_MESSAGE);
     }
@@ -440,7 +440,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 	}
 
 	@Override
-	public void cancel(String reason) {
+	public void cancel(final String reason) {
 		// TODO Auto-generated method stub
 		
 	}
