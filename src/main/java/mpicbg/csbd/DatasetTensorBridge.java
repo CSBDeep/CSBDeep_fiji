@@ -76,24 +76,34 @@ public class DatasetTensorBridge {
 			dimMapping[ 4 ] = C;
 		}else{
 			if ( inputTensorShape.numDimensions() == 4 ) {
-				if ( dataset.getChannels() <= 1 ) {
+				// If all is 1, we take this one
+				if ( dataset.getChannels() <= 1 && dataset.getFrames() == 1 && dataset.getDepth() == 1 ) {
 					dimMapping[ 0 ] = UNSET;
 					dimMapping[ 1 ] = T;
 					dimMapping[ 2 ] = Z;
 					dimMapping[ 3 ] = Y;
 					dimMapping[ 4 ] = X;
-				} else if ( dataset.getFrames() > 1 ) {
+				// Otherwise if channels > 1 we make it depend on frames...
+				} else if ( dataset.getChannels() > 1 && dataset.getFrames() > 1 ) {
 					dimMapping[ 0 ] = UNSET;
 					dimMapping[ 1 ] = T;
 					dimMapping[ 2 ] = Y;
 					dimMapping[ 3 ] = X;
 					dimMapping[ 4 ] = C;
-				} else { // if ( dataset.getDepth() > 1 ) {
+				// ... depth size ...
+				} else if ( dataset.getChannels() > 1 && dataset.getDepth() > 1 ) {
 					dimMapping[ 0 ] = UNSET;
 					dimMapping[ 1 ] = Z;
 					dimMapping[ 2 ] = Y;
 					dimMapping[ 3 ] = X;
 					dimMapping[ 4 ] = C;
+				// And in all other cases we do this:
+				} else {
+					dimMapping[ 0 ] = UNSET;
+					dimMapping[ 1 ] = T;
+					dimMapping[ 2 ] = Z;
+					dimMapping[ 3 ] = Y;
+					dimMapping[ 4 ] = X;
 				}
 			}
 		}
