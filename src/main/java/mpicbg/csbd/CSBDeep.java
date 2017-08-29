@@ -60,7 +60,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
     private File modelfile = null;
     
     @Parameter(label = "Input node name", callback = "inputNodeNameChanged", initializer = "inputNodeNameChanged")
-    private String inputNodeName = "input_1";
+    private String inputNodeName = "input";
     
     @Parameter(label = "Output node name", persist = false)
     private String outputNodeName = "output";
