@@ -12,21 +12,35 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
+import org.tensorflow.framework.SignatureDef;
+
 public class MappingDialog {
 
-	public static void create(final DatasetTensorBridge bridge) {
+	public static void create(final DatasetTensorBridge bridge, SignatureDef sig) {
 		
 		if(bridge.complete()){
 			List<JComboBox<String>> drops = new ArrayList<>();
 			
 			JPanel dialogPanel = new JPanel();
+			JPanel inputNodePanel = new JPanel();
+			JPanel inputNamePanel = new JPanel();
 			JPanel inputDimPanel = new JPanel();
 			JPanel imgDimPanel = new JPanel();
 			JPanel mappingPanel = new JPanel();
 			
 			imgDimPanel.setBorder(BorderFactory.createTitledBorder("Image"));
-			inputDimPanel.setBorder(BorderFactory.createTitledBorder("Model input"));
 			mappingPanel.setBorder(BorderFactory.createTitledBorder("Mapping"));
+			
+			if(sig != null){
+				String[] inputNames = new String[sig.getInputsCount()];
+				JComboBox<String> inputNameDrop = new JComboBox(inputNames);
+				inputNameDrop.setSelectedIndex(0);
+				inputNamePanel.add(new JLabel("Input node name", SwingConstants.RIGHT));
+				inputNamePanel.add(inputNameDrop);				
+				inputNodePanel.setBorder(BorderFactory.createTitledBorder("Model input"));
+			}else{
+				inputDimPanel.setBorder(BorderFactory.createTitledBorder("Model input"));
+			}
 			
 			List<String> dimStringsLength = new ArrayList<>();
 			for(int i = 0; i < bridge.numDimensions(); i++){
@@ -60,14 +74,26 @@ public class MappingDialog {
 			
 			GridLayout col1Layout = new GridLayout(0,1);
 			GridLayout col5Layout = new GridLayout(0,10);
+			GridLayout row2Layout = new GridLayout(2, 1);
 			col5Layout.setHgap(15);
 			col1Layout.setVgap(15);
+			
 			imgDimPanel.setLayout(col5Layout);
 			inputDimPanel.setLayout(col5Layout);
 			mappingPanel.setLayout(col5Layout);
 			dialogPanel.setLayout(col1Layout);
+			
 			dialogPanel.add(imgDimPanel);
-			dialogPanel.add(inputDimPanel);
+			
+			if(sig != null){
+				inputNodePanel.add(inputNamePanel);
+				inputNodePanel.add(inputDimPanel);
+				inputNodePanel.setLayout(row2Layout);
+				dialogPanel.add(inputNodePanel);
+			}else{
+				dialogPanel.add(inputDimPanel);
+			}
+			
 			dialogPanel.add(mappingPanel);
 			
 			int result = JOptionPane.showConfirmDialog(null, dialogPanel, 

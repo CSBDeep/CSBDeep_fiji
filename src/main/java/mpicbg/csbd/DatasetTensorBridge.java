@@ -5,8 +5,6 @@ import java.util.List;
 
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
-import net.imagej.axis.CalibratedAxis;
-import net.imglib2.type.numeric.integer.UnsignedByteType;
 
 import org.tensorflow.Shape;
 import org.tensorflow.Tensor;
