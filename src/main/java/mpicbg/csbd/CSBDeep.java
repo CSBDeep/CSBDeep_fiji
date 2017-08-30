@@ -267,7 +267,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 	
 	private float[][][][][] datasetToArray(final Dataset d) {
 				
-		final float[][][][][] inputarr = bridge.createFakeTFArray();
+		final float[][][][][] inputarr = bridge.createTFArray5D();
 	/*
 	 * create 5D array from dataset (unused dimensions get size 1)
 	 */
@@ -295,7 +295,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 	}
 	
 	private Tensor arrayToTensor(final float[][][][][] array){
-		if(bridge.getInputTensorShape().numDimensions() == 4){
+		if(bridge.getInitialInputTensorShape().numDimensions() == 4){
 			return Tensor.create(array[0]);
 		}		
 		return Tensor.create(array);
@@ -366,7 +366,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 					System.out.println("output dim " + i + ": " + output_t.shape()[i]);
 				}
 				
-				if(output_t.numDimensions() -1 == bridge.getInputTensorShape().numDimensions()){
+				if(output_t.numDimensions() -1 == bridge.getInitialInputTensorShape().numDimensions()){
 					//model reduces dim by 1
 					//assume z gets reduced -> move it to front and ignore first dimension
 					/*

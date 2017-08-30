@@ -125,7 +125,6 @@ public class DatasetTensorBridge {
     public Shape getInitialInputTensorShape() {
 		return initialInputTensorShape;
 	}
-	}
 
     public int numDimensions(){
     	return datasetDimNames.length;
