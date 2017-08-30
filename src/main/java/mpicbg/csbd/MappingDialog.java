@@ -56,7 +56,7 @@ public class MappingDialog {
 			for(int i = 0; i < bridge.numDimensions(); i++){
 				if(bridge.getMapping(i) >= 0){
 					JTextField field = new JTextField();
-			        field.setText(String.valueOf(bridge.getInputTensorShape().size(dimCount)));
+			        field.setText(String.valueOf(bridge.getInitialInputTensorShape().size(dimCount)));
 			        field.setEditable(false);
 			        inputDimPanel.add(new JLabel(dimCount + ":", SwingConstants.RIGHT));
 			        inputDimPanel.add(field);
@@ -64,7 +64,7 @@ public class MappingDialog {
 					
 					JComboBox<String> dimDrop = new JComboBox(dimStringsLength.toArray());
 					dimDrop.setSelectedIndex(bridge.getMapping(i));
-					mappingPanel.add(new JLabel(dimCount + " [" + bridge.getInputTensorShape().size(dimCount) + "] :", SwingConstants.RIGHT));
+					mappingPanel.add(new JLabel(dimCount + " [" + bridge.getInitialInputTensorShape().size(dimCount) + "] :", SwingConstants.RIGHT));
 					mappingPanel.add(dimDrop);
 					drops.add(dimDrop);
 					
@@ -102,7 +102,7 @@ public class MappingDialog {
 				bridge.printMapping();
 				for(int i = 0; i < drops.size(); i++){
 					System.out.println("selected index for tf index " + i + ": " + drops.get(i).getSelectedIndex());
-					bridge.setMappingRealTFIndex(i, drops.get(i).getSelectedIndex());
+					bridge.setMappingInputTensorDim(i, drops.get(i).getSelectedIndex());
 				}
 				bridge.printMapping();
 			}	

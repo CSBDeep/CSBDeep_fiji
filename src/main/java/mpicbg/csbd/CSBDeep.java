@@ -51,13 +51,13 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 	private String header = "This command removes noise from your images.";
 
     @Parameter(label = "input data", type = ItemIO.INPUT, callback = "imageChanged", initializer = "imageChanged")
-    private Dataset input = null;
+    private Dataset input;
     
     @Parameter(label = "Normalize image")
 	private boolean normalizeInput = true;
     
     @Parameter(label = "Import model", callback = "modelChanged", initializer = "modelChanged")
-    private File modelfile = null;
+    private File modelfile;
     
     @Parameter(label = "Input node name", callback = "inputNodeNameChanged", initializer = "inputNodeNameChanged")
     private String inputNodeName = "input";
@@ -87,15 +87,17 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
     private Dataset outputImage;
     
     @Parameter
-    private double percentile = 0.9;
+    private double percentileBottom = 0.1;
+    @Parameter
+    private double percentileTop = 0.9;
     @Parameter
     private double min = 0;
     @Parameter
     private double max = 100;
-    private Graph graph = null;
-    private SavedModelBundle model = null;
-    private SignatureDef sig = null;
-    private DatasetTensorBridge bridge = null;
+    private Graph graph;
+    private SavedModelBundle model;
+    private SignatureDef sig;
+    private DatasetTensorBridge bridge;
     private boolean hasSavedModel = true;
     
 	// Same as
@@ -114,6 +116,9 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 //		modelChanged();
 	}
 	
+	/*
+	 * model can be imported via graphdef or savedmodel
+	 */
 	protected boolean loadGraph(){
 		
 //		System.out.println("loadGraph");
@@ -155,6 +160,9 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 		return false;
 	}
 	
+	/*
+	 * model can be imported via graphdef or savedmodel, depending on that the execution graph has different origins
+	 */
 	protected Graph getGraph(){
 		if(hasSavedModel && (model == null)){
 			return null;
@@ -213,7 +221,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 		
 		loadModelInputShape(inputNodeName);
 		
-		if(bridge.getInputTensorShape() != null){
+		if(bridge.getInitialInputTensorShape() != null){
 			if(!bridge.isMappingInitialized()){
 				bridge.setMappingDefaults();
 			}
@@ -224,7 +232,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 		
 		imageChanged();
 		
-		if(bridge.getInputTensorShape() == null){
+		if(bridge.getInitialInputTensorShape() == null){
 			modelChanged();
 		}
 		
@@ -260,6 +268,9 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 	private float[][][][][] datasetToArray(final Dataset d) {
 				
 		final float[][][][][] inputarr = bridge.createFakeTFArray();
+	/*
+	 * create 5D array from dataset (unused dimensions get size 1)
+	 */
 
 		//copy input data to array
 		
@@ -290,6 +301,10 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 		return Tensor.create(array);
 	}
 	
+	/*
+	 * runs graph on input tensor
+	 * converts result tensor to dataset 
+	 */
 	private Dataset executeGraph(final Graph g, final Tensor image)
 		{	
 		
@@ -297,16 +312,22 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 		
 		try (
 				Session s = new Session(g);
-//				
-//				System.out.println
 		) {
 			
 //			int size = s.runner().feed(inputNodeName, image).fetch(outputNodeName).run().size();
 //			System.out.println("output array size: " + size);
+			
 			Tensor output_t = null;
+			
+			/*
+			 * check if keras_learning_phase node has to be set
+			 */
 			if(graph.operation("dropout_1/keras_learning_phase") != null){
 				final Tensor learning_phase = Tensor.create(false);
 				try{
+					/*
+					 * execute graph
+					 */
 					final Tensor output_t2 = s.runner().feed(inputNodeName, image).feed("dropout_1/keras_learning_phase", learning_phase).fetch(outputNodeName).run().get(0);
 					output_t = output_t2;
 				}
@@ -315,6 +336,9 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 				}
 			}else{
 				try{
+					/*
+					 * execute graph
+					 */
 					final Tensor output_t2 = s.runner().feed(inputNodeName, image).fetch(outputNodeName).run().get(0);
 					output_t = output_t2;
 				}
@@ -331,7 +355,12 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 					return null;
 				}
 				
-				final float[][][][][] outputarr = bridge.createFakeTFArray(output_t);
+				
+				
+				/*
+				 * create 5D array from output tensor, unused dimensions will have size 1
+				 */
+				final float[][][][][] outputarr = bridge.createTFArray5D(output_t);
 				
 				for(int i = 0; i < output_t.numDimensions(); i++){
 					System.out.println("output dim " + i + ": " + output_t.shape()[i]);
@@ -340,10 +369,15 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 				if(output_t.numDimensions() -1 == bridge.getInputTensorShape().numDimensions()){
 					//model reduces dim by 1
 					//assume z gets reduced -> move it to front and ignore first dimension
+					/*
+					 * model reduces dim by 1
+					 * assume z gets reduced -> move it to front and ignore first dimension
+					 */
 					System.out.println("model reduces dimension, z dimension reduction assumed");
 					bridge.moveZMappingToFront();
 				}
 				
+				// .. :-/
 				if(output_t.numDimensions() == 5){
 					output_t.copyTo(outputarr);
 				}else{
@@ -371,7 +405,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 	
 	private Dataset arrayToDataset(final float[][][][][] outputarr, final long[] shape){
 		
-		final Dataset img_out = bridge.createFromTFDims(shape);
+		final Dataset img_out = bridge.createDatasetFromTFDims(shape);
 		
 		//write ouput dataset and undo normalization
 		
