@@ -8,10 +8,21 @@
 
 package mpicbg.csbd;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import java.io.File;
 import java.io.IOException;
 
 import javax.swing.JOptionPane;
+
+import net.imagej.Dataset;
+import net.imagej.ImageJ;
+import net.imagej.ops.OpService;
+import net.imagej.tensorflow.TensorFlowService;
+import net.imglib2.Cursor;
+import net.imglib2.img.Img;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.util.Util;
 
 import org.scijava.Cancelable;
 import org.scijava.ItemIO;
@@ -33,15 +44,6 @@ import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
-import net.imagej.Dataset;
-import net.imagej.ImageJ;
-import net.imagej.ops.OpService;
-import net.imagej.tensorflow.TensorFlowService;
-import net.imglib2.Cursor;
-import net.imglib2.type.numeric.RealType;
-
 /**
  */
 @Plugin(type = Command.class, menuPath = "Plugins>CSBDeep", headless = true)
@@ -52,9 +54,6 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 
     @Parameter(label = "input data", type = ItemIO.INPUT, callback = "imageChanged", initializer = "imageChanged")
     private Dataset input;
-    
-    @Parameter(label = "Normalize image")
-	private boolean normalizeInput = true;
     
     @Parameter(label = "Import model", callback = "modelChanged", initializer = "modelChanged")
     private File modelfile;
@@ -86,14 +85,23 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
     @Parameter(type = ItemIO.OUTPUT)
     private Dataset outputImage;
     
+    @Parameter(visibility = ItemVisibility.MESSAGE)
+	private String normtext = "Normalization";
+//    @Parameter(label = "Normalize image")
+	private boolean normalizeInput = true;
     @Parameter
-    private double percentileBottom = 0.1;
+    private float percentileBottom = 0.1f;
     @Parameter
-    private double percentileTop = 0.9;
+    private float percentileTop = 0.9f;
     @Parameter
-    private double min = 0;
+    private float min = 0;
     @Parameter
-    private double max = 100;
+    private float max = 100;
+    @Parameter(label = "Clamp normalization")
+	private boolean clamp = true;
+    
+    private float percentileBottomVal, percentileTopVal;
+    
     private Graph graph;
     private SavedModelBundle model;
     private SignatureDef sig;
@@ -242,15 +250,15 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 	@Override
     public void run() {
 		
-//		System.out.println("run");
-		
-//		Dataset input_norm = input.duplicateBlank();
-		
-//		opService.run(PercentileNormalization.class, input_norm.getImgPlus(), input.getImgPlus(), percentile);
-//		uiService.show(input_norm);
-		
 		if(graph == null){
 			modelChanged();
+		}
+		
+		if(normalizeInput){
+			float[] ps = percentiles(input, new float[]{percentileBottom, percentileTop});
+			percentileBottomVal = ps[0];
+			percentileTopVal = ps[1];
+			testNormalization();
 		}
 
 		try (
@@ -265,31 +273,115 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 		
     }
 	
+	private void testNormalization(){
+		Img<RealType<?>> dcopy = input.copy();
+		Cursor<RealType<?>> cursor = dcopy.cursor();
+		System.out.println("percentiles: " + percentileBottomVal + " -> " + percentileTopVal);
+		float factor = (max-min)/(percentileTopVal-percentileBottomVal);
+		System.out.println("factor: " + factor);
+		if(clamp){
+			while( cursor.hasNext() )
+			{
+				final float val = cursor.next().getRealFloat();
+				cursor.get().setReal(Math.max(min, Math.min(max, (val-percentileBottomVal)*factor+min)));
+			}
+		}else{
+			while( cursor.hasNext() )
+			{
+				final float val = cursor.next().getRealFloat();
+				cursor.get().setReal(Math.max(0,(val-percentileBottomVal)*factor+min));
+			}
+		}
+		
+		uiService.show(dcopy);		
+	}
+	
+	private static float[] percentiles(final Dataset d, float[] percentiles){
+		Cursor<RealType<?>> cursor = d.cursor();
+		int items = 1;
+		int i = 0;
+		for(; i < d.numDimensions(); i++){
+			items *= d.dimension(i);
+		}
+		float [] values = new float[items];
+		i = 0;
+		while( cursor.hasNext() )
+		{
+			cursor.fwd();
+			values[i] = cursor.get().getRealFloat();
+			i++;
+		}
+		
+		Util.quicksort(values);
+		
+		float[] res = new float[percentiles.length];
+		for(i = 0; i < percentiles.length; i++){
+			res[i] = values[ Math.min( values.length - 1, Math.max(0, Math.round((values.length - 1) * percentiles[i])))];
+		}
+		
+		return res;
+	}
+	
 	private float[][][][][] datasetToArray(final Dataset d) {
 				
 		final float[][][][][] inputarr = bridge.createTFArray5D();
+		
+		int[] lookup = new int[5];
+		for(int i = 0; i < lookup.length; i++){
+			lookup[i] = bridge.getDatasetDimIndexByTFIndex(i);
+		}
 	/*
 	 * create 5D array from dataset (unused dimensions get size 1)
 	 */
 
 		//copy input data to array
 		
-		final Cursor<T> cursor = (Cursor<T>) d.localizingCursor();
-		while( cursor.hasNext() )
-		{
-			final int[] pos = {0,0,0,0,0};
-			final T val = cursor.next();
-			for(int i = 0; i < pos.length; i++){
-				final int imgIndex = bridge.getDatasetDimIndexByTFIndex(i);
-				if(imgIndex >= 0){
-					pos[i] = cursor.getIntPosition(imgIndex);
+		Cursor<RealType<?>> cursor = d.localizingCursor();
+		if(normalizeInput){
+			float factor = (max-min)/(percentileTopVal-percentileBottomVal);
+			if(clamp){
+				while( cursor.hasNext() )
+				{
+					final float val = cursor.next().getRealFloat();
+					final int[] pos = {0,0,0,0,0};
+					for(int i = 0; i < pos.length; i++){
+						if(lookup[i] >= 0){
+							pos[i] = cursor.getIntPosition(lookup[i]);							
+						}
+					}
+					inputarr[pos[0]][pos[1]][pos[2]][pos[3]][pos[4]] = 
+							Math.max(min, Math.min(max, (val-percentileBottomVal)*factor+min));
+					
+				}
+			}else{
+				while( cursor.hasNext() )
+				{
+					final float val = cursor.next().getRealFloat();
+					final int[] pos = {0,0,0,0,0};
+					for(int i = 0; i < pos.length; i++){
+						if(lookup[i] >= 0){
+							pos[i] = cursor.getIntPosition(lookup[i]);							
+						}
+					}
+					inputarr[pos[0]][pos[1]][pos[2]][pos[3]][pos[4]] = 
+							Math.max(0, (val-percentileBottomVal)*factor+min);
+					
 				}
 			}
-			final float fval = val.getRealFloat();
-//			System.out.println("pos " + pos[0] + " " + pos[1] + " " + pos[2] + " " + pos[3] + " " + pos[4]);
-			inputarr[pos[0]][pos[1]][pos[2]][pos[3]][pos[4]] = fval;
-			
+		}else{
+			while( cursor.hasNext() )
+			{
+				final float val = cursor.next().getRealFloat();
+				final int[] pos = {0,0,0,0,0};
+				for(int i = 0; i < pos.length; i++){
+					if(lookup[i] >= 0){
+						pos[i] = cursor.getIntPosition(lookup[i]);							
+					}
+				}
+				inputarr[pos[0]][pos[1]][pos[2]][pos[3]][pos[4]] = val;
+			}
 		}
+		
 		
 		return inputarr;
 	}
@@ -409,11 +501,11 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 		
 		//write ouput dataset and undo normalization
 		
-		final Cursor<T> cursor = (Cursor<T>) img_out.localizingCursor();
+		Cursor<RealType<?>> cursor = img_out.localizingCursor();
 		while( cursor.hasNext() )
 		{
 			final int[] pos = {0,0,0,0,0};
-			final T val = cursor.next();
+			final RealType<?> val = cursor.next();
 			for(int i = 0; i < pos.length; i++){
 				final int imgIndex = bridge.getDatasetDimIndexByTFIndex(i);
 				if(imgIndex >= 0){
@@ -444,7 +536,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
         // ask the user for a file to open
         final File file = ij.ui().chooseFile(null, "open");
         
-        if(file.exists()){
+        if(file != null && file.exists()){
             // load the dataset
             final Dataset dataset = ij.scifio().datasetIO().open(file.getAbsolutePath());
 
@@ -453,7 +545,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 
             // invoke the plugin
             ij.command().run(CSBDeep.class, true);
-        }    	
+        }
 
     }
     

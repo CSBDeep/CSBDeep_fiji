@@ -33,7 +33,7 @@ public class MappingDialog {
 			
 			if(sig != null){
 				String[] inputNames = new String[sig.getInputsCount()];
-				JComboBox<String> inputNameDrop = new JComboBox(inputNames);
+				JComboBox<String> inputNameDrop = new JComboBox<>(inputNames);
 				inputNameDrop.setSelectedIndex(0);
 				inputNamePanel.add(new JLabel("Input node name", SwingConstants.RIGHT));
 				inputNamePanel.add(inputNameDrop);				
@@ -62,7 +62,7 @@ public class MappingDialog {
 			        inputDimPanel.add(field);
 			        inputDimPanel.add(field);
 					
-					JComboBox<String> dimDrop = new JComboBox(dimStringsLength.toArray());
+					JComboBox<String> dimDrop = new JComboBox<>((String[]) dimStringsLength.toArray());
 					dimDrop.setSelectedIndex(bridge.getMapping(i));
 					mappingPanel.add(new JLabel(dimCount + " [" + bridge.getInitialInputTensorShape().size(dimCount) + "] :", SwingConstants.RIGHT));
 					mappingPanel.add(dimDrop);

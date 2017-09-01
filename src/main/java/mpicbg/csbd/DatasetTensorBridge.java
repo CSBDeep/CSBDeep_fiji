@@ -1,13 +1,10 @@
 package mpicbg.csbd;
 
-import java.util.Arrays;
-import java.util.List;
+import net.imagej.Dataset;
+import net.imagej.axis.Axes;
 
 import org.tensorflow.Shape;
 import org.tensorflow.Tensor;
-
-import net.imagej.Dataset;
-import net.imagej.axis.Axes;
 
 public class DatasetTensorBridge {
 
@@ -20,14 +17,13 @@ public class DatasetTensorBridge {
 	public static int T = 4;
 
 	private final Dataset dataset;
-    private Shape initialInputTensorShape, finalInputTensorShape;
+    private Shape initialInputTensorShape;
 
 	private final String[] datasetDimNames;
     private final int[] datasetDimIndices;
     private final long[] datasetDimLengths;
 	private final int[] dimMapping = { UNSET, UNSET, UNSET, UNSET, UNSET };
     private boolean mappingInitialized = false;
-    private List<Integer> tfToInput;
 
     public DatasetTensorBridge(final Dataset image){
     	dataset = image;
@@ -305,19 +301,6 @@ public class DatasetTensorBridge {
 		int count = 0;
 		for(int i = 0; i < searcharray.length; i++){
 			if(i == val){
-				return count;
-			}
-			if(searcharray[i] >= 0){
-				count++;
-			}
-		}
-		return -1;
-	}
-	
-	private int getIndexByValIgnoreNegatives(final int[] searcharray, final int val){
-		int count = 0;
-		for(int i = 0; i < searcharray.length; i++){
-			if(searcharray[i] == val){
 				return count;
 			}
 			if(searcharray[i] >= 0){
