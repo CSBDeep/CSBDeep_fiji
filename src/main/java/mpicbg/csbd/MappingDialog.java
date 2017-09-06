@@ -61,8 +61,11 @@ public class MappingDialog {
 			        inputDimPanel.add(new JLabel(dimCount + ":", SwingConstants.RIGHT));
 			        inputDimPanel.add(field);
 			        inputDimPanel.add(field);
-					
-					JComboBox<String> dimDrop = new JComboBox<>((String[]) dimStringsLength.toArray());
+			        String[] dimStringsLengthArr = new String[dimStringsLength.size()];
+			        for(int j = 0; j < dimStringsLength.size(); j++){
+			        	dimStringsLengthArr[j] = dimStringsLength.get(j);
+			        }
+					JComboBox<String> dimDrop = new JComboBox<>(dimStringsLengthArr);
 					dimDrop.setSelectedIndex(bridge.getMapping(i));
 					mappingPanel.add(new JLabel(dimCount + " [" + bridge.getInitialInputTensorShape().size(dimCount) + "] :", SwingConstants.RIGHT));
 					mappingPanel.add(dimDrop);
