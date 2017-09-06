@@ -33,6 +33,7 @@ import org.scijava.io.location.FileLocation;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
+import org.scijava.prefs.PrefService;
 import org.scijava.ui.UIService;
 import org.scijava.widget.Button;
 import org.tensorflow.Graph;
@@ -55,7 +56,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
     @Parameter(label = "input data", type = ItemIO.INPUT, callback = "imageChanged", initializer = "imageChanged")
     private Dataset input;
     
-    @Parameter(label = "Import model", callback = "modelChanged", initializer = "modelChanged")
+    @Parameter(label = "Import model", callback = "modelChanged", initializer = "modelInitialized", persist = false)
     private File modelfile;
     
     @Parameter(label = "Input node name", callback = "inputNodeNameChanged", initializer = "inputNodeNameChanged")
@@ -81,6 +82,9 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 
     @Parameter
     private OpService opService;
+    
+    @Parameter
+    private PrefService prefService;
     
     @Parameter(type = ItemIO.OUTPUT)
     private Dataset outputImage;
@@ -189,10 +193,23 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 		
 	}
 	
+	/** Executed whenever the {@link #modelfile} parameter is initialized. */
+	protected void modelInitialized() {
+		String p_modelfile = prefService.get("modelfile", "");
+		if(p_modelfile != ""){
+			modelfile = new File(p_modelfile);			
+		}
+		modelChanged();
+	}
+	
     /** Executed whenever the {@link #modelfile} parameter changes. */
 	protected void modelChanged() {
 		
 //		System.out.println("modelChanged");
+		
+		if(modelfile != null){
+			savePreferences();			
+		}
 		
 		imageChanged();
 		if(loadGraph()){
@@ -250,6 +267,8 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 	@Override
     public void run() {
 		
+		savePreferences();
+		
 		if(graph == null){
 			modelChanged();
 		}
@@ -273,6 +292,11 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 		
     }
 	
+	private void savePreferences() {
+		prefService.put("modelfile", modelfile.getAbsolutePath());
+		
+	}
+
 	private void testNormalization(){
 		Img<RealType<?>> dcopy = input.copy();
 		Cursor<RealType<?>> cursor = dcopy.cursor();
