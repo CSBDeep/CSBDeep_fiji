@@ -556,6 +556,8 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
     public static void main(final String... args) throws Exception {
         // create the ImageJ application context with all available services
         final ImageJ ij = new ImageJ();
+        
+        ij.launch(args);
 
         // ask the user for a file to open
         final File file = ij.ui().chooseFile(null, "open");
