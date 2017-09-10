@@ -175,22 +175,26 @@ public class DatasetTensorBridge {
 	}
 
 	/*
-	 * if move Z dimension in mapping to the first position
-	 * used for dimension reduction to get rid of Z (first entry will be ignored)
+	 * moves Z dimension in mapping to the first position and set it to -1
 	 * example:
-	 * mapping: [T,Z,Y,X,C] -> [Z,T,Y,X,C]
-	 * mapping: [T,Y,X,C,Z] -> [Z,T,Y,X,C]
+	 * mapping: [T,Z,Y,X,C] -> [-1,T,Y,X,C]
+	 * mapping: [T,Y,X,C,Z] -> [-1,T,Y,X,C]
 	 * 
 	 */
-	public boolean moveZMappingToFront(){
+	public boolean removeZFromMapping(){
 		boolean shift = false;
 		printMapping();
 		for(int i = numDimensions()-1; i >= 0; i--){
 			if(dataset.dimensionIndex(Axes.Z) == getMapping(i)){
 				shift = true;
 			}
-			if(shift&& i > 0){
-				setMapping(i, getMapping(i-1));
+			if(shift){
+				if(i > 0){
+					setMapping(i, getMapping(i-1));					
+				}else{
+					setMapping(i, -1);
+				}
+				
 			}
 		}
 		printMapping();

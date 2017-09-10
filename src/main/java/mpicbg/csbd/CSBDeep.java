@@ -288,6 +288,10 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 			modelChanged();
 		}
 		
+		if(bridge != null && bridge.getInitialInputTensorShape() == null){
+			inputNodeNameChanged();
+		}
+		
 		if(normalizeInput){
 			float[] ps = percentiles(input, new float[]{percentileBottom, percentileTop});
 			percentileBottomVal = ps[0];
@@ -498,7 +502,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 					System.out.println("output dim " + i + ": " + output_t.shape()[i]);
 				}
 				
-				if(output_t.numDimensions() -1 == bridge.getInitialInputTensorShape().numDimensions()){
+				if(output_t.numDimensions() == bridge.getInitialInputTensorShape().numDimensions() -1){
 					//model reduces dim by 1
 					//assume z gets reduced -> move it to front and ignore first dimension
 					/*
@@ -506,7 +510,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 					 * assume z gets reduced -> move it to front and ignore first dimension
 					 */
 					System.out.println("model reduces dimension, z dimension reduction assumed");
-					bridge.moveZMappingToFront();
+					bridge.removeZFromMapping();
 				}
 				
 				// .. :-/
@@ -576,7 +580,8 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
         ij.launch(args);
 
         // ask the user for a file to open
-        final File file = ij.ui().chooseFile(null, "open");
+//        final File file = ij.ui().chooseFile(null, "open");
+        final File file = new File("/home/random/Development/imagej/plugins/CSBDeep-data/net_project/input-1.tif");
         
         if(file != null && file.exists()){
             // load the dataset
