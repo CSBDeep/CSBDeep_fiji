@@ -116,6 +116,12 @@
 			<artifactId>imagej-tensorflow</artifactId>
 			<version>0.1.1</version>
 		</dependency>
+		<!-- maybe useful for GPU support  
+		<dependency>
+		    <groupId>org.scijava</groupId>
+		    <artifactId>native-lib-loader</artifactId>
+	    </dependency>
+	    -->
 		<!-- 
 		<dependency>
 		  <groupId>sc.fiji</groupId>

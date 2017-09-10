@@ -119,6 +119,15 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 	private static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY = "serving_default";
     
     public CSBDeep(){
+    	/*
+    	 * a failed attempt to get GPU support 
+    	 */
+//    	try {
+//			NativeLoader.loadLibrary("tensorflow_jni");
+//		} catch (IOException exc) {
+//			System.err.println("cannot import tensorflow gpu lib");
+//			exc.printStackTrace();
+//		}
 //    	modelChanged();
     }
     	
