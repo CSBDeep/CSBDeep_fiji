@@ -28,7 +28,6 @@ import org.scijava.Cancelable;
 import org.scijava.ItemIO;
 import org.scijava.ItemVisibility;
 import org.scijava.command.Command;
-import org.scijava.command.Previewable;
 import org.scijava.io.location.FileLocation;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
@@ -48,7 +47,7 @@ import org.tensorflow.framework.SignatureDef;
 /**
  */
 @Plugin(type = Command.class, menuPath = "Plugins>CSBDeep", headless = true)
-public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Cancelable {
+public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 	
 	@Parameter(visibility = ItemVisibility.MESSAGE)
 	private String header = "This command removes noise from your images.";
@@ -130,12 +129,6 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
 //		}
 //    	modelChanged();
     }
-    	
-	@Override
-	public void preview() {
-//		imageChanged();
-//		modelChanged();
-	}
 	
 	/*
 	 * model can be imported via graphdef or savedmodel
@@ -588,11 +581,6 @@ public class CSBDeep<T extends RealType<T>> implements Command, Previewable, Can
     	JOptionPane.showMessageDialog(null, errorMsg, "Error",
                 JOptionPane.ERROR_MESSAGE);
     }
-
-	@Override
-	public void cancel() {
-		// TODO Auto-generated method stub
-	}
 
 	@Override
 	public boolean isCanceled() {
