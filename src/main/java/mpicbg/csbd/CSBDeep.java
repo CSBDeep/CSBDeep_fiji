@@ -110,6 +110,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
     private SignatureDef sig;
     private DatasetTensorBridge bridge;
     private boolean hasSavedModel = true;
+    private boolean processedDataset = false;
     
 	// Same as
 	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
@@ -127,7 +128,6 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 //			System.err.println("cannot import tensorflow gpu lib");
 //			exc.printStackTrace();
 //		}
-//    	modelChanged();
     }
 	
 	/*
@@ -185,12 +185,13 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 	}
     
     /** Executed whenever the {@link #input} parameter changes. */
-	protected void imageChanged() {
+	protected void processDataset() {
 		
-//		System.out.println("imageChanged");
-		
-		if(input != null) {
-			bridge = new DatasetTensorBridge(input);
+		if(!processedDataset){
+			if(input != null) {
+				bridge = new DatasetTensorBridge(input);
+				processedDataset = true;
+			}
 		}
 		
 	}
@@ -213,7 +214,12 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 			savePreferences();			
 		}
 		
-		imageChanged();
+		processDataset();
+		
+		if(input == null){
+			return;
+		}
+		
 		if(loadGraph()){
 			
 			if(hasSavedModel){
@@ -248,16 +254,19 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 		
 		loadModelInputShape(inputNodeName);
 		
-		if(bridge.getInitialInputTensorShape() != null){
-			if(!bridge.isMappingInitialized()){
-				bridge.setMappingDefaults();
-			}
+		if(bridge != null){
+			if(bridge.getInitialInputTensorShape() != null){
+				if(!bridge.isMappingInitialized()){
+					bridge.setMappingDefaults();
+				}
+			}	
 		}
+		
 	}
 	
 	protected void openTFMappingDialog() {
 		
-		imageChanged();
+		processDataset();
 		
 		if(bridge.getInitialInputTensorShape() == null){
 			modelChanged();
@@ -271,7 +280,11 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 		
 		savePreferences();
 		
-		if(graph == null){
+		if(input == null) {
+			return;
+		}
+		
+		if(getGraph() == null){
 			modelChanged();
 		}
 		
