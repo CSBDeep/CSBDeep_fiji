@@ -52,14 +52,14 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 	@Parameter(visibility = ItemVisibility.MESSAGE)
 	private String header = "This command removes noise from your images.";
 
-    @Parameter(label = "input data", type = ItemIO.INPUT, callback = "imageChanged", initializer = "imageChanged")
+    @Parameter(label = "input data", type = ItemIO.INPUT, initializer = "processDataset")
     private Dataset input;
     
     @Parameter(label = "Import model", callback = "modelChanged", initializer = "modelInitialized", persist = false)
     private File modelfile;
     
     @Parameter(label = "Input node name", callback = "inputNodeNameChanged", initializer = "inputNodeNameChanged")
-    private String inputNodeName = "input";
+    private String inputNodeName = "input_1";
     
     @Parameter(label = "Output node name", persist = false)
     private String outputNodeName = "output";
@@ -286,7 +286,8 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 			final Tensor image = arrayToTensor(datasetToArray(input));
 		)
 		{
-			outputImage = executeGraph(getGraph(), image);	
+			outputImage = executeGraph(getGraph(), image);
+			outputImage.setName("CSBDeepened_" + input.getName());
 			uiService.show(outputImage);
 		}
 		
@@ -300,7 +301,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 	}
 
 	private void testNormalization(){
-		Img<RealType<?>> dcopy = input.copy();
+		Dataset dcopy = (Dataset) input.copy();
 		Cursor<RealType<?>> cursor = dcopy.cursor();
 		System.out.println("percentiles: " + percentileBottomVal + " -> " + percentileTopVal);
 		float factor = (max-min)/(percentileTopVal-percentileBottomVal);
@@ -318,7 +319,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 				cursor.get().setReal(Math.max(0,(val-percentileBottomVal)*factor+min));
 			}
 		}
-		
+		dcopy.setName("normalized_" + input.getName());
 		uiService.show(dcopy);		
 	}
 	
