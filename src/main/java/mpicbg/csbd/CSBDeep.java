@@ -22,7 +22,6 @@ import net.imagej.ImageJ;
 import net.imagej.ops.OpService;
 import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.Cursor;
-import net.imglib2.img.Img;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Util;
 
@@ -171,6 +170,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 			final Operation input_op = getGraph().operation(inputName);
 			if(input_op != null){
 				bridge.setInputTensorShape(input_op.output(0).shape());
+				bridge.setMappingDefaults();
 				return true;			
 			}
 			System.out.println("input node with name " + inputName + " not found");			
