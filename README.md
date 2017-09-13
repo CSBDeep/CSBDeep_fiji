@@ -12,7 +12,7 @@ mvn -Dimagej.app.directory=/path/to/Fiji.app/ -Ddelete.other.versions=true
 2. Open Fiji.
 3. Open an image from the data repo, e.g. `CSBDeep-data/net_denoise/input.png`.
 4. Run the plugin via `Plugins > CSBDeep`.
-5. Chose an `Import model`, e.g. `CSBDeep-data/net_denoise/resunet.pb`.
+5. Chose an `Import model`, e.g. `CSBDeep-data/net_denoise/resunet.pb`. In this case, you still have to adjust the input node name to `input_1`, for the other models `input` should be fine.
 6. Run the plugin by pressing `Ok`.
 
 The first image popping up is the normalized image (for debugging).
