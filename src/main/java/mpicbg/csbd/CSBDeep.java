@@ -166,6 +166,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 			final Operation input_op = getGraph().operation(inputName);
 			if(input_op != null){
 				bridge.setInputTensorShape(input_op.output(0).shape());
+				bridge.setMappingDefaults();
 				return true;			
 			}
 			System.out.println("input node with name " + inputName + " not found");			
