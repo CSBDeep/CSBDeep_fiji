@@ -8,10 +8,6 @@
 
 package mpicbg.csbd;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
-import fiji.JNI;
-
 import java.io.File;
 import java.io.IOException;
 
@@ -22,7 +18,6 @@ import net.imagej.ImageJ;
 import net.imagej.ops.OpService;
 import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.Cursor;
-import net.imglib2.img.Img;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.util.Util;
 
@@ -42,10 +37,11 @@ import org.tensorflow.Operation;
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Session;
 import org.tensorflow.Tensor;
-import org.tensorflow.TensorFlow;
 import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 /**
  */
@@ -131,7 +127,6 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 //			System.err.println("cannot import tensorflow gpu lib");
 //			exc.printStackTrace();
 //		}
-		JNI.loadLibrary("tensorflow_jni");
     }
 	
 	/*
