@@ -8,25 +8,15 @@
 
 package mpicbg.csbd;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 import java.io.File;
 import java.io.IOException;
 
 import javax.swing.JOptionPane;
 
-import net.imagej.Dataset;
-import net.imagej.ImageJ;
-import net.imagej.ops.OpService;
-import net.imagej.tensorflow.TensorFlowService;
-import net.imglib2.Cursor;
-import net.imglib2.img.Img;
-import net.imglib2.type.numeric.RealType;
-import net.imglib2.util.Util;
-
 import org.scijava.Cancelable;
 import org.scijava.ItemIO;
 import org.scijava.ItemVisibility;
+import org.scijava.app.StatusService;
 import org.scijava.command.Command;
 import org.scijava.io.location.FileLocation;
 import org.scijava.log.LogService;
@@ -43,6 +33,16 @@ import org.tensorflow.Tensor;
 import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
+
+import com.google.protobuf.InvalidProtocolBufferException;
+
+import net.imagej.Dataset;
+import net.imagej.ImageJ;
+import net.imagej.ops.OpService;
+import net.imagej.tensorflow.TensorFlowService;
+import net.imglib2.Cursor;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.util.Util;
 
 /**
  */
@@ -81,10 +81,13 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 
     @Parameter
     private OpService opService;
-    
+
     @Parameter
     private PrefService prefService;
-    
+
+    @Parameter
+    private StatusService statusService;
+
     @Parameter(type = ItemIO.OUTPUT)
     private Dataset outputImage;
     
@@ -102,7 +105,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
     private float max = 100;
     @Parameter(label = "Clamp normalization")
 	private boolean clamp = true;
-    
+
     private float percentileBottomVal, percentileTopVal;
     
     private Graph graph;
@@ -445,16 +448,17 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 		{	
 		
 		System.out.println("executeInceptionGraph");
-		
+
+		statusService.showStatus(0, 3, "Creating tensorflow session ");
 		try (
 				Session s = new Session(g);
 		) {
-			
 //			int size = s.runner().feed(inputNodeName, image).fetch(outputNodeName).run().size();
 //			System.out.println("output array size: " + size);
 			
 			Tensor output_t = null;
-			
+
+			statusService.showStatus(1, 3, "Executing model ");
 			/*
 			 * check if keras_learning_phase node has to be set
 			 */
@@ -484,6 +488,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 			}
 			
 			if(output_t != null){
+				statusService.showStatus(2, 3, "Creating output dataset ");
 				System.out.println("Output tensor with " + output_t.numDimensions() + " dimensions");
 				
 				if(output_t.numDimensions() == 0){
@@ -526,6 +531,7 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 					}
 				}
 				
+				statusService.clearStatus();
 				return arrayToDataset(outputarr, output_t.shape());	
 			}
 			return null;
