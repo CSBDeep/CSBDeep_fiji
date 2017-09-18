@@ -8,8 +8,12 @@
 
 package mpicbg.csbd;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import java.io.File;
 import java.io.IOException;
+import java.net.MalformedURLException;
+import java.net.URISyntaxException;
 
 import javax.swing.JOptionPane;
 
@@ -25,13 +29,12 @@ import org.scijava.Cancelable;
 import org.scijava.ItemIO;
 import org.scijava.ItemVisibility;
 import org.scijava.command.Command;
-import org.scijava.io.location.FileLocation;
+import org.scijava.io.http.HTTPLocation;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.prefs.PrefService;
 import org.scijava.ui.UIService;
-import org.scijava.widget.Button;
 import org.tensorflow.Graph;
 import org.tensorflow.Operation;
 import org.tensorflow.SavedModelBundle;
@@ -41,37 +44,25 @@ import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 /**
  */
-@Plugin(type = Command.class, menuPath = "Plugins>CSBDeep>Any network", headless = true)
-public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
+@Plugin(type = Command.class, menuPath = "Plugins>CSBDeep>Project", headless = true)
+public class NetProject<T extends RealType<T>> implements Command, Cancelable {
 	
 	@Parameter(visibility = ItemVisibility.MESSAGE)
-	private String header = "This command removes noise from your images.";
+	private String header = "This is the projection network command.";
 
     @Parameter(label = "input data", type = ItemIO.INPUT, initializer = "processDataset")
     private Dataset input;
     
-    @Parameter(label = "Import model", callback = "modelChanged", initializer = "modelInitialized", persist = false)
-    private File modelfile;
-    private String modelfileKey = "modelfile-anynetwork";
-    
-    @Parameter(label = "Input node name", callback = "inputNodeNameChanged", initializer = "inputNodeNameChanged")
+    private String modelfileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_project.zip";
+    private String modelName = "net_project";
+    private String modelfileName = "model_pro_avg.pb";
     private String inputNodeName = "input";
-    
-    @Parameter(label = "Output node name", persist = false)
     private String outputNodeName = "output";
-    
-    @Parameter(label = "Adjust image <-> tensorflow mapping", callback = "openTFMappingDialog")
-	private Button changeTFMapping;
     
     @Parameter
 	private TensorFlowService tensorFlowService;
-    
-    @Parameter
-	private mpicbg.csbd.TensorFlowService tensorFlowService2;
     
     @Parameter
 	private LogService log;
@@ -118,12 +109,12 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 	// API.
 	private static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY = "serving_default";
     
-    public CSBDeep(){
+    public NetProject(){
     	/*
     	 * a failed attempt to get GPU support 
     	 */
 //    	try {
-//			System.loadLibrary("tensorflow_jni");
+			System.loadLibrary("tensorflow_jni");
 //		} catch (IOException exc) {
 //			System.err.println("cannot import tensorflow gpu lib");
 //			exc.printStackTrace();
@@ -133,28 +124,17 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 	/*
 	 * model can be imported via graphdef or savedmodel
 	 */
-	protected boolean loadGraph(){
+	protected boolean loadGraph() throws MalformedURLException, URISyntaxException{
 		
 //		System.out.println("loadGraph");
 		
-		if(modelfile == null){
-			System.out.println("Cannot load graph from null File");
-			return false;
-		}
-		
-		final FileLocation source = new FileLocation(modelfile);
-		hasSavedModel = true;
+		final HTTPLocation source = new HTTPLocation(modelfileUrl);
+		hasSavedModel = false;
 		try {
-			model = tensorFlowService.loadModel(source, modelfile.getName());
+			graph = tensorFlowService.loadGraph(source, modelName, modelfileName);
 		} catch (TensorFlowException | IOException e) {
-			try {
-				graph = tensorFlowService2.loadGraph(modelfile);
-//				graph = tensorFlowService.loadGraph(source, "", "");
-				hasSavedModel = false;
-			} catch (final IOException e2) {
-				e2.printStackTrace();
-				return false;
-			}
+			e.printStackTrace();
+			return false;
 		}
 		return true;
 	}
@@ -197,23 +177,13 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 		
 	}
 	
-	/** Executed whenever the {@link #modelfile} parameter is initialized. */
-	protected void modelInitialized() {
-		String p_modelfile = prefService.get(modelfileKey, "");
-		if(p_modelfile != ""){
-			modelfile = new File(p_modelfile);			
-		}
-		modelChanged();
-	}
-	
-    /** Executed whenever the {@link #modelfile} parameter changes. */
-	protected void modelChanged() {
+    /** 
+     * @throws URISyntaxException 
+     * @throws MalformedURLException */
+	protected void modelChanged() throws MalformedURLException, URISyntaxException {
 		
 //		System.out.println("modelChanged");
 		
-		if(modelfile != null){
-			savePreferences();			
-		}
 		
 		processDataset();
 		
@@ -264,29 +234,22 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 		}
 		
 	}
-	
-	protected void openTFMappingDialog() {
-		
-		processDataset();
-		
-		if(bridge.getInitialInputTensorShape() == null){
-			modelChanged();
-		}
-		
-		MappingDialog.create(bridge, sig);
-	}
 
 	@Override
     public void run() {
-		
-		savePreferences();
 		
 		if(input == null) {
 			return;
 		}
 		
-		if(getGraph() == null){
+		try {
 			modelChanged();
+		} catch (MalformedURLException exc) {
+			// TODO Auto-generated catch block
+			exc.printStackTrace();
+		} catch (URISyntaxException exc) {
+			// TODO Auto-generated catch block
+			exc.printStackTrace();
 		}
 		
 		if(bridge != null && bridge.getInitialInputTensorShape() == null){
@@ -315,11 +278,6 @@ public class CSBDeep<T extends RealType<T>> implements Command, Cancelable {
 		
     }
 	
-	private void savePreferences() {
-		prefService.put(modelfileKey, modelfile.getAbsolutePath());
-		
-	}
-
 	private void testNormalization(){
 		Dataset dcopy = (Dataset) input.copy();
 		Cursor<RealType<?>> cursor = dcopy.cursor();
