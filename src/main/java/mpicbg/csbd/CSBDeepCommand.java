@@ -18,9 +18,7 @@ import javax.swing.JOptionPane;
 
 import net.imagej.Dataset;
 import net.imagej.tensorflow.TensorFlowService;
-import net.imglib2.Cursor;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.util.Util;
 
 import org.scijava.ItemIO;
 import org.scijava.ItemVisibility;
@@ -37,7 +35,7 @@ import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
 
-public class CSBDeepCommand< T extends RealType< T > > {
+public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer {
 
 	@Parameter( visibility = ItemVisibility.MESSAGE )
 	protected String header;
@@ -57,23 +55,6 @@ public class CSBDeepCommand< T extends RealType< T > > {
 	@Parameter( type = ItemIO.OUTPUT )
 	protected Dataset outputImage;
 
-	@Parameter( visibility = ItemVisibility.MESSAGE )
-	protected String normtext = "Normalization";
-//    @Parameter(label = "Normalize image")
-	protected boolean normalizeInput = true;
-	@Parameter
-	protected float percentileBottom = 0.1f;
-	@Parameter
-	protected float percentileTop = 0.9f;
-	@Parameter
-	protected float min = 0;
-	@Parameter
-	protected float max = 100;
-	@Parameter( label = "Clamp normalization" )
-	protected boolean clamp = true;
-
-	protected float percentileBottomVal, percentileTopVal;
-
 	protected String modelfileUrl;
 	protected String modelName;
 	protected String modelfileName;
@@ -87,6 +68,8 @@ public class CSBDeepCommand< T extends RealType< T > > {
 	protected DatasetTensorBridge bridge;
 	protected boolean hasSavedModel = true;
 	protected boolean processedDataset = false;
+	
+	private DatasetConverter datasetConverter = new DefaultDatasetConverter();
 
 	// Same as
 	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
@@ -225,17 +208,12 @@ public class CSBDeepCommand< T extends RealType< T > > {
 
 	private void _run() {
 
-		if ( normalizeInput ) {
-			final float[] ps =
-					percentiles( input, new float[] { percentileBottom, percentileTop } );
-			percentileBottomVal = ps[ 0 ];
-			percentileTopVal = ps[ 1 ];
-			testNormalization();
-		}
+		preprocessing(input);
+		testNormalization(input, uiService);
 
 		try (
-				final Tensor image = arrayToTensor( datasetToArray( input ) );) {
-			outputImage = executeGraph( getGraph(), image );
+				final Tensor image = datasetConverter.datasetToTensor(input, bridge, this);) {
+			outputImage = datasetConverter.tensorToDataset(executeGraph( getGraph(), image ), bridge);
 			if ( outputImage != null ) {
 				outputImage.setName( "CSBDeepened_" + input.getName() );
 				uiService.show( outputImage );
@@ -246,35 +224,11 @@ public class CSBDeepCommand< T extends RealType< T > > {
 
 	}
 
-	private void testNormalization() {
-		final Dataset dcopy = ( Dataset ) input.copy();
-		final Cursor< RealType< ? > > cursor = dcopy.cursor();
-		System.out.println( "percentiles: " + percentileBottomVal + " -> " + percentileTopVal );
-		final float factor = ( max - min ) / ( percentileTopVal - percentileBottomVal );
-		System.out.println( "factor: " + factor );
-		if ( clamp ) {
-			while ( cursor.hasNext() ) {
-				final float val = cursor.next().getRealFloat();
-				cursor.get().setReal(
-						Math.max(
-								min,
-								Math.min( max, ( val - percentileBottomVal ) * factor + min ) ) );
-			}
-		} else {
-			while ( cursor.hasNext() ) {
-				final float val = cursor.next().getRealFloat();
-				cursor.get().setReal( Math.max( 0, ( val - percentileBottomVal ) * factor + min ) );
-			}
-		}
-		dcopy.setName( "normalized_" + input.getName() );
-		uiService.show( dcopy );
-	}
-
 	/*
 	 * runs graph on input tensor
 	 * converts result tensor to dataset
 	 */
-	private Dataset executeGraph( final Graph g, final Tensor image ) {
+	private Tensor executeGraph( final Graph g, final Tensor image ) {
 
 		System.out.println( "executeInceptionGraph" );
 
@@ -324,42 +278,7 @@ public class CSBDeepCommand< T extends RealType< T > > {
 					return null;
 				}
 
-				/*
-				 * create 5D array from output tensor, unused dimensions will
-				 * have size 1
-				 */
-				final float[][][][][] outputarr = bridge.createTFArray5D( output_t );
-
-				for ( int i = 0; i < output_t.numDimensions(); i++ ) {
-					System.out.println( "output dim " + i + ": " + output_t.shape()[ i ] );
-				}
-
-				if ( output_t.numDimensions() == bridge.getInitialInputTensorShape().numDimensions() - 1 ) {
-					//model reduces dim by 1
-					//assume z gets reduced -> move it to front and ignore first dimension
-					/*
-					 * model reduces dim by 1
-					 * assume z gets reduced -> move it to front and ignore
-					 * first dimension
-					 */
-					System.out.println( "model reduces dimension, z dimension reduction assumed" );
-					bridge.removeZFromMapping();
-				}
-
-				// .. :-/
-				if ( output_t.numDimensions() == 5 ) {
-					output_t.copyTo( outputarr );
-				} else {
-					if ( output_t.numDimensions() == 4 ) {
-						output_t.copyTo( outputarr[ 0 ] );
-					} else {
-						if ( output_t.numDimensions() == 3 ) {
-							output_t.copyTo( outputarr[ 0 ][ 0 ] );
-						}
-					}
-				}
-
-				return arrayToDataset( outputarr, output_t.shape() );
+				return output_t;
 			}
 			return null;
 
@@ -368,126 +287,6 @@ public class CSBDeepCommand< T extends RealType< T > > {
 			e.printStackTrace();
 		}
 		return null;
-	}
-
-	protected static float[] percentiles( final Dataset d, final float[] percentiles ) {
-		final Cursor< RealType< ? > > cursor = d.cursor();
-		int items = 1;
-		int i = 0;
-		for ( ; i < d.numDimensions(); i++ ) {
-			items *= d.dimension( i );
-		}
-		final float[] values = new float[ items ];
-		i = 0;
-		while ( cursor.hasNext() ) {
-			cursor.fwd();
-			values[ i ] = cursor.get().getRealFloat();
-			i++;
-		}
-
-		Util.quicksort( values );
-
-		final float[] res = new float[ percentiles.length ];
-		for ( i = 0; i < percentiles.length; i++ ) {
-			res[ i ] = values[ Math.min(
-					values.length - 1,
-					Math.max( 0, Math.round( ( values.length - 1 ) * percentiles[ i ] ) ) ) ];
-		}
-
-		return res;
-	}
-
-	protected float[][][][][] datasetToArray( final Dataset d ) {
-
-		final float[][][][][] inputarr = bridge.createTFArray5D();
-
-		final int[] lookup = new int[ 5 ];
-		for ( int i = 0; i < lookup.length; i++ ) {
-			lookup[ i ] = bridge.getDatasetDimIndexByTFIndex( i );
-		}
-		/*
-		 * create 5D array from dataset (unused dimensions get size 1)
-		 */
-
-		//copy input data to array
-
-		final Cursor< RealType< ? > > cursor = d.localizingCursor();
-		if ( normalizeInput ) {
-			final float factor = ( max - min ) / ( percentileTopVal - percentileBottomVal );
-			if ( clamp ) {
-				while ( cursor.hasNext() ) {
-					final float val = cursor.next().getRealFloat();
-					final int[] pos = { 0, 0, 0, 0, 0 };
-					for ( int i = 0; i < pos.length; i++ ) {
-						if ( lookup[ i ] >= 0 ) {
-							pos[ i ] = cursor.getIntPosition( lookup[ i ] );
-						}
-					}
-					inputarr[ pos[ 0 ] ][ pos[ 1 ] ][ pos[ 2 ] ][ pos[ 3 ] ][ pos[ 4 ] ] =
-							Math.max(
-									min,
-									Math.min( max, ( val - percentileBottomVal ) * factor + min ) );
-
-				}
-			} else {
-				while ( cursor.hasNext() ) {
-					final float val = cursor.next().getRealFloat();
-					final int[] pos = { 0, 0, 0, 0, 0 };
-					for ( int i = 0; i < pos.length; i++ ) {
-						if ( lookup[ i ] >= 0 ) {
-							pos[ i ] = cursor.getIntPosition( lookup[ i ] );
-						}
-					}
-					inputarr[ pos[ 0 ] ][ pos[ 1 ] ][ pos[ 2 ] ][ pos[ 3 ] ][ pos[ 4 ] ] =
-							Math.max( 0, ( val - percentileBottomVal ) * factor + min );
-
-				}
-			}
-		} else {
-			while ( cursor.hasNext() ) {
-				final float val = cursor.next().getRealFloat();
-				final int[] pos = { 0, 0, 0, 0, 0 };
-				for ( int i = 0; i < pos.length; i++ ) {
-					if ( lookup[ i ] >= 0 ) {
-						pos[ i ] = cursor.getIntPosition( lookup[ i ] );
-					}
-				}
-				inputarr[ pos[ 0 ] ][ pos[ 1 ] ][ pos[ 2 ] ][ pos[ 3 ] ][ pos[ 4 ] ] = val;
-			}
-		}
-
-		return inputarr;
-	}
-
-	protected Tensor arrayToTensor( final float[][][][][] array ) {
-		if ( bridge.getInitialInputTensorShape().numDimensions() == 4 ) { return Tensor.create(
-				array[ 0 ] ); }
-		return Tensor.create( array );
-	}
-
-	protected Dataset arrayToDataset( final float[][][][][] outputarr, final long[] shape ) {
-
-		final Dataset img_out = bridge.createDatasetFromTFDims( shape );
-
-		//write ouput dataset and undo normalization
-
-		final Cursor< RealType< ? > > cursor = img_out.localizingCursor();
-		while ( cursor.hasNext() ) {
-			final int[] pos = { 0, 0, 0, 0, 0 };
-			final RealType< ? > val = cursor.next();
-			for ( int i = 0; i < pos.length; i++ ) {
-				final int imgIndex = bridge.getDatasetDimIndexByTFIndex( i );
-				if ( imgIndex >= 0 ) {
-					pos[ i ] = cursor.getIntPosition( imgIndex );
-				}
-			}
-//			System.out.println("pos " + pos[0] + " " + pos[1] + " " + pos[2] + " " + pos[3] + " " + pos[4]);
-			val.setReal( outputarr[ pos[ 0 ] ][ pos[ 1 ] ][ pos[ 2 ] ][ pos[ 3 ] ][ pos[ 4 ] ] );
-
-		}
-
-		return img_out;
-
 	}
 
 	public void showError( final String errorMsg ) {

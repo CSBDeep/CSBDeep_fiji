@@ -6,7 +6,7 @@
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
 
-package mpicbg.csbd;
+package mpicbg.csbd.net;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -43,10 +43,13 @@ import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
 
+import mpicbg.csbd.DatasetTensorBridge;
+import mpicbg.csbd.ui.MappingDialog;
+
 /**
  */
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Any network", headless = true )
-public class CSBDeep< T extends RealType< T > > implements Command, Cancelable {
+public class AnyNetwork< T extends RealType< T > > implements Command, Cancelable {
 
 	@Parameter( visibility = ItemVisibility.MESSAGE )
 	private final String header = "This command removes noise from your images.";
@@ -118,7 +121,7 @@ public class CSBDeep< T extends RealType< T > > implements Command, Cancelable {
 	// API.
 	private static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY = "serving_default";
 
-	public CSBDeep() {
+	public AnyNetwork() {
 		/*
 		 * a failed attempt to get GPU support
 		 */
@@ -584,7 +587,7 @@ public class CSBDeep< T extends RealType< T > > implements Command, Cancelable {
 			ij.ui().show( dataset );
 
 			// invoke the plugin
-			ij.command().run( CSBDeep.class, true );
+			ij.command().run( AnyNetwork.class, true );
 		}
 
 	}

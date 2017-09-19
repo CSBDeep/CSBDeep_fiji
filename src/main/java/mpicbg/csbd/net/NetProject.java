@@ -6,7 +6,7 @@
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
 
-package mpicbg.csbd;
+package mpicbg.csbd.net;
 
 import java.io.File;
 
@@ -18,23 +18,25 @@ import org.scijava.Cancelable;
 import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
 
+import mpicbg.csbd.CSBDeepCommand;
+
 /**
  */
-@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Tribolium", headless = true )
-public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
+@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Project", headless = true )
+public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T >
 		implements
 		Command,
 		Cancelable {
 
-	public NetTribolium() {
+	public NetProject() {
 
-		modelfileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_tribolium.zip";
-		modelName = "net_tribolium";
-		modelfileName = "model_resunet3_2_5_32.pb";
+		modelfileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_project.zip";
+		modelName = "net_project";
+		modelfileName = "model_pro_avg.pb";
 		inputNodeName = "input";
 		outputNodeName = "output";
 
-		header = "This is the tribolium network command.";
+		header = "This is the projection network command.";
 
 	}
 
@@ -55,7 +57,7 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 			ij.ui().show( dataset );
 
 			// invoke the plugin
-			ij.command().run( NetTribolium.class, true );
+			ij.command().run( NetProject.class, true );
 		}
 
 	}
@@ -75,13 +77,6 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 
 	@Override
 	public void run() {
-
-		final int[] mapping = { DatasetTensorBridge.T,
-								DatasetTensorBridge.C,
-								DatasetTensorBridge.Y,
-								DatasetTensorBridge.X,
-								DatasetTensorBridge.Z };
-		super.runWithMapping( mapping );
-
+		super.run();
 	}
 }

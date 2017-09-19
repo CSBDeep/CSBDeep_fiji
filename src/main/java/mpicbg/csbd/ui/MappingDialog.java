@@ -1,4 +1,4 @@
-package mpicbg.csbd;
+package mpicbg.csbd.ui;
 
 import java.awt.GridLayout;
 import java.util.ArrayList;
@@ -13,6 +13,8 @@ import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
 import org.tensorflow.framework.SignatureDef;
+
+import mpicbg.csbd.DatasetTensorBridge;
 
 public class MappingDialog {
 

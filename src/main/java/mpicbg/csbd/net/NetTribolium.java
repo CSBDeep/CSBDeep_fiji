@@ -6,7 +6,7 @@
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
 
-package mpicbg.csbd;
+package mpicbg.csbd.net;
 
 import java.io.File;
 
@@ -18,23 +18,26 @@ import org.scijava.Cancelable;
 import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
 
+import mpicbg.csbd.CSBDeepCommand;
+import mpicbg.csbd.DatasetTensorBridge;
+
 /**
  */
-@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Tubulin", headless = true )
-public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
+@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Tribolium", headless = true )
+public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 		implements
 		Command,
 		Cancelable {
 
-	public NetTubulin() {
+	public NetTribolium() {
 
-		modelfileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_tubulin.zip";
-		modelName = "net_tubulin";
-		modelfileName = "model_resunet_2_7_32.pb";
-		inputNodeName = "input_1";
+		modelfileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_tribolium.zip";
+		modelName = "net_tribolium";
+		modelfileName = "model_resunet3_2_5_32.pb";
+		inputNodeName = "input";
 		outputNodeName = "output";
 
-		header = "This is the tubulin network command.";
+		header = "This is the tribolium network command.";
 
 	}
 
@@ -55,7 +58,7 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 			ij.ui().show( dataset );
 
 			// invoke the plugin
-			ij.command().run( NetTubulin.class, true );
+			ij.command().run( NetTribolium.class, true );
 		}
 
 	}
@@ -75,7 +78,13 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 
 	@Override
 	public void run() {
-		super.run();
+
+		final int[] mapping = { DatasetTensorBridge.T,
+								DatasetTensorBridge.C,
+								DatasetTensorBridge.Y,
+								DatasetTensorBridge.X,
+								DatasetTensorBridge.Z };
+		super.runWithMapping( mapping );
 
 	}
 }

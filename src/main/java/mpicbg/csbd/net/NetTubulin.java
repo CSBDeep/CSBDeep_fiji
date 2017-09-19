@@ -6,7 +6,7 @@
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
 
-package mpicbg.csbd;
+package mpicbg.csbd.net;
 
 import java.io.File;
 
@@ -18,23 +18,25 @@ import org.scijava.Cancelable;
 import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
 
+import mpicbg.csbd.CSBDeepCommand;
+
 /**
  */
-@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Project", headless = true )
-public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T >
+@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Tubulin", headless = true )
+public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 		implements
 		Command,
 		Cancelable {
 
-	public NetProject() {
+	public NetTubulin() {
 
-		modelfileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_project.zip";
-		modelName = "net_project";
-		modelfileName = "model_pro_avg.pb";
-		inputNodeName = "input";
+		modelfileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_tubulin.zip";
+		modelName = "net_tubulin";
+		modelfileName = "model_resunet_2_7_32.pb";
+		inputNodeName = "input_1";
 		outputNodeName = "output";
 
-		header = "This is the projection network command.";
+		header = "This is the tubulin network command.";
 
 	}
 
@@ -55,7 +57,7 @@ public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T >
 			ij.ui().show( dataset );
 
 			// invoke the plugin
-			ij.command().run( NetProject.class, true );
+			ij.command().run( NetTubulin.class, true );
 		}
 
 	}
@@ -76,5 +78,6 @@ public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T >
 	@Override
 	public void run() {
 		super.run();
+
 	}
 }
