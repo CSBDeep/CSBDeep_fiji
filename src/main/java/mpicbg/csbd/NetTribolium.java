@@ -21,18 +21,21 @@ import org.scijava.plugin.Plugin;
 /**
  */
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Tribolium", headless = true )
-public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T > implements Command, Cancelable {
+public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
+		implements
+		Command,
+		Cancelable {
 
 	public NetTribolium() {
-		
+
 		modelfileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_tribolium.zip";
 		modelName = "net_tribolium";
 		modelfileName = "model_resunet3_2_5_32.pb";
 		inputNodeName = "input";
 		outputNodeName = "output";
-		
+
 		header = "This is the tribolium network command.";
-		
+
 	}
 
 	public static void main( final String... args ) throws Exception {
@@ -63,8 +66,7 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 	}
 
 	@Override
-	public void cancel( String reason ) {
-	}
+	public void cancel( final String reason ) {}
 
 	@Override
 	public String getCancelReason() {
@@ -73,13 +75,13 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 
 	@Override
 	public void run() {
-		
-		int[] mapping = {DatasetTensorBridge.T,
-		                 DatasetTensorBridge.C,
-		                 DatasetTensorBridge.Y,
-		                 DatasetTensorBridge.X,
-		                 DatasetTensorBridge.Z};
+
+		final int[] mapping = { DatasetTensorBridge.T,
+								DatasetTensorBridge.C,
+								DatasetTensorBridge.Y,
+								DatasetTensorBridge.X,
+								DatasetTensorBridge.Z };
 		super.runWithMapping( mapping );
-		
+
 	}
 }

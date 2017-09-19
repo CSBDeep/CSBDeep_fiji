@@ -21,18 +21,21 @@ import org.scijava.plugin.Plugin;
 /**
  */
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Project", headless = true )
-public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T > implements Command, Cancelable {
+public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T >
+		implements
+		Command,
+		Cancelable {
 
 	public NetProject() {
-		
+
 		modelfileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_project.zip";
 		modelName = "net_project";
 		modelfileName = "model_pro_avg.pb";
 		inputNodeName = "input";
 		outputNodeName = "output";
-		
+
 		header = "This is the projection network command.";
-		
+
 	}
 
 	public static void main( final String... args ) throws Exception {
@@ -63,8 +66,7 @@ public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T > i
 	}
 
 	@Override
-	public void cancel( String reason ) {		
-	}
+	public void cancel( final String reason ) {}
 
 	@Override
 	public String getCancelReason() {

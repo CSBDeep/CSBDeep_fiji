@@ -47,7 +47,7 @@ public class CSBDeepCommand< T extends RealType< T > > {
 
 	@Parameter
 	protected TensorFlowService tensorFlowService;
-	
+
 	@Parameter
 	protected LogService log;
 
@@ -73,7 +73,7 @@ public class CSBDeepCommand< T extends RealType< T > > {
 	protected boolean clamp = true;
 
 	protected float percentileBottomVal, percentileTopVal;
-	
+
 	protected String modelfileUrl;
 	protected String modelName;
 	protected String modelfileName;
@@ -87,7 +87,7 @@ public class CSBDeepCommand< T extends RealType< T > > {
 	protected DatasetTensorBridge bridge;
 	protected boolean hasSavedModel = true;
 	protected boolean processedDataset = false;
-	
+
 	// Same as
 	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
 	// in Python. Perhaps this should be an exported constant in TensorFlow's Java
@@ -134,7 +134,6 @@ public class CSBDeepCommand< T extends RealType< T > > {
 		}
 
 	}
-	
 
 	/*
 	 * model can be imported via graphdef or savedmodel
@@ -187,19 +186,19 @@ public class CSBDeepCommand< T extends RealType< T > > {
 				}
 
 				loadModelInputShape( inputNodeName );
-				
+
 			}
 		} catch ( MalformedURLException | URISyntaxException exc ) {
 			exc.printStackTrace();
 		}
 	}
-	
+
 	public void run() {
-		
+
 		if ( input == null ) { return; }
 		modelChanged();
 
-		if ( bridge != null) {
+		if ( bridge != null ) {
 			if ( bridge.getInitialInputTensorShape() != null ) {
 				if ( !bridge.isMappingInitialized() ) {
 					bridge.setMappingDefaults();
@@ -208,16 +207,16 @@ public class CSBDeepCommand< T extends RealType< T > > {
 		}
 		_run();
 	}
-	
-	public void runWithMapping(int[] mapping){
-		
+
+	public void runWithMapping( final int[] mapping ) {
+
 		if ( input == null ) { return; }
 		modelChanged();
 
-		if ( bridge != null) {
+		if ( bridge != null ) {
 			if ( bridge.getInitialInputTensorShape() != null ) {
-				for(int i = 0; i < mapping.length; i++){
-					bridge.setMapping( i, mapping[i] );
+				for ( int i = 0; i < mapping.length; i++ ) {
+					bridge.setMapping( i, mapping[ i ] );
 				}
 			}
 		}
@@ -370,7 +369,7 @@ public class CSBDeepCommand< T extends RealType< T > > {
 		}
 		return null;
 	}
-	
+
 	protected static float[] percentiles( final Dataset d, final float[] percentiles ) {
 		final Cursor< RealType< ? > > cursor = d.cursor();
 		int items = 1;

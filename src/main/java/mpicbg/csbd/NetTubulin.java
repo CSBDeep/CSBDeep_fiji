@@ -21,18 +21,21 @@ import org.scijava.plugin.Plugin;
 /**
  */
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Tubulin", headless = true )
-public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T > implements Command, Cancelable {
+public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
+		implements
+		Command,
+		Cancelable {
 
 	public NetTubulin() {
-		
+
 		modelfileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_tubulin.zip";
 		modelName = "net_tubulin";
 		modelfileName = "model_resunet_2_7_32.pb";
 		inputNodeName = "input_1";
 		outputNodeName = "output";
-		
+
 		header = "This is the tubulin network command.";
-		
+
 	}
 
 	public static void main( final String... args ) throws Exception {
@@ -63,8 +66,7 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T > i
 	}
 
 	@Override
-	public void cancel( String reason ) {		
-	}
+	public void cancel( final String reason ) {}
 
 	@Override
 	public String getCancelReason() {
@@ -74,6 +76,6 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T > i
 	@Override
 	public void run() {
 		super.run();
-		
+
 	}
 }
