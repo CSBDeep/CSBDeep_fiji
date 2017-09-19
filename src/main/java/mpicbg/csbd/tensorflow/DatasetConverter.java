@@ -1,8 +1,10 @@
-package mpicbg.csbd;
+package mpicbg.csbd.tensorflow;
 
 import net.imagej.Dataset;
 
 import org.tensorflow.Tensor;
+
+import mpicbg.csbd.normalize.Normalizer;
 
 public interface DatasetConverter {
 

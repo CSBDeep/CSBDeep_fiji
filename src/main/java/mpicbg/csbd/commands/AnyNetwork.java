@@ -6,7 +6,7 @@
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
 
-package mpicbg.csbd.net;
+package mpicbg.csbd.commands;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -43,7 +43,7 @@ import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
 
-import mpicbg.csbd.DatasetTensorBridge;
+import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 import mpicbg.csbd.ui.MappingDialog;
 
 /**
@@ -74,7 +74,7 @@ public class AnyNetwork< T extends RealType< T > > implements Command, Cancelabl
 	private TensorFlowService tensorFlowService;
 
 	@Parameter
-	private mpicbg.csbd.TensorFlowService tensorFlowService2;
+	private mpicbg.csbd.tensorflow.TensorFlowService tensorFlowService2;
 
 	@Parameter
 	private LogService log;

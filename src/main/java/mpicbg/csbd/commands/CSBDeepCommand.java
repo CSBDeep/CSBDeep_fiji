@@ -6,7 +6,7 @@
  * http://creativecommons.org/publicdomain/zero/1.0/
  */
 
-package mpicbg.csbd;
+package mpicbg.csbd.commands;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
@@ -29,11 +29,16 @@ import org.scijava.ui.UIService;
 import org.tensorflow.Graph;
 import org.tensorflow.Operation;
 import org.tensorflow.SavedModelBundle;
-import org.tensorflow.Session;
 import org.tensorflow.Tensor;
 import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
+
+import mpicbg.csbd.normalize.PercentileNormalizer;
+import mpicbg.csbd.tensorflow.DatasetConverter;
+import mpicbg.csbd.tensorflow.DatasetTensorBridge;
+import mpicbg.csbd.tensorflow.DefaultDatasetConverter;
+import mpicbg.csbd.tensorflow.TensorFlowRunner;
 
 public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer {
 
@@ -65,6 +70,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	protected Graph graph;
 	protected SavedModelBundle model;
+	protected TensorFlowRunner tfRunner;
 	protected DatasetTensorBridge bridge;
 	protected boolean hasSavedModel = true;
 	protected boolean processedDataset = false;
@@ -213,7 +219,9 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 		try (
 				final Tensor image = datasetConverter.datasetToTensor(input, bridge, this);) {
-			outputImage = datasetConverter.tensorToDataset(executeGraph( getGraph(), image ), bridge);
+			outputImage = datasetConverter.tensorToDataset(
+					TensorFlowRunner.executeGraph( getGraph(), image, inputNodeName, outputNodeName ), 
+					bridge);
 			if ( outputImage != null ) {
 				outputImage.setName( "CSBDeepened_" + input.getName() );
 				uiService.show( outputImage );
@@ -224,70 +232,6 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	}
 
-	/*
-	 * runs graph on input tensor
-	 * converts result tensor to dataset
-	 */
-	private Tensor executeGraph( final Graph g, final Tensor image ) {
-
-		System.out.println( "executeInceptionGraph" );
-
-		try (
-				Session s = new Session( g );) {
-
-//			int size = s.runner().feed(inputNodeName, image).fetch(outputNodeName).run().size();
-//			System.out.println("output array size: " + size);
-
-			Tensor output_t = null;
-
-			/*
-			 * check if keras_learning_phase node has to be set
-			 */
-			if ( graph.operation( "dropout_1/keras_learning_phase" ) != null ) {
-				final Tensor learning_phase = Tensor.create( false );
-				try {
-					/*
-					 * execute graph
-					 */
-					final Tensor output_t2 = s.runner().feed( inputNodeName, image ).feed(
-							"dropout_1/keras_learning_phase",
-							learning_phase ).fetch( outputNodeName ).run().get( 0 );
-					output_t = output_t2;
-				} catch ( final Exception e ) {
-					e.printStackTrace();
-				}
-			} else {
-				try {
-					/*
-					 * execute graph
-					 */
-					final Tensor output_t2 = s.runner().feed( inputNodeName, image ).fetch(
-							outputNodeName ).run().get( 0 );
-					output_t = output_t2;
-				} catch ( final Exception e ) {
-					e.printStackTrace();
-				}
-			}
-
-			if ( output_t != null ) {
-				System.out.println(
-						"Output tensor with " + output_t.numDimensions() + " dimensions" );
-
-				if ( output_t.numDimensions() == 0 ) {
-					showError( "Output tensor has no dimensions" );
-					return null;
-				}
-
-				return output_t;
-			}
-			return null;
-
-		} catch ( final Exception e ) {
-			System.out.println( "could not create output dataset" );
-			e.printStackTrace();
-		}
-		return null;
-	}
 
 	public void showError( final String errorMsg ) {
 		JOptionPane.showMessageDialog(

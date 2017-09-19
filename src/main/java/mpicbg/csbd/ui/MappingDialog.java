@@ -14,7 +14,7 @@ import javax.swing.SwingConstants;
 
 import org.tensorflow.framework.SignatureDef;
 
-import mpicbg.csbd.DatasetTensorBridge;
+import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 
 public class MappingDialog {
 

@@ -1,4 +1,4 @@
-package mpicbg.csbd;
+package mpicbg.csbd.tensorflow;
 
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;

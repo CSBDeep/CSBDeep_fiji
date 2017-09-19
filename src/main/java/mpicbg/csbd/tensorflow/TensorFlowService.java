@@ -33,7 +33,7 @@
  * #L%
  */
 
-package mpicbg.csbd;
+package mpicbg.csbd.tensorflow;
 
 import java.io.File;
 import java.io.IOException;

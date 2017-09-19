@@ -1,4 +1,4 @@
-package mpicbg.csbd;
+package mpicbg.csbd.normalize;
 
 import net.imagej.Dataset;
 
