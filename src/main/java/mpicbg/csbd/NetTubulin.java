@@ -93,7 +93,7 @@ public class NetTubulin< T extends RealType< T > > implements Command, Cancelabl
 	@Parameter
 	private float max = 100;
 	@Parameter( label = "Clamp normalization" )
-	private final boolean clamp = true;
+	private boolean clamp = true;
 
 	private float percentileBottomVal, percentileTopVal;
 
