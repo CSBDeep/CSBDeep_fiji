@@ -1,9 +1,9 @@
 /*-
- * 
- * 
- * This code is adapted from imagej-tensorflow and will be deleted as soon as 
+ *
+ *
+ * This code is adapted from imagej-tensorflow and will be deleted as soon as
  * we are able to use image-tensorflow
- * 
+ *
  * #%L
  * ImageJ/TensorFlow integration.
  * %%
@@ -12,13 +12,13 @@
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -54,32 +54,31 @@ import org.tensorflow.Graph;
  * @author Curtis Rueden
  * @author Deborah Schmidt
  */
-@Plugin(type = Service.class)
+@Plugin( type = Service.class )
 public class TensorFlowService extends AbstractService implements ImageJService
 
 {
 
 	/** Graphs which are already cached in memory. */
-	private final Map<String, Graph> graphs = new HashMap<>();
+	private final Map< String, Graph > graphs = new HashMap<>();
 
 	// -- TensorFlowService methods --
 
-	public Graph loadGraph(final File graph) throws IOException
-	{
+	public Graph loadGraph( final File graph ) throws IOException {
 		final String key = graph.getName();
 
 		// If the graph is already cached in memory, return it.
-		if (graphs.containsKey(key)) return graphs.get(key);
+		if ( graphs.containsKey( key ) ) return graphs.get( key );
 
 		// Read the serialized graph.
-		final byte[] graphDef = Files.readAllBytes(Paths.get(graph.getAbsolutePath()));
+		final byte[] graphDef = Files.readAllBytes( Paths.get( graph.getAbsolutePath() ) );
 
 		// Convert to a TensorFlow Graph object.
 		final Graph _graph = new Graph();
-		_graph.importGraphDef(graphDef);
+		_graph.importGraphDef( graphDef );
 
 		// Cache the result for performance next time.
-		graphs.put(key, _graph);
+		graphs.put( key, _graph );
 
 		return _graph;
 	}
@@ -88,7 +87,7 @@ public class TensorFlowService extends AbstractService implements ImageJService
 
 	@Override
 	public void initialize() {
-		System.loadLibrary("tensorflow_jni");
+		System.loadLibrary( "tensorflow_jni" );
 	}
 
 	// -- Disposable methods --
@@ -97,7 +96,7 @@ public class TensorFlowService extends AbstractService implements ImageJService
 	public void dispose() {
 
 		// Dispose graphs.
-		for (final Graph graph : graphs.values()) {
+		for ( final Graph graph : graphs.values() ) {
 			graph.close();
 		}
 		graphs.clear();
