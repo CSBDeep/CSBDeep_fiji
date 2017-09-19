@@ -11,9 +11,9 @@ import mpicbg.csbd.normalize.Normalizer;
 public class DefaultDatasetConverter implements DatasetConverter {
 
 	@Override
-	public Dataset tensorToDataset( Tensor output_t, DatasetTensorBridge bridge ) {
-		
-		if(output_t != null){
+	public Dataset tensorToDataset( final Tensor output_t, final DatasetTensorBridge bridge ) {
+
+		if ( output_t != null ) {
 			/*
 			 * create 5D array from output tensor, unused dimensions will
 			 * have size 1
@@ -50,13 +50,16 @@ public class DefaultDatasetConverter implements DatasetConverter {
 			}
 
 			return arrayToDataset( outputarr, output_t.shape(), bridge );
-	
+
 		}
-	
+
 		return null;
 	}
-	
-	protected Dataset arrayToDataset( final float[][][][][] outputarr, final long[] shape, DatasetTensorBridge bridge ) {
+
+	protected Dataset arrayToDataset(
+			final float[][][][][] outputarr,
+			final long[] shape,
+			final DatasetTensorBridge bridge ) {
 
 		final Dataset img_out = bridge.createDatasetFromTFDims( shape );
 
@@ -82,12 +85,17 @@ public class DefaultDatasetConverter implements DatasetConverter {
 	}
 
 	@Override
-	public Tensor datasetToTensor( Dataset image, DatasetTensorBridge bridge, Normalizer normalizer ) {
+	public Tensor datasetToTensor(
+			final Dataset image,
+			final DatasetTensorBridge bridge,
+			final Normalizer normalizer ) {
 		return arrayToTensor( datasetToArray( image, bridge, normalizer ), bridge );
 	}
-	
 
-	protected float[][][][][] datasetToArray( final Dataset d, DatasetTensorBridge bridge, Normalizer normalizer ) {
+	protected float[][][][][] datasetToArray(
+			final Dataset d,
+			final DatasetTensorBridge bridge,
+			final Normalizer normalizer ) {
 
 		final float[][][][][] inputarr = bridge.createTFArray5D();
 
@@ -103,7 +111,7 @@ public class DefaultDatasetConverter implements DatasetConverter {
 
 		final Cursor< RealType< ? > > cursor = d.localizingCursor();
 		if ( normalizer.isActive() ) {
-			
+
 			while ( cursor.hasNext() ) {
 				final float val = cursor.next().getRealFloat();
 				final int[] pos = { 0, 0, 0, 0, 0 };
@@ -112,7 +120,8 @@ public class DefaultDatasetConverter implements DatasetConverter {
 						pos[ i ] = cursor.getIntPosition( lookup[ i ] );
 					}
 				}
-				inputarr[ pos[ 0 ] ][ pos[ 1 ] ][ pos[ 2 ] ][ pos[ 3 ] ][ pos[ 4 ] ] = normalizer.normalize(val);
+				inputarr[ pos[ 0 ] ][ pos[ 1 ] ][ pos[ 2 ] ][ pos[ 3 ] ][ pos[ 4 ] ] =
+						normalizer.normalize( val );
 
 			}
 		} else {
@@ -131,11 +140,11 @@ public class DefaultDatasetConverter implements DatasetConverter {
 		return inputarr;
 	}
 
-	protected Tensor arrayToTensor( final float[][][][][] array, DatasetTensorBridge bridge ) {
+	protected Tensor
+			arrayToTensor( final float[][][][][] array, final DatasetTensorBridge bridge ) {
 		if ( bridge.getInitialInputTensorShape().numDimensions() == 4 ) { return Tensor.create(
 				array[ 0 ] ); }
 		return Tensor.create( array );
 	}
-
 
 }

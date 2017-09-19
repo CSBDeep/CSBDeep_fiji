@@ -27,7 +27,6 @@ import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.ui.UIService;
 import org.tensorflow.Graph;
-import org.tensorflow.Operation;
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
 import org.tensorflow.TensorFlowException;
@@ -70,12 +69,11 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	protected Graph graph;
 	protected SavedModelBundle model;
-	protected TensorFlowRunner tfRunner;
 	protected DatasetTensorBridge bridge;
 	protected boolean hasSavedModel = true;
 	protected boolean processedDataset = false;
-	
-	private DatasetConverter datasetConverter = new DefaultDatasetConverter();
+
+	private final DatasetConverter datasetConverter = new DefaultDatasetConverter();
 
 	// Same as
 	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
@@ -85,22 +83,6 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	public CSBDeepCommand() {
 		System.loadLibrary( "tensorflow_jni" );
-	}
-
-	protected boolean loadModelInputShape( final String inputName ) {
-
-//		System.out.println("loadModelInputShape");
-
-		if ( getGraph() != null ) {
-			final Operation input_op = getGraph().operation( inputName );
-			if ( input_op != null ) {
-				bridge.setInputTensorShape( input_op.output( 0 ).shape() );
-				bridge.setMappingDefaults();
-				return true;
-			}
-			System.out.println( "input node with name " + inputName + " not found" );
-		}
-		return false;
 	}
 
 	/*
@@ -174,7 +156,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 					}
 				}
 
-				loadModelInputShape( inputNodeName );
+				TensorFlowRunner.loadModelInputShape( getGraph(), inputNodeName, bridge );
 
 			}
 		} catch ( MalformedURLException | URISyntaxException exc ) {
@@ -214,14 +196,18 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	private void _run() {
 
-		preprocessing(input);
-		testNormalization(input, uiService);
+		prepareNormalization( input );
+		testNormalization( input, uiService );
 
 		try (
-				final Tensor image = datasetConverter.datasetToTensor(input, bridge, this);) {
+				final Tensor image = datasetConverter.datasetToTensor( input, bridge, this );) {
 			outputImage = datasetConverter.tensorToDataset(
-					TensorFlowRunner.executeGraph( getGraph(), image, inputNodeName, outputNodeName ), 
-					bridge);
+					TensorFlowRunner.executeGraph(
+							getGraph(),
+							image,
+							inputNodeName,
+							outputNodeName ),
+					bridge );
 			if ( outputImage != null ) {
 				outputImage.setName( "CSBDeepened_" + input.getName() );
 				uiService.show( outputImage );
@@ -231,7 +217,6 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 //		uiService.show(arrayToDataset(datasetToArray(input)));
 
 	}
-
 
 	public void showError( final String errorMsg ) {
 		JOptionPane.showMessageDialog(

@@ -83,13 +83,6 @@ public class TensorFlowService extends AbstractService implements ImageJService
 		return _graph;
 	}
 
-	// -- Service methods --
-
-	@Override
-	public void initialize() {
-		System.loadLibrary( "tensorflow_jni" );
-	}
-
 	// -- Disposable methods --
 
 	@Override

@@ -3,16 +3,40 @@ package mpicbg.csbd.tensorflow;
 import javax.swing.JOptionPane;
 
 import org.tensorflow.Graph;
+import org.tensorflow.Operation;
 import org.tensorflow.Session;
 import org.tensorflow.Tensor;
 
 public class TensorFlowRunner {
 
+	public static boolean loadModelInputShape(
+			final Graph graph,
+			final String inputName,
+			final DatasetTensorBridge bridge ) {
+
+//		System.out.println("loadModelInputShape");
+
+		if ( graph != null ) {
+			final Operation input_op = graph.operation( inputName );
+			if ( input_op != null ) {
+				bridge.setInputTensorShape( input_op.output( 0 ).shape() );
+				bridge.setMappingDefaults();
+				return true;
+			}
+			System.err.println( "input node with name " + inputName + " not found" );
+		}
+		return false;
+	}
+
 	/*
 	 * runs graph on input tensor
 	 * converts result tensor to dataset
 	 */
-	public static Tensor executeGraph( final Graph g, final Tensor image, String inputNodeName, String outputNodeName ) {
+	public static Tensor executeGraph(
+			final Graph g,
+			final Tensor image,
+			final String inputNodeName,
+			final String outputNodeName ) {
 
 		System.out.println( "executeInceptionGraph" );
 
@@ -72,7 +96,7 @@ public class TensorFlowRunner {
 		}
 		return null;
 	}
-	
+
 	public static void showError( final String errorMsg ) {
 		JOptionPane.showMessageDialog(
 				null,
@@ -81,6 +105,4 @@ public class TensorFlowRunner {
 				JOptionPane.ERROR_MESSAGE );
 	}
 
-	
 }
-

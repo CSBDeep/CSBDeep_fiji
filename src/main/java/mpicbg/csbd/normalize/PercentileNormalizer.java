@@ -10,7 +10,7 @@ import org.scijava.plugin.Parameter;
 import org.scijava.ui.UIService;
 
 public class PercentileNormalizer implements Normalizer {
-	
+
 	@Parameter( visibility = ItemVisibility.MESSAGE )
 	protected String normtext = "Normalization";
 //    @Parameter(label = "Normalize image")
@@ -27,44 +27,49 @@ public class PercentileNormalizer implements Normalizer {
 	protected boolean clamp = true;
 
 	protected float percentileBottomVal, percentileTopVal;
-	
+
 	protected float factor;
 
 	@Override
-	public void testNormalization(Dataset input, UIService uiService) {
-		final Dataset dcopy = ( Dataset ) input.copy();
-		final Cursor< RealType< ? > > cursor = dcopy.cursor();
-//		System.out.println( "percentiles: " + percentileBottomVal + " -> " + percentileTopVal );
-		factor = ( max - min ) / ( percentileTopVal - percentileBottomVal );
-		if ( clamp ) {
-			while ( cursor.hasNext() ) {
-				final float val = cursor.next().getRealFloat();
-				cursor.get().setReal(
-						Math.max(
-								min,
-								Math.min( max, ( val - percentileBottomVal ) * factor + min ) ) );
+	public void testNormalization( final Dataset input, final UIService uiService ) {
+		if ( normalizeInput ) {
+			final Dataset dcopy = ( Dataset ) input.copy();
+			final Cursor< RealType< ? > > cursor = dcopy.cursor();
+			//		System.out.println( "percentiles: " + percentileBottomVal + " -> " + percentileTopVal );
+			factor = ( max - min ) / ( percentileTopVal - percentileBottomVal );
+			if ( clamp ) {
+				while ( cursor.hasNext() ) {
+					final float val = cursor.next().getRealFloat();
+					cursor.get().setReal(
+							Math.max(
+									min,
+									Math.min(
+											max,
+											( val - percentileBottomVal ) * factor + min ) ) );
+				}
+			} else {
+				while ( cursor.hasNext() ) {
+					final float val = cursor.next().getRealFloat();
+					cursor.get().setReal(
+							Math.max( 0, ( val - percentileBottomVal ) * factor + min ) );
+				}
 			}
-		} else {
-			while ( cursor.hasNext() ) {
-				final float val = cursor.next().getRealFloat();
-				cursor.get().setReal( Math.max( 0, ( val - percentileBottomVal ) * factor + min ) );
-			}
+			dcopy.setName( "normalized_" + input.getName() );
+			uiService.show( dcopy );
 		}
-		dcopy.setName( "normalized_" + input.getName() );
-		uiService.show( dcopy );
 	}
 
 	@Override
-	public void preprocessing( Dataset input ) {
+	public void prepareNormalization( final Dataset input ) {
 		if ( normalizeInput ) {
 			final float[] ps =
 					percentiles( input, new float[] { percentileBottom, percentileTop } );
 			percentileBottomVal = ps[ 0 ];
 			percentileTopVal = ps[ 1 ];
 			factor = ( max - min ) / ( percentileTopVal - percentileBottomVal );
-		}		
+		}
 	}
-	
+
 	protected static float[] percentiles( final Dataset d, final float[] percentiles ) {
 		final Cursor< RealType< ? > > cursor = d.cursor();
 		int items = 1;
@@ -91,19 +96,17 @@ public class PercentileNormalizer implements Normalizer {
 
 		return res;
 	}
-	
+
 	@Override
-	public boolean isActive(){
+	public boolean isActive() {
 		return normalizeInput;
 	}
 
 	@Override
-	public float normalize( float val ) {
-		if(clamp){
-			return Math.max(
-					min,
-					Math.min( max, ( val - percentileBottomVal ) * factor + min ) );			
-		}
+	public float normalize( final float val ) {
+		if ( clamp ) { return Math.max(
+				min,
+				Math.min( max, ( val - percentileBottomVal ) * factor + min ) ); }
 		return Math.max( 0, ( val - percentileBottomVal ) * factor + min );
 	}
 
