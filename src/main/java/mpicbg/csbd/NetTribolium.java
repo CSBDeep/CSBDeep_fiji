@@ -83,17 +83,17 @@ public class NetTribolium< T extends RealType< T > > implements Command, Cancela
 	@Parameter( visibility = ItemVisibility.MESSAGE )
 	private final String normtext = "Normalization";
 //    @Parameter(label = "Normalize image")
-	private final boolean normalizeInput = true;
+	private boolean normalizeInput = true;
 	@Parameter
-	private final float percentileBottom = 0.1f;
+	private float percentileBottom = 0.1f;
 	@Parameter
-	private final float percentileTop = 0.9f;
+	private float percentileTop = 0.9f;
 	@Parameter
-	private final float min = 0;
+	private float min = 0;
 	@Parameter
-	private final float max = 100;
+	private float max = 100;
 	@Parameter( label = "Clamp normalization" )
-	private final boolean clamp = true;
+	private boolean clamp = true;
 
 	private float percentileBottomVal, percentileTopVal;
 
