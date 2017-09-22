@@ -59,9 +59,9 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	@Parameter( type = ItemIO.OUTPUT )
 	protected Dataset outputImage;
 
-	protected String modelfileUrl;
+	protected String modelFileUrl;
 	protected String modelName;
-	protected String modelfileName;
+	protected String graphFileName;
 	protected String inputNodeName;
 	protected String outputNodeName;
 
@@ -113,13 +113,18 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 //		System.out.println("loadGraph");
 
-		final HTTPLocation source = new HTTPLocation( modelfileUrl );
-		hasSavedModel = false;
+		final HTTPLocation source = new HTTPLocation( modelFileUrl );
+		hasSavedModel = true;
 		try {
-			graph = tensorFlowService.loadGraph( source, modelName, modelfileName );
+			model = tensorFlowService.loadModel( source, modelName, graphFileName );
 		} catch ( TensorFlowException | IOException e ) {
-			e.printStackTrace();
-			return false;
+			try {
+				graph = tensorFlowService.loadGraph( source, modelName, graphFileName );
+				hasSavedModel = false;
+			} catch ( final IOException e2 ) {
+				e2.printStackTrace();
+				return false;
+			}
 		}
 		return true;
 	}

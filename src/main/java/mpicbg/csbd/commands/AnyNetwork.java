@@ -60,9 +60,13 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
 	private Dataset input;
 
-	@Parameter( label = "Import model", callback = "modelChanged", initializer = "modelInitialized", persist = false )
-	private File modelfile;
-	private final String modelfileKey = "modelfile-anynetwork";
+	@Parameter( label = "Import model (.zip)", callback = "modelChanged", initializer = "modelInitialized", persist = false )
+	private File modelFile;
+	private final String modelFileKey = "modelfile-anynetwork";
+
+	@Parameter( label = "Graph file name (.pb)", callback = "modelChanged", initializer = "graphInitialized", persist = false )
+	protected String graphFileName = "";
+	private final String graphFileKey = "graphfile-anynetwork";
 
 	@Parameter( label = "Input node name", callback = "inputNodeNameChanged", initializer = "inputNodeNameChanged" )
 	private String inputNodeName = "input";
@@ -75,9 +79,6 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 
 	@Parameter
 	private TensorFlowService tensorFlowService;
-
-	@Parameter
-	private mpicbg.csbd.tensorflow.TensorFlowService tensorFlowService2;
 
 	@Parameter
 	private LogService log;
@@ -119,22 +120,23 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 
 //		System.out.println("loadGraph");
 
-		if ( modelfile == null ) {
+		if ( modelFile == null ) {
 			System.out.println( "Cannot load graph from null File" );
 			return false;
 		}
 
-		final FileLocation source = new FileLocation( modelfile );
+		final FileLocation source = new FileLocation( modelFile );
 		hasSavedModel = true;
 		try {
-			model = tensorFlowService.loadModel( source, modelfile.getName() );
+			model = tensorFlowService.loadModel( source, source.getName(), graphFileName );
 		} catch ( TensorFlowException | IOException e ) {
+			hasSavedModel = false;
 			try {
-				graph = tensorFlowService2.loadGraph( modelfile );
-//				graph = tensorFlowService.loadGraph(source, "", "");
-				hasSavedModel = false;
+				graph = tensorFlowService.loadGraph( source, source.getName(), graphFileName );
 			} catch ( final IOException e2 ) {
-				e2.printStackTrace();
+//				e2.printStackTrace();
+				System.err.println(
+						"Could not find graph file \"" + graphFileName + "\" in " + modelFile.getAbsolutePath() );
 				return false;
 			}
 		}
@@ -162,21 +164,29 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 
 	}
 
-	/** Executed whenever the {@link #modelfile} parameter is initialized. */
+	/** Executed whenever the {@link #modelFile} parameter is initialized. */
 	protected void modelInitialized() {
-		final String p_modelfile = prefService.get( modelfileKey, "" );
+		final String p_modelfile = prefService.get( modelFileKey, "" );
 		if ( p_modelfile != "" ) {
-			modelfile = new File( p_modelfile );
+			modelFile = new File( p_modelfile );
+			modelChanged();
 		}
-		modelChanged();
 	}
 
-	/** Executed whenever the {@link #modelfile} parameter changes. */
+	/** Executed whenever the {@link #modelFile} parameter is initialized. */
+	protected void graphInitialized() {
+		final String p_graphfile = prefService.get( graphFileKey, "" );
+		if ( p_graphfile != "" && modelFile != null ) {
+			modelChanged();
+		}
+	}
+
+	/** Executed whenever the {@link #modelFile} parameter changes. */
 	protected void modelChanged() {
 
 //		System.out.println("modelChanged");
 
-		if ( modelfile != null ) {
+		if ( modelFile != null ) {
 			savePreferences();
 		}
 
@@ -277,7 +287,8 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 	}
 
 	private void savePreferences() {
-		prefService.put( modelfileKey, modelfile.getAbsolutePath() );
+		prefService.put( modelFileKey, modelFile.getAbsolutePath() );
+		prefService.put( graphFileKey, graphFileName );
 
 	}
 

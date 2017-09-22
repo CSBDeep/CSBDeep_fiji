@@ -28,9 +28,9 @@ public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T >
 
 	public NetProject() {
 
-		modelfileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_project.zip";
+		modelFileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_project.zip";
 		modelName = "net_project";
-		modelfileName = "model_pro_avg.pb";
+		graphFileName = "model_pro_avg.pb";
 		inputNodeName = "input";
 		outputNodeName = "output";
 

@@ -30,9 +30,9 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 
 	public NetTribolium() {
 
-		modelfileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_tribolium.zip";
+		modelFileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_tribolium.zip";
 		modelName = "net_tribolium";
-		modelfileName = "model_resunet3_2_5_32.pb";
+		graphFileName = "model_resunet3_2_5_32.pb";
 		inputNodeName = "input";
 		outputNodeName = "output";
 
