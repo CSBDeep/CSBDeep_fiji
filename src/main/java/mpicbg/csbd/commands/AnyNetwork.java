@@ -48,6 +48,7 @@ import net.imagej.ops.OpService;
 import net.imagej.tensorflow.TensorFlowService;
 import net.imagej.tensorflow.Tensors;
 import net.imglib2.Cursor;
+import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
@@ -56,8 +57,10 @@ import net.imglib2.img.ImgFactory;
 import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Intervals;
 import net.imglib2.view.ArrangedView;
 import net.imglib2.view.CombinedView;
+import net.imglib2.view.ExtendedRandomAccessibleInterval;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.TiledView;
 import net.imglib2.view.Views;
@@ -117,7 +120,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 	private DatasetTensorBridge bridge;
 	private boolean hasSavedModel = true;
 	private boolean processedDataset = false;
-	private final DatasetConverter datasetConverter = new DefaultDatasetConverter();
+	private final DatasetConverter<T> datasetConverter = new DefaultDatasetConverter<>();
 
 	// Same as
 	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
@@ -327,120 +330,68 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 		}
 
 		// Calculate the blocksize to use
-		long blockwidthIdeal = largestSize / nTiles;
+		double blockwidthIdeal = largestSize / (double) nTiles;
 		long blockwidth = (long) (Math.ceil(blockwidthIdeal / 32.0) * 32); // TODO(benjamin) remove magic numbers
 		long[] blockSize = Arrays.copyOf(shape, im.numDimensions());
 		blockSize[largestDim] = blockwidth;
+
+		// Expand the image to fit the blocksize
+		im = expandDimToSize(im, largestDim, blockwidth * nTiles);
+		printDim("After expand", im);
 
 		// Put the padding per dimension in a array
 		long[] padding = new long[im.numDimensions()];
 		padding[largestDim] = 32; // TODO remove magic number
 
 		// Create the tiled view
-		TiledView<T> tiledView = new TiledView<>(im, blockSize);
+		TiledView<T> tiledView = new TiledView<>(im, blockSize, padding);
 		Cursor<RandomAccessibleInterval<T>> cursor = Views.iterable(tiledView).cursor();
-		
+
+		// Set padding to negative to remove it later
+		long[] negPadding = padding.clone();
+		negPadding[largestDim] = - padding[largestDim];
+
+		// Loop over the tiles and execute the prediction
 		List<RandomAccessibleInterval<FloatType>> results = new ArrayList<>();
 		while (cursor.hasNext()) {
 			RandomAccessibleInterval<T> tile = cursor.next();
-			//uiService.show(Views.permute(Views.permute(tile, 0, 1), 1, 2));
+			//uiService.show(tile);
 			RandomAccessibleInterval<FloatType> tileExecuted = executeGraphWithPadding(tile);
-			uiService.show(tileExecuted);
+			// Remove padding
+			tileExecuted = Views.zeroMin(Views.expandZero(tileExecuted, negPadding));
+			//uiService.show(tileExecuted);
 			results.add(tileExecuted);
 		}
 		// Arrange and combine the tiles again
-		long[] grid = new long[im.numDimensions()];
+		long[] grid = new long[results.get(0).numDimensions()];
 		for (int i = 0; i < grid.length; i++) {
 			grid[i] = i == largestDim ? nTiles : 1;
 		}
-		return new CombinedView<FloatType>(new ArrangedView<>(results, grid));
+		RandomAccessibleInterval<FloatType> result = new CombinedView<FloatType>(new ArrangedView<>(results, grid));
+		return expandDimToSize(result, largestDim, shape[largestDim]);
+	}
+	
+	private <U extends RealType<U>> RandomAccessibleInterval<U> expandDimToSize(RandomAccessibleInterval<U> im, int d, long size) {
+		final int n = im.numDimensions();
+		final long[] min = new long[ n ];
+		final long[] max = new long[ n ];
+		im.min( min );
+		im.max( max );
+		max[ d ] += (size - im.dimension(d));
+		return Views.interval(Views.extendMirrorDouble(im), new FinalInterval(min, max));
 	}
 
 	private RandomAccessibleInterval<FloatType> executeGraphWithPadding(final RandomAccessibleInterval<T> input) {
-
-		printDim("Before mapping", input);
-		// Resort the dimensions
-		RandomAccessibleInterval<T> im = input;
-		while (im.numDimensions() < bridge.getInitialInputTensorShape().numDimensions()) {
-			im = Views.addDimension(im, 0, 0);
-		}
-		int[] mapping = new int[im.numDimensions()];
-		for (int i = 0; i < mapping.length; i++) {
-			mapping[i] = bridge.getMapping(4 - i); // TODO that seems ugly...
-		}
-		im = permuteDimensions(im, mapping);
-//		im = Views.permute(Views.permute(im, 1, 2), 0, 1);
-		printDim("After mapping", im);
-
-		Tensor inputTensor = Tensors.tensor(normalizeImage(im));
+		Tensor inputTensor = datasetConverter.datasetToTensor(input, bridge, this);
 		Tensor outputTensor = TensorFlowRunner.executeGraph(
 													getGraph(),
 													inputTensor,
 													inputNodeName,
 													outputNodeName );
-		RandomAccessibleInterval<FloatType> outImg = Tensors.img(outputTensor);
-
-		printDim("Before remapping", outImg);
-		// Map back to the original dimensions
-		while (outImg.numDimensions() > im.numDimensions()) {
-			outImg = Views.hyperSlice(outImg, 0, 0);
-		}
-		int[] reverseMapping = new int[im.numDimensions()];
-		for (int i = 0; i < im.numDimensions(); i++) {
-			reverseMapping[mapping[i]] = i;
-		}
-		outImg = permuteDimensions(outImg, reverseMapping);
-//		IntervalView<FloatType> output = Views.permute(Views.permute(outImg, 0, 1), 1, 2);
-		printDim("After remapping", outImg);
-
-		return Views.dropSingletonDimensions(outImg);
-	}
-	
-	// TODO doesn't fit here move into normalizer
-	private Img< FloatType > normalizeImage(RandomAccessibleInterval<T> im) {
-		final ImgFactory< FloatType > factory = new ArrayImgFactory<>();
-		final Img< FloatType > output = factory.create(im, new FloatType());
-		
-		final RandomAccess< T > in = im.randomAccess();
-		final Cursor< FloatType > out = output.localizingCursor();
-		while ( out.hasNext() )
-		{
-			out.fwd();
-			in.setPosition( out );
-			out.get().set(normalize(in.get().getRealFloat()));
-		}
-		
-		return output;
-	}
-	
-	// TODO maybe put in bridge?
-	private <T> RandomAccessibleInterval<T> permuteDimensions(RandomAccessibleInterval<T> im, int[] mapping) {
-		RandomAccessibleInterval<T> output = im;
-		int[] mapped = new int[im.numDimensions()];
-		for (int i = 0; i < im.numDimensions(); i++ ) {
-			mapped[i] = i;
-		}
-		for (int i = 0; i < im.numDimensions(); i++) {
-			int from = mapping[i];
-			while (from != mapped[from]) {
-				from = mapped[from];
-			}
-			int to = i;
-			output = Views.permute(output, from, to);
-			mapped[i] = from;
-		}
-		return output;
-	}
-	
-	// -------------------------------------------------------- DEBUG OUTPUTS
-	private static void printDim(String name, Tensor im) {
-		System.out.print(name + ": [ ");
-		for (int i = 0; i < im.shape().length; i++) {
-			System.out.print(im.shape()[i] + " ");
-		}
-		System.out.println("]");
+		return datasetConverter.tensorToDataset(outputTensor, bridge);
 	}
 
+	// TODO remove
 	private static void printDim(String name, RandomAccessibleInterval<?> im) {
 		System.out.print(name + ": [ ");
 		for (int i = 0; i < im.numDimensions(); i++) {
@@ -448,81 +399,6 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 		}
 		System.out.println("]");
 	}
-	
-//	private RandomAccessible<RealType<?>> tiledPrediction(RandomAccessibleInterval<RealType<?>> im, int nTiles) { // TODO output type
-//
-//		// Get the dimensions of the image
-//		long[] shape = new long[im.numDimensions()];
-//		im.dimensions(shape);
-//
-//		// Get the largest dimension and its size
-//		int largestDim = 0;
-//		long largestSize = 0;
-//		for (int d = 0; d < im.numDimensions(); d++) {
-//			if (shape[d] > largestSize) {
-//				largestSize = shape[d];
-//				largestDim = d;
-//			}
-//		}
-//
-//		// Calculate the blocksize to use
-//		long blockwidthIdeal = largestSize / nTiles;
-//		long blockwidth = (long) (Math.ceil(blockwidthIdeal / 32.0) * 32); // TODO(benjamin) remove magic numbers
-//		long[] blockSize = Arrays.copyOf(shape, im.numDimensions());
-//		blockSize[largestDim] = blockwidth;
-//
-//		// Put the padding per dimension in a array
-//		long[] padding = new long[im.numDimensions()];
-//		padding[largestDim] = 32; // TODO remove magic number
-//
-//		// Create the tiled view
-//		TiledView<RealType<?>> tiledView = new TiledView<>(im, blockSize, padding);
-//		Cursor<RandomAccessibleInterval<RealType<?>>> cursor = Views.iterable(tiledView).cursor();
-//		
-//		List<RandomAccessibleInterval<RealType<?>>> results = new ArrayList<>();
-//		while (cursor.hasNext()) {
-//			RandomAccessibleInterval<RealType<?>> tile = cursor.next();
-//			RandomAccessibleInterval<RealType<?>> tileExecuted = executeGraphWithPadding(tile);
-//			uiService.show(tileExecuted);
-//			results.add(tileExecuted);
-//		}
-//		// Arrange and combine the tiles again
-//		return new CombinedView<RealType<?>>(ArrangedView.arrangeAlongAxis(results, largestDim));
-//		
-////		// Extend the view with mirror borders
-////		RandomAccessible<RealType<?>> extendedIm = Views.extendMirrorDouble(im);
-////
-////		// Create the final result
-////		ArrayImg<FloatType, FloatArray> result = ArrayImgs.floats(shape);
-////
-////		// Loop over the tiles and run the network on them
-////		for (int i = 0; i < nTiles; i++) {
-////			long[] offset = new long[im.numDimensions()];
-////			offset[largestDim] = i*blockwidth;
-////			
-////			IterableInterval<RealType<?>> tile = Views.interval(Views.offset(extendedIm, offset), new long[im.numDimensions()], blockSize);
-////			IterableInterval<RealType<?>> tileResult = executeGraphWithPadding(tile, padding); // TODO maybe add graph as parameter
-////			
-////
-////			// Assemble the result
-////			
-////			// TODO assemble the complete result
-////		}
-////		// TODO make a ArrayImg out of the result?
-//	}
-//
-//	private RandomAccessibleInterval<RealType<?>> executeGraphWithPadding(RandomAccessibleInterval<RealType<?>> im) {
-//		// TODO padding!
-//		Tensor inputIm = Tensors.tensor(im);
-//		Tensor outputIm = TensorFlowRunner.executeGraph(
-//													getGraph(),
-//													inputIm,
-//													inputNodeName,
-//													outputNodeName );
-//		return datasetConverter.tensorToDataset(outputIm, bridge);
-//		// TODO this method should create a float array from the RandomAccessible and
-//		// run the Graph on it. Then it should create a RandomAccessible again and remove the padding
-//	}
 
 	private void savePreferences() {
 		prefService.put( modelFileKey, modelFile.getAbsolutePath() );

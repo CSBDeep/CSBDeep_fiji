@@ -1,17 +1,16 @@
 package mpicbg.csbd.tensorflow;
 
-import net.imagej.Dataset;
-import net.imglib2.IterableInterval;
-import net.imglib2.type.numeric.RealType;
-
 import org.tensorflow.Tensor;
 
 import mpicbg.csbd.normalize.Normalizer;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.FloatType;
 
-public interface DatasetConverter{
+public interface DatasetConverter<T extends RealType<T>>{
 
-	Dataset tensorToDataset( Tensor output_t, DatasetTensorBridge bridge );
+	RandomAccessibleInterval<FloatType> tensorToDataset( Tensor tensor, DatasetTensorBridge bridge );
 
-	Tensor datasetToTensor( IterableInterval<RealType<?>> image, DatasetTensorBridge bridge, Normalizer normalizer );
+	Tensor datasetToTensor( RandomAccessibleInterval<T> image, DatasetTensorBridge bridge, Normalizer normalizer );
 
 }

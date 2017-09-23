@@ -2,7 +2,13 @@ package mpicbg.csbd.normalize;
 
 import net.imagej.Dataset;
 import net.imglib2.Cursor;
+import net.imglib2.RandomAccess;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.img.Img;
+import net.imglib2.img.ImgFactory;
+import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Util;
 
 import org.scijava.ItemVisibility;
@@ -108,6 +114,23 @@ public class PercentileNormalizer implements Normalizer {
 				min,
 				Math.min( max, ( val - percentileBottomVal ) * factor + min ) ); }
 		return Math.max( 0, ( val - percentileBottomVal ) * factor + min );
+	}
+
+	@Override
+	public <T extends RealType<T>> Img<FloatType> normalizeImage(RandomAccessibleInterval<T> im) {
+		final ImgFactory< FloatType > factory = new ArrayImgFactory<>();
+		final Img< FloatType > output = factory.create(im, new FloatType());
+		
+		final RandomAccess< T > in = im.randomAccess();
+		final Cursor< FloatType > out = output.localizingCursor();
+		while ( out.hasNext() )
+		{
+			out.fwd();
+			in.setPosition( out );
+			out.get().set(normalize(in.get().getRealFloat()));
+		}
+		
+		return output;
 	}
 
 }

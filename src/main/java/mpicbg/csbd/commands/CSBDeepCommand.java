@@ -203,21 +203,22 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 		prepareNormalization( input );
 		testNormalization( input, uiService );
-
-		try (
-				final Tensor image = datasetConverter.datasetToTensor( input, bridge, this );) {
-			outputImage = datasetConverter.tensorToDataset(
-					TensorFlowRunner.executeGraph(
-							getGraph(),
-							image,
-							inputNodeName,
-							outputNodeName ),
-					bridge );
-			if ( outputImage != null ) {
-				outputImage.setName( "CSBDeepened_" + input.getName() );
-				uiService.show( outputImage );
-			}
-		}
+		
+		// TODO remove comment and add tiled prediction
+//		try (
+//				final Tensor image = datasetConverter.datasetToTensor( input, bridge, this );) {
+//			outputImage = datasetConverter.tensorToDataset(
+//					TensorFlowRunner.executeGraph(
+//							getGraph(),
+//							image,
+//							inputNodeName,
+//							outputNodeName ),
+//					bridge );
+//			if ( outputImage != null ) {
+//				outputImage.setName( "CSBDeepened_" + input.getName() );
+//				uiService.show( outputImage );
+//			}
+//		}
 
 //		uiService.show(arrayToDataset(datasetToArray(input)));
 
