@@ -114,7 +114,16 @@
 		<dependency>
 			<groupId>net.imagej</groupId>
 			<artifactId>imagej-tensorflow</artifactId>
-			<version>0.1.1</version>
+			<version>0.1.2-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>net.imglib2</groupId>
+			<artifactId>imglib2</artifactId>
+			<version>4.4.1-TILED-SNAPSHOT</version>
+		</dependency>
+		<dependency>
+			<groupId>net.imglib2</groupId>
+			<artifactId>imglib2-ij</artifactId>
 		</dependency>
 		<!-- maybe useful for GPU support  
 		<dependency>

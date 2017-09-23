@@ -152,6 +152,7 @@ public class DatasetTensorBridge {
 										3 ) ][ ( int ) getDatasetDimLengthFromTFIndex( 4 ) ];
 	}
 
+
 	public boolean complete() {
 		return initialInputTensorShape != null && dataset != null;
 	}

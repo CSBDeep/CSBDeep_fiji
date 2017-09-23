@@ -1,12 +1,12 @@
 package mpicbg.csbd.tensorflow;
 
-import net.imagej.Dataset;
-import net.imglib2.Cursor;
-import net.imglib2.type.numeric.RealType;
-
 import org.tensorflow.Tensor;
 
 import mpicbg.csbd.normalize.Normalizer;
+import net.imagej.Dataset;
+import net.imglib2.Cursor;
+import net.imglib2.IterableInterval;
+import net.imglib2.type.numeric.RealType;
 
 public class DefaultDatasetConverter implements DatasetConverter {
 
@@ -86,14 +86,14 @@ public class DefaultDatasetConverter implements DatasetConverter {
 
 	@Override
 	public Tensor datasetToTensor(
-			final Dataset image,
+			final IterableInterval<RealType<?>> image,
 			final DatasetTensorBridge bridge,
 			final Normalizer normalizer ) {
 		return arrayToTensor( datasetToArray( image, bridge, normalizer ), bridge );
 	}
 
 	protected float[][][][][] datasetToArray(
-			final Dataset d,
+			final IterableInterval<RealType<?>> d,
 			final DatasetTensorBridge bridge,
 			final Normalizer normalizer ) {
 
@@ -109,7 +109,7 @@ public class DefaultDatasetConverter implements DatasetConverter {
 
 		//copy input data to array
 
-		final Cursor< RealType< ? > > cursor = d.localizingCursor();
+		final Cursor< RealType<?> > cursor = d.localizingCursor();
 		if ( normalizer.isActive() ) {
 
 			while ( cursor.hasNext() ) {

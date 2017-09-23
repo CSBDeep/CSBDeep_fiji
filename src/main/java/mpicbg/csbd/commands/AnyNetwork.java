@@ -8,18 +8,13 @@
 
 package mpicbg.csbd.commands;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 import javax.swing.JOptionPane;
-
-import net.imagej.Dataset;
-import net.imagej.ImageJ;
-import net.imagej.ops.OpService;
-import net.imagej.tensorflow.TensorFlowService;
-import net.imglib2.type.numeric.RealType;
 
 import org.scijava.Cancelable;
 import org.scijava.ItemIO;
@@ -39,12 +34,33 @@ import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import mpicbg.csbd.normalize.PercentileNormalizer;
 import mpicbg.csbd.tensorflow.DatasetConverter;
 import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 import mpicbg.csbd.tensorflow.DefaultDatasetConverter;
 import mpicbg.csbd.tensorflow.TensorFlowRunner;
 import mpicbg.csbd.ui.MappingDialog;
+import net.imagej.Dataset;
+import net.imagej.ImageJ;
+import net.imagej.ops.OpService;
+import net.imagej.tensorflow.TensorFlowService;
+import net.imagej.tensorflow.Tensors;
+import net.imglib2.Cursor;
+import net.imglib2.RandomAccess;
+import net.imglib2.RandomAccessible;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.img.Img;
+import net.imglib2.img.ImgFactory;
+import net.imglib2.img.array.ArrayImgFactory;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.view.ArrangedView;
+import net.imglib2.view.CombinedView;
+import net.imglib2.view.IntervalView;
+import net.imglib2.view.TiledView;
+import net.imglib2.view.Views;
 
 /**
  */
@@ -110,7 +126,11 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 	private static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY = "serving_default";
 
 	public AnyNetwork() {
-		System.loadLibrary( "tensorflow_jni" );
+		try {
+			System.loadLibrary( "tensorflow_jni" );
+		} catch (UnsatisfiedLinkError e) {
+			System.out.println("Couldn't load tensorflow from library path. Using CPU version from jar file.");
+		}
 	}
 
 	/*
@@ -267,24 +287,242 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 		prepareNormalization( input );
 		testNormalization( input, uiService );
 
-		try (
-				final Tensor image = datasetConverter.datasetToTensor( input, bridge, this );) {
-			outputImage = datasetConverter.tensorToDataset(
-					TensorFlowRunner.executeGraph(
-							getGraph(),
-							image,
-							inputNodeName,
-							outputNodeName ),
-					bridge );
-			if ( outputImage != null ) {
-				outputImage.setName( "CSBDeepened_" + input.getName() );
-				uiService.show( outputImage );
-			}
-		}
-
+//		try (
+//				final Tensor image = datasetConverter.datasetToTensor( input, bridge, this );) {
+//			outputImage = datasetConverter.tensorToDataset(
+//					TensorFlowRunner.executeGraph(
+//							getGraph(),
+//							image,
+//							inputNodeName,
+//							outputNodeName ),
+//					bridge );
+//			if ( outputImage != null ) {
+//				outputImage.setName( "CSBDeepened_" + input.getName() );
+//				uiService.show( outputImage );
+//			}
+//		}
+		RandomAccessibleInterval<FloatType> tiledPrediction = tiledPrediction(input, 4);
+		uiService.show(tiledPrediction);
 //		uiService.show(arrayToDataset(datasetToArray(input)));
 
 	}
+
+	private RandomAccessibleInterval<FloatType> tiledPrediction(Dataset im, int nTiles) {
+		return tiledPrediction((RandomAccessibleInterval) im.getImgPlus(), nTiles);
+	}
+
+	private RandomAccessibleInterval<FloatType> tiledPrediction(RandomAccessibleInterval<T> im, int nTiles) { // TODO output type
+		// Get the dimensions of the image
+		long[] shape = new long[im.numDimensions()];
+		im.dimensions(shape);
+
+		// Get the largest dimension and its size
+		int largestDim = 0;
+		long largestSize = 0;
+		for (int d = 0; d < im.numDimensions(); d++) {
+			if (shape[d] > largestSize) {
+				largestSize = shape[d];
+				largestDim = d;
+			}
+		}
+
+		// Calculate the blocksize to use
+		long blockwidthIdeal = largestSize / nTiles;
+		long blockwidth = (long) (Math.ceil(blockwidthIdeal / 32.0) * 32); // TODO(benjamin) remove magic numbers
+		long[] blockSize = Arrays.copyOf(shape, im.numDimensions());
+		blockSize[largestDim] = blockwidth;
+
+		// Put the padding per dimension in a array
+		long[] padding = new long[im.numDimensions()];
+		padding[largestDim] = 32; // TODO remove magic number
+
+		// Create the tiled view
+		TiledView<T> tiledView = new TiledView<>(im, blockSize);
+		Cursor<RandomAccessibleInterval<T>> cursor = Views.iterable(tiledView).cursor();
+		
+		List<RandomAccessibleInterval<FloatType>> results = new ArrayList<>();
+		while (cursor.hasNext()) {
+			RandomAccessibleInterval<T> tile = cursor.next();
+			//uiService.show(Views.permute(Views.permute(tile, 0, 1), 1, 2));
+			RandomAccessibleInterval<FloatType> tileExecuted = executeGraphWithPadding(tile);
+			uiService.show(tileExecuted);
+			results.add(tileExecuted);
+		}
+		// Arrange and combine the tiles again
+		long[] grid = new long[im.numDimensions()];
+		for (int i = 0; i < grid.length; i++) {
+			grid[i] = i == largestDim ? nTiles : 1;
+		}
+		return new CombinedView<FloatType>(new ArrangedView<>(results, grid));
+	}
+
+	private RandomAccessibleInterval<FloatType> executeGraphWithPadding(final RandomAccessibleInterval<T> input) {
+
+		printDim("Before mapping", input);
+		// Resort the dimensions
+		RandomAccessibleInterval<T> im = input;
+		while (im.numDimensions() < bridge.getInitialInputTensorShape().numDimensions()) {
+			im = Views.addDimension(im, 0, 0);
+		}
+		int[] mapping = new int[im.numDimensions()];
+		for (int i = 0; i < mapping.length; i++) {
+			mapping[i] = bridge.getMapping(4 - i); // TODO that seems ugly...
+		}
+		im = permuteDimensions(im, mapping);
+//		im = Views.permute(Views.permute(im, 1, 2), 0, 1);
+		printDim("After mapping", im);
+
+		Tensor inputTensor = Tensors.tensor(normalizeImage(im));
+		Tensor outputTensor = TensorFlowRunner.executeGraph(
+													getGraph(),
+													inputTensor,
+													inputNodeName,
+													outputNodeName );
+		RandomAccessibleInterval<FloatType> outImg = Tensors.img(outputTensor);
+
+		printDim("Before remapping", outImg);
+		// Map back to the original dimensions
+		while (outImg.numDimensions() > im.numDimensions()) {
+			outImg = Views.hyperSlice(outImg, 0, 0);
+		}
+		int[] reverseMapping = new int[im.numDimensions()];
+		for (int i = 0; i < im.numDimensions(); i++) {
+			reverseMapping[mapping[i]] = i;
+		}
+		outImg = permuteDimensions(outImg, reverseMapping);
+//		IntervalView<FloatType> output = Views.permute(Views.permute(outImg, 0, 1), 1, 2);
+		printDim("After remapping", outImg);
+
+		return Views.dropSingletonDimensions(outImg);
+	}
+	
+	// TODO doesn't fit here move into normalizer
+	private Img< FloatType > normalizeImage(RandomAccessibleInterval<T> im) {
+		final ImgFactory< FloatType > factory = new ArrayImgFactory<>();
+		final Img< FloatType > output = factory.create(im, new FloatType());
+		
+		final RandomAccess< T > in = im.randomAccess();
+		final Cursor< FloatType > out = output.localizingCursor();
+		while ( out.hasNext() )
+		{
+			out.fwd();
+			in.setPosition( out );
+			out.get().set(normalize(in.get().getRealFloat()));
+		}
+		
+		return output;
+	}
+	
+	// TODO maybe put in bridge?
+	private <T> RandomAccessibleInterval<T> permuteDimensions(RandomAccessibleInterval<T> im, int[] mapping) {
+		RandomAccessibleInterval<T> output = im;
+		int[] mapped = new int[im.numDimensions()];
+		for (int i = 0; i < im.numDimensions(); i++ ) {
+			mapped[i] = i;
+		}
+		for (int i = 0; i < im.numDimensions(); i++) {
+			int from = mapping[i];
+			while (from != mapped[from]) {
+				from = mapped[from];
+			}
+			int to = i;
+			output = Views.permute(output, from, to);
+			mapped[i] = from;
+		}
+		return output;
+	}
+	
+	// -------------------------------------------------------- DEBUG OUTPUTS
+	private static void printDim(String name, Tensor im) {
+		System.out.print(name + ": [ ");
+		for (int i = 0; i < im.shape().length; i++) {
+			System.out.print(im.shape()[i] + " ");
+		}
+		System.out.println("]");
+	}
+
+	private static void printDim(String name, RandomAccessibleInterval<?> im) {
+		System.out.print(name + ": [ ");
+		for (int i = 0; i < im.numDimensions(); i++) {
+			System.out.print(im.dimension(i) + " ");
+		}
+		System.out.println("]");
+	}
+	
+//	private RandomAccessible<RealType<?>> tiledPrediction(RandomAccessibleInterval<RealType<?>> im, int nTiles) { // TODO output type
+//
+//		// Get the dimensions of the image
+//		long[] shape = new long[im.numDimensions()];
+//		im.dimensions(shape);
+//
+//		// Get the largest dimension and its size
+//		int largestDim = 0;
+//		long largestSize = 0;
+//		for (int d = 0; d < im.numDimensions(); d++) {
+//			if (shape[d] > largestSize) {
+//				largestSize = shape[d];
+//				largestDim = d;
+//			}
+//		}
+//
+//		// Calculate the blocksize to use
+//		long blockwidthIdeal = largestSize / nTiles;
+//		long blockwidth = (long) (Math.ceil(blockwidthIdeal / 32.0) * 32); // TODO(benjamin) remove magic numbers
+//		long[] blockSize = Arrays.copyOf(shape, im.numDimensions());
+//		blockSize[largestDim] = blockwidth;
+//
+//		// Put the padding per dimension in a array
+//		long[] padding = new long[im.numDimensions()];
+//		padding[largestDim] = 32; // TODO remove magic number
+//
+//		// Create the tiled view
+//		TiledView<RealType<?>> tiledView = new TiledView<>(im, blockSize, padding);
+//		Cursor<RandomAccessibleInterval<RealType<?>>> cursor = Views.iterable(tiledView).cursor();
+//		
+//		List<RandomAccessibleInterval<RealType<?>>> results = new ArrayList<>();
+//		while (cursor.hasNext()) {
+//			RandomAccessibleInterval<RealType<?>> tile = cursor.next();
+//			RandomAccessibleInterval<RealType<?>> tileExecuted = executeGraphWithPadding(tile);
+//			uiService.show(tileExecuted);
+//			results.add(tileExecuted);
+//		}
+//		// Arrange and combine the tiles again
+//		return new CombinedView<RealType<?>>(ArrangedView.arrangeAlongAxis(results, largestDim));
+//		
+////		// Extend the view with mirror borders
+////		RandomAccessible<RealType<?>> extendedIm = Views.extendMirrorDouble(im);
+////
+////		// Create the final result
+////		ArrayImg<FloatType, FloatArray> result = ArrayImgs.floats(shape);
+////
+////		// Loop over the tiles and run the network on them
+////		for (int i = 0; i < nTiles; i++) {
+////			long[] offset = new long[im.numDimensions()];
+////			offset[largestDim] = i*blockwidth;
+////			
+////			IterableInterval<RealType<?>> tile = Views.interval(Views.offset(extendedIm, offset), new long[im.numDimensions()], blockSize);
+////			IterableInterval<RealType<?>> tileResult = executeGraphWithPadding(tile, padding); // TODO maybe add graph as parameter
+////			
+////
+////			// Assemble the result
+////			
+////			// TODO assemble the complete result
+////		}
+////		// TODO make a ArrayImg out of the result?
+//	}
+//
+//	private RandomAccessibleInterval<RealType<?>> executeGraphWithPadding(RandomAccessibleInterval<RealType<?>> im) {
+//		// TODO padding!
+//		Tensor inputIm = Tensors.tensor(im);
+//		Tensor outputIm = TensorFlowRunner.executeGraph(
+//													getGraph(),
+//													inputIm,
+//													inputNodeName,
+//													outputNodeName );
+//		return datasetConverter.tensorToDataset(outputIm, bridge);
+//		// TODO this method should create a float array from the RandomAccessible and
+//		// run the Graph on it. Then it should create a RandomAccessible again and remove the padding
+//	}
 
 	private void savePreferences() {
 		prefService.put( modelFileKey, modelFile.getAbsolutePath() );
@@ -321,6 +559,26 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 			ij.command().run( AnyNetwork.class, true );
 		}
 
+		
+//		// Tests
+//		final ImgFactory< UnsignedByteType > factory = new ArrayImgFactory<>();
+//		final Img< UnsignedByteType > img = IO.openImgs( "/Users/bw/Pictures/Lenna.png", factory, new UnsignedByteType() ).get( 0 ).getImg();
+//		
+//		ImageJFunctions.show(img);
+//		
+//		// Create a tiled view on it
+//		TiledView<UnsignedByteType> tiledView = TiledView.createFromBlocksPerDim(img, new long[]{ 3, 3, 1 });
+//		
+//		// Take a middle part
+//		TiledViewRandomAccess<UnsignedByteType> randomAccess = tiledView.randomAccess();
+//		randomAccess.setPosition(1,0);
+//		randomAccess.setPosition(1,1);
+//		
+//		RandomAccessibleInterval<UnsignedByteType> part = randomAccess.get();
+//		RandomAccessibleInterval<UnsignedByteType> expanded = Views.expand(part, new OutOfBoundsMirrorFactory<>(Boundary.DOUBLE), new long[]{ 20, 20, 0 });
+//		//RandomAccessibleInterval<UnsignedByteType> expanded = Views.expandBorder(part, new long[]{ 20, 20, 0 });
+//		
+//		ImageJFunctions.show(expanded);
 	}
 
 	public void showError( final String errorMsg ) {
