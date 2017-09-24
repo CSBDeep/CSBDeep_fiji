@@ -10,9 +10,6 @@ package mpicbg.csbd.commands;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
 
 import javax.swing.JOptionPane;
 
@@ -29,7 +26,6 @@ import org.scijava.ui.UIService;
 import org.scijava.widget.Button;
 import org.tensorflow.Graph;
 import org.tensorflow.SavedModelBundle;
-import org.tensorflow.Tensor;
 import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
@@ -46,24 +42,9 @@ import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.ops.OpService;
 import net.imagej.tensorflow.TensorFlowService;
-import net.imagej.tensorflow.Tensors;
-import net.imglib2.Cursor;
-import net.imglib2.FinalInterval;
-import net.imglib2.RandomAccess;
-import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.img.Img;
-import net.imglib2.img.ImgFactory;
-import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.util.Intervals;
-import net.imglib2.view.ArrangedView;
-import net.imglib2.view.CombinedView;
-import net.imglib2.view.ExtendedRandomAccessibleInterval;
-import net.imglib2.view.IntervalView;
-import net.imglib2.view.TiledView;
-import net.imglib2.view.Views;
 
 /**
  */
@@ -95,6 +76,12 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 
 	@Parameter( label = "Adjust image <-> tensorflow mapping", callback = "openTFMappingDialog" )
 	private Button changeTFMapping;
+
+	@Parameter( label="Number of tiles", min="1" )
+	protected int nTiles = 1;
+
+	@Parameter( label="Overlap between tiles", min="0", stepSize="16")
+	protected int overlap = 32;
 
 	@Parameter
 	private TensorFlowService tensorFlowService;
@@ -304,100 +291,20 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 //				uiService.show( outputImage );
 //			}
 //		}
-		RandomAccessibleInterval<FloatType> tiledPrediction = tiledPrediction(input, 4);
+		RandomAccessibleInterval<FloatType> tiledPrediction =
+				Util.tiledPrediction((RandomAccessibleInterval) input.getImgPlus(),
+						nTiles,
+						16,
+						overlap,
+						datasetConverter,
+						bridge,
+						this,
+						getGraph(),
+						inputNodeName,
+						outputNodeName);
 		uiService.show(tiledPrediction);
 //		uiService.show(arrayToDataset(datasetToArray(input)));
 
-	}
-
-	private RandomAccessibleInterval<FloatType> tiledPrediction(Dataset im, int nTiles) {
-		return tiledPrediction((RandomAccessibleInterval) im.getImgPlus(), nTiles);
-	}
-
-	private RandomAccessibleInterval<FloatType> tiledPrediction(RandomAccessibleInterval<T> im, int nTiles) { // TODO output type
-		// Get the dimensions of the image
-		long[] shape = new long[im.numDimensions()];
-		im.dimensions(shape);
-
-		// Get the largest dimension and its size
-		int largestDim = 0;
-		long largestSize = 0;
-		for (int d = 0; d < im.numDimensions(); d++) {
-			if (shape[d] > largestSize) {
-				largestSize = shape[d];
-				largestDim = d;
-			}
-		}
-
-		// Calculate the blocksize to use
-		double blockwidthIdeal = largestSize / (double) nTiles;
-		long blockwidth = (long) (Math.ceil(blockwidthIdeal / 32.0) * 32); // TODO(benjamin) remove magic numbers
-		long[] blockSize = Arrays.copyOf(shape, im.numDimensions());
-		blockSize[largestDim] = blockwidth;
-
-		// Expand the image to fit the blocksize
-		im = expandDimToSize(im, largestDim, blockwidth * nTiles);
-		printDim("After expand", im);
-
-		// Put the padding per dimension in a array
-		long[] padding = new long[im.numDimensions()];
-		padding[largestDim] = 32; // TODO remove magic number
-
-		// Create the tiled view
-		TiledView<T> tiledView = new TiledView<>(im, blockSize, padding);
-		Cursor<RandomAccessibleInterval<T>> cursor = Views.iterable(tiledView).cursor();
-
-		// Set padding to negative to remove it later
-		long[] negPadding = padding.clone();
-		negPadding[largestDim] = - padding[largestDim];
-
-		// Loop over the tiles and execute the prediction
-		List<RandomAccessibleInterval<FloatType>> results = new ArrayList<>();
-		while (cursor.hasNext()) {
-			RandomAccessibleInterval<T> tile = cursor.next();
-			//uiService.show(tile);
-			RandomAccessibleInterval<FloatType> tileExecuted = executeGraphWithPadding(tile);
-			// Remove padding
-			tileExecuted = Views.zeroMin(Views.expandZero(tileExecuted, negPadding));
-			//uiService.show(tileExecuted);
-			results.add(tileExecuted);
-		}
-		// Arrange and combine the tiles again
-		long[] grid = new long[results.get(0).numDimensions()];
-		for (int i = 0; i < grid.length; i++) {
-			grid[i] = i == largestDim ? nTiles : 1;
-		}
-		RandomAccessibleInterval<FloatType> result = new CombinedView<FloatType>(new ArrangedView<>(results, grid));
-		return expandDimToSize(result, largestDim, shape[largestDim]);
-	}
-	
-	private <U extends RealType<U>> RandomAccessibleInterval<U> expandDimToSize(RandomAccessibleInterval<U> im, int d, long size) {
-		final int n = im.numDimensions();
-		final long[] min = new long[ n ];
-		final long[] max = new long[ n ];
-		im.min( min );
-		im.max( max );
-		max[ d ] += (size - im.dimension(d));
-		return Views.interval(Views.extendMirrorDouble(im), new FinalInterval(min, max));
-	}
-
-	private RandomAccessibleInterval<FloatType> executeGraphWithPadding(final RandomAccessibleInterval<T> input) {
-		Tensor inputTensor = datasetConverter.datasetToTensor(input, bridge, this);
-		Tensor outputTensor = TensorFlowRunner.executeGraph(
-													getGraph(),
-													inputTensor,
-													inputNodeName,
-													outputNodeName );
-		return datasetConverter.tensorToDataset(outputTensor, bridge);
-	}
-
-	// TODO remove
-	private static void printDim(String name, RandomAccessibleInterval<?> im) {
-		System.out.print(name + ": [ ");
-		for (int i = 0; i < im.numDimensions(); i++) {
-			System.out.print(im.dimension(i) + " ");
-		}
-		System.out.println("]");
 	}
 
 	private void savePreferences() {
