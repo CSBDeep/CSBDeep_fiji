@@ -7,6 +7,9 @@ import java.util.List;
 import org.tensorflow.Graph;
 import org.tensorflow.Tensor;
 
+import mpicbg.csbd.imglib2.ArrangedView;
+import mpicbg.csbd.imglib2.CombinedView;
+import mpicbg.csbd.imglib2.TiledView;
 import mpicbg.csbd.normalize.Normalizer;
 import mpicbg.csbd.tensorflow.DatasetConverter;
 import mpicbg.csbd.tensorflow.DatasetTensorBridge;
@@ -16,12 +19,9 @@ import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.view.ArrangedView;
-import net.imglib2.view.CombinedView;
-import net.imglib2.view.TiledView;
 import net.imglib2.view.Views;
 
-public class Util {
+public class TiledPredictionUtil {
 
 	public static <T extends RealType<T>> RandomAccessibleInterval<FloatType> tiledPrediction(
 			final RandomAccessibleInterval<T> input,

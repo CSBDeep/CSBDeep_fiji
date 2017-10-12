@@ -292,7 +292,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 //			}
 //		}
 		RandomAccessibleInterval<FloatType> tiledPrediction =
-				Util.tiledPrediction((RandomAccessibleInterval) input.getImgPlus(),
+				TiledPredictionUtil.tiledPrediction((RandomAccessibleInterval) input.getImgPlus(),
 						nTiles,
 						16,
 						overlap,

@@ -214,7 +214,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		prepareNormalization( input );
 		testNormalization( input, uiService );
 		
-		RandomAccessibleInterval<FloatType> tiledPrediction = Util.tiledPrediction((RandomAccessibleInterval) input.getImgPlus(),
+		RandomAccessibleInterval<FloatType> tiledPrediction = TiledPredictionUtil.tiledPrediction((RandomAccessibleInterval) input.getImgPlus(),
 				nTiles, 32, overlap, datasetConverter, bridge, this, getGraph(), inputNodeName, outputNodeName);
 		uiService.show(tiledPrediction);
 		// TODO remove comment and add tiled prediction
