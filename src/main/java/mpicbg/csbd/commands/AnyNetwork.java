@@ -8,18 +8,10 @@
 
 package mpicbg.csbd.commands;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 import java.io.File;
 import java.io.IOException;
 
 import javax.swing.JOptionPane;
-
-import net.imagej.Dataset;
-import net.imagej.ImageJ;
-import net.imagej.ops.OpService;
-import net.imagej.tensorflow.TensorFlowService;
-import net.imglib2.type.numeric.RealType;
 
 import org.scijava.Cancelable;
 import org.scijava.ItemIO;
@@ -34,10 +26,11 @@ import org.scijava.ui.UIService;
 import org.scijava.widget.Button;
 import org.tensorflow.Graph;
 import org.tensorflow.SavedModelBundle;
-import org.tensorflow.Tensor;
 import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 import mpicbg.csbd.normalize.PercentileNormalizer;
 import mpicbg.csbd.tensorflow.DatasetConverter;
@@ -45,6 +38,13 @@ import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 import mpicbg.csbd.tensorflow.DefaultDatasetConverter;
 import mpicbg.csbd.tensorflow.TensorFlowRunner;
 import mpicbg.csbd.ui.MappingDialog;
+import net.imagej.Dataset;
+import net.imagej.ImageJ;
+import net.imagej.ops.OpService;
+import net.imagej.tensorflow.TensorFlowService;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.FloatType;
 
 /**
  */
@@ -77,6 +77,12 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 	@Parameter( label = "Adjust image <-> tensorflow mapping", callback = "openTFMappingDialog" )
 	private Button changeTFMapping;
 
+	@Parameter( label="Number of tiles", min="1" )
+	protected int nTiles = 1;
+
+	@Parameter( label="Overlap between tiles", min="0", stepSize="16")
+	protected int overlap = 32;
+
 	@Parameter
 	private TensorFlowService tensorFlowService;
 
@@ -101,7 +107,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 	private DatasetTensorBridge bridge;
 	private boolean hasSavedModel = true;
 	private boolean processedDataset = false;
-	private final DatasetConverter datasetConverter = new DefaultDatasetConverter();
+	private final DatasetConverter<T> datasetConverter = new DefaultDatasetConverter<>();
 
 	// Same as
 	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
@@ -110,7 +116,11 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 	private static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY = "serving_default";
 
 	public AnyNetwork() {
-		System.loadLibrary( "tensorflow_jni" );
+		try {
+			System.loadLibrary( "tensorflow_jni" );
+		} catch (UnsatisfiedLinkError e) {
+			System.out.println("Couldn't load tensorflow from library path. Using CPU version from jar file.");
+		}
 	}
 
 	/*
@@ -267,21 +277,32 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 		prepareNormalization( input );
 		testNormalization( input, uiService );
 
-		try (
-				final Tensor image = datasetConverter.datasetToTensor( input, bridge, this );) {
-			outputImage = datasetConverter.tensorToDataset(
-					TensorFlowRunner.executeGraph(
-							getGraph(),
-							image,
-							inputNodeName,
-							outputNodeName ),
-					bridge );
-			if ( outputImage != null ) {
-				outputImage.setName( "CSBDeepened_" + input.getName() );
-				uiService.show( outputImage );
-			}
-		}
-
+//		try (
+//				final Tensor image = datasetConverter.datasetToTensor( input, bridge, this );) {
+//			outputImage = datasetConverter.tensorToDataset(
+//					TensorFlowRunner.executeGraph(
+//							getGraph(),
+//							image,
+//							inputNodeName,
+//							outputNodeName ),
+//					bridge );
+//			if ( outputImage != null ) {
+//				outputImage.setName( "CSBDeepened_" + input.getName() );
+//				uiService.show( outputImage );
+//			}
+//		}
+		RandomAccessibleInterval<FloatType> tiledPrediction =
+				TiledPredictionUtil.tiledPrediction((RandomAccessibleInterval) input.getImgPlus(),
+						nTiles,
+						16,
+						overlap,
+						datasetConverter,
+						bridge,
+						this,
+						getGraph(),
+						inputNodeName,
+						outputNodeName);
+		uiService.show(tiledPrediction);
 //		uiService.show(arrayToDataset(datasetToArray(input)));
 
 	}
@@ -321,6 +342,26 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 			ij.command().run( AnyNetwork.class, true );
 		}
 
+		
+//		// Tests
+//		final ImgFactory< UnsignedByteType > factory = new ArrayImgFactory<>();
+//		final Img< UnsignedByteType > img = IO.openImgs( "/Users/bw/Pictures/Lenna.png", factory, new UnsignedByteType() ).get( 0 ).getImg();
+//		
+//		ImageJFunctions.show(img);
+//		
+//		// Create a tiled view on it
+//		TiledView<UnsignedByteType> tiledView = TiledView.createFromBlocksPerDim(img, new long[]{ 3, 3, 1 });
+//		
+//		// Take a middle part
+//		TiledViewRandomAccess<UnsignedByteType> randomAccess = tiledView.randomAccess();
+//		randomAccess.setPosition(1,0);
+//		randomAccess.setPosition(1,1);
+//		
+//		RandomAccessibleInterval<UnsignedByteType> part = randomAccess.get();
+//		RandomAccessibleInterval<UnsignedByteType> expanded = Views.expand(part, new OutOfBoundsMirrorFactory<>(Boundary.DOUBLE), new long[]{ 20, 20, 0 });
+//		//RandomAccessibleInterval<UnsignedByteType> expanded = Views.expandBorder(part, new long[]{ 20, 20, 0 });
+//		
+//		ImageJFunctions.show(expanded);
 	}
 
 	public void showError( final String errorMsg ) {

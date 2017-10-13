@@ -8,17 +8,11 @@
 
 package mpicbg.csbd.commands;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 
 import javax.swing.JOptionPane;
-
-import net.imagej.Dataset;
-import net.imagej.tensorflow.TensorFlowService;
-import net.imglib2.type.numeric.RealType;
 
 import org.scijava.ItemIO;
 import org.scijava.ItemVisibility;
@@ -28,16 +22,22 @@ import org.scijava.plugin.Parameter;
 import org.scijava.ui.UIService;
 import org.tensorflow.Graph;
 import org.tensorflow.SavedModelBundle;
-import org.tensorflow.Tensor;
 import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
+
+import com.google.protobuf.InvalidProtocolBufferException;
 
 import mpicbg.csbd.normalize.PercentileNormalizer;
 import mpicbg.csbd.tensorflow.DatasetConverter;
 import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 import mpicbg.csbd.tensorflow.DefaultDatasetConverter;
 import mpicbg.csbd.tensorflow.TensorFlowRunner;
+import net.imagej.Dataset;
+import net.imagej.tensorflow.TensorFlowService;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.FloatType;
 
 public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer {
 
@@ -58,6 +58,12 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	@Parameter( type = ItemIO.OUTPUT )
 	protected Dataset outputImage;
+
+	@Parameter( label="Number of tiles", min="1" )
+	protected int nTiles = 1;
+
+	@Parameter( label="Overlap between tiles", min="0", stepSize="16")
+	protected int overlap = 32;
 
 	protected String modelFileUrl;
 	protected String modelName;
@@ -82,7 +88,11 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY = "serving_default";
 
 	public CSBDeepCommand() {
-		System.loadLibrary( "tensorflow_jni" );
+		try {
+			System.loadLibrary( "tensorflow_jni" );
+		} catch (UnsatisfiedLinkError e) {
+			System.out.println("Couldn't load tensorflow from library path. Using CPU version from jar file.");
+		}
 	}
 
 	/*
@@ -203,21 +213,25 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 		prepareNormalization( input );
 		testNormalization( input, uiService );
-
-		try (
-				final Tensor image = datasetConverter.datasetToTensor( input, bridge, this );) {
-			outputImage = datasetConverter.tensorToDataset(
-					TensorFlowRunner.executeGraph(
-							getGraph(),
-							image,
-							inputNodeName,
-							outputNodeName ),
-					bridge );
-			if ( outputImage != null ) {
-				outputImage.setName( "CSBDeepened_" + input.getName() );
-				uiService.show( outputImage );
-			}
-		}
+		
+		RandomAccessibleInterval<FloatType> tiledPrediction = TiledPredictionUtil.tiledPrediction((RandomAccessibleInterval) input.getImgPlus(),
+				nTiles, 32, overlap, datasetConverter, bridge, this, getGraph(), inputNodeName, outputNodeName);
+		uiService.show(tiledPrediction);
+		// TODO remove comment and add tiled prediction
+//		try (
+//				final Tensor image = datasetConverter.datasetToTensor( input, bridge, this );) {
+//			outputImage = datasetConverter.tensorToDataset(
+//					TensorFlowRunner.executeGraph(
+//							getGraph(),
+//							image,
+//							inputNodeName,
+//							outputNodeName ),
+//					bridge );
+//			if ( outputImage != null ) {
+//				outputImage.setName( "CSBDeepened_" + input.getName() );
+//				uiService.show( outputImage );
+//			}
+//		}
 
 //		uiService.show(arrayToDataset(datasetToArray(input)));
 
