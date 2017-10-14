@@ -24,8 +24,6 @@ public class MappingDialog {
 			final List< JComboBox< String > > drops = new ArrayList<>();
 
 			final JPanel dialogPanel = new JPanel();
-			final JPanel inputNodePanel = new JPanel();
-			final JPanel inputNamePanel = new JPanel();
 			final JPanel inputDimPanel = new JPanel();
 			final JPanel imgDimPanel = new JPanel();
 			final JPanel mappingPanel = new JPanel();
@@ -33,16 +31,7 @@ public class MappingDialog {
 			imgDimPanel.setBorder( BorderFactory.createTitledBorder( "Image" ) );
 			mappingPanel.setBorder( BorderFactory.createTitledBorder( "Mapping" ) );
 
-			if ( sig != null ) {
-				final String[] inputNames = new String[ sig.getInputsCount() ];
-				final JComboBox< String > inputNameDrop = new JComboBox<>( inputNames );
-				inputNameDrop.setSelectedIndex( 0 );
-				inputNamePanel.add( new JLabel( "Input node name", SwingConstants.RIGHT ) );
-				inputNamePanel.add( inputNameDrop );
-				inputNodePanel.setBorder( BorderFactory.createTitledBorder( "Model input" ) );
-			} else {
-				inputDimPanel.setBorder( BorderFactory.createTitledBorder( "Model input" ) );
-			}
+			inputDimPanel.setBorder( BorderFactory.createTitledBorder( "Model input" ) );
 
 			final List< String > dimStringsLength = new ArrayList<>();
 			for ( int i = 0; i < bridge.numDimensions(); i++ ) {
@@ -63,7 +52,7 @@ public class MappingDialog {
 					final JTextField field = new JTextField();
 					field.setText(
 							String.valueOf(
-									bridge.getInitialInputTensorShape().size( dimCount ) ) );
+									bridge.getInitialInputTensorShape().getDim( dimCount ).getSize() ) );
 					field.setEditable( false );
 					inputDimPanel.add( new JLabel( dimCount + ":", SwingConstants.RIGHT ) );
 					inputDimPanel.add( field );
@@ -75,8 +64,8 @@ public class MappingDialog {
 					final JComboBox< String > dimDrop = new JComboBox<>( dimStringsLengthArr );
 					dimDrop.setSelectedIndex( bridge.getMapping( i ) );
 					mappingPanel.add(
-							new JLabel( dimCount + " [" + bridge.getInitialInputTensorShape().size(
-									dimCount ) + "] :", SwingConstants.RIGHT ) );
+							new JLabel( dimCount + " [" + bridge.getInitialInputTensorShape().getDim(
+									dimCount ).getSize() + "] :", SwingConstants.RIGHT ) );
 					mappingPanel.add( dimDrop );
 					drops.add( dimDrop );
 
@@ -86,7 +75,6 @@ public class MappingDialog {
 
 			final GridLayout col1Layout = new GridLayout( 0, 1 );
 			final GridLayout col5Layout = new GridLayout( 0, 10 );
-			final GridLayout row2Layout = new GridLayout( 2, 1 );
 			col5Layout.setHgap( 15 );
 			col1Layout.setVgap( 15 );
 
@@ -97,14 +85,7 @@ public class MappingDialog {
 
 			dialogPanel.add( imgDimPanel );
 
-			if ( sig != null ) {
-				inputNodePanel.add( inputNamePanel );
-				inputNodePanel.add( inputDimPanel );
-				inputNodePanel.setLayout( row2Layout );
-				dialogPanel.add( inputNodePanel );
-			} else {
-				dialogPanel.add( inputDimPanel );
-			}
+			dialogPanel.add( inputDimPanel );
 
 			dialogPanel.add( mappingPanel );
 

@@ -30,9 +30,6 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 
 		modelFileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_tubulin.zip";
 		modelName = "net_tubulin";
-		graphFileName = "model_resunet_2_7_32.pb";
-		inputNodeName = "input_1";
-		outputNodeName = "output";
 
 		header = "This is the tubulin network command.";
 

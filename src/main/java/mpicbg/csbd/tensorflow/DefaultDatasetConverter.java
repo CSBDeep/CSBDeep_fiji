@@ -43,7 +43,7 @@ public class DefaultDatasetConverter <T extends RealType<T>> implements DatasetC
 		RandomAccessibleInterval<FloatType> im = normalizer.normalizeImage(image);
 		
 		// Add dimensions until it fits the input tensor
-		while (im.numDimensions() < bridge.getInitialInputTensorShape().numDimensions()) {
+		while (im.numDimensions() < bridge.getInitialInputTensorShape().getDimCount()) {
 			im = Views.addDimension(im, 0, 0);
 		}
 
@@ -56,9 +56,9 @@ public class DefaultDatasetConverter <T extends RealType<T>> implements DatasetC
 	}
 
 	private int[] getMapping(DatasetTensorBridge bridge) {
-		int[] mapping = new int[bridge.getInitialInputTensorShape().numDimensions()];
+		int[] mapping = new int[bridge.getInitialInputTensorShape().getDimCount()];
 		for (int i = 0; i < mapping.length; i++) {
-			mapping[i] = bridge.getMapping(i + 5 - bridge.getInitialInputTensorShape().numDimensions()); // TODO that seems ugly...
+			mapping[i] = bridge.getMapping(i + 5 - bridge.getInitialInputTensorShape().getDimCount()); // TODO that seems ugly...
 		}
 		return mapping;
 	}

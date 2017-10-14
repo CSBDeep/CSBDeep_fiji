@@ -2,101 +2,68 @@ package mpicbg.csbd.tensorflow;
 
 import javax.swing.JOptionPane;
 
-import org.tensorflow.Graph;
-import org.tensorflow.Operation;
-import org.tensorflow.Session;
+import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
+import org.tensorflow.framework.SignatureDef;
+import org.tensorflow.framework.TensorInfo;
+import org.tensorflow.framework.TensorShapeProto;
 
 public class TensorFlowRunner {
-
-	public static boolean loadModelInputShape(
-			final Graph graph,
-			final String inputName,
-			final DatasetTensorBridge bridge ) {
-
-//		System.out.println("loadModelInputShape");
-
-		if ( graph != null ) {
-			final Operation input_op = graph.operation( inputName );
-			if ( input_op != null ) {
-				bridge.setInputTensorShape( input_op.output( 0 ).shape() );
-				bridge.setMappingDefaults();
-				return true;
-			}
-			System.err.println( "input node with name " + inputName + " not found" );
-		}
-		return false;
-	}
 
 	/*
 	 * runs graph on input tensor
 	 * converts result tensor to dataset
 	 */
 	public static Tensor executeGraph(
-			final Graph g,
+			final SavedModelBundle model,
+			final SignatureDef sig,
 			final Tensor image,
 			final String inputNodeName,
 			final String outputNodeName ) {
 
 		System.out.println( "executeInceptionGraph" );
 
-		try (
-				Session s = new Session( g );) {
-
-//			int size = s.runner().feed(inputNodeName, image).fetch(outputNodeName).run().size();
-//			System.out.println("output array size: " + size);
-
-			Tensor output_t = null;
-
+		Tensor output_t = null;
+		try {
 			/*
-			 * check if keras_learning_phase node has to be set
+			 * execute graph
 			 */
-			if ( g.operation( "dropout_1/keras_learning_phase" ) != null ) {
-				final Tensor learning_phase = Tensor.create( false );
-				try {
-					/*
-					 * execute graph
-					 */
-					final Tensor output_t2 = s.runner().feed( inputNodeName, image ).feed(
-							"dropout_1/keras_learning_phase",
-							learning_phase ).fetch( outputNodeName ).run().get( 0 );
-					output_t = output_t2;
-				} catch ( final Exception e ) {
-					e.printStackTrace();
-				}
-			} else {
-				try {
-					/*
-					 * execute graph
-					 */
-					final Tensor output_t2 = s.runner().feed( inputNodeName, image ).fetch(
-							outputNodeName ).run().get( 0 );
-					output_t = output_t2;
-				} catch ( final Exception e ) {
-					e.printStackTrace();
-				}
-			}
-
-			if ( output_t != null ) {
-				System.out.println(
-						"Output tensor with " + output_t.numDimensions() + " dimensions" );
-
-				if ( output_t.numDimensions() == 0 ) {
-					showError( "Output tensor has no dimensions" );
-					return null;
-				}
-
-				return output_t;
-			}
-			return null;
-
+			output_t = model.session().runner() //
+					.feed(opName(sig.getInputsOrThrow(inputNodeName)), image) //
+					.fetch(opName(sig.getOutputsOrThrow(outputNodeName))) //
+				.run().get( 0 );
 		} catch ( final Exception e ) {
-			System.out.println( "could not create output dataset" );
 			e.printStackTrace();
+		}
+
+		if ( output_t != null ) {
+			System.out.println(
+					"Output tensor with " + output_t.numDimensions() + " dimensions" );
+
+			if ( output_t.numDimensions() == 0 ) {
+				showError( "Output tensor has no dimensions" );
+				return null;
+			}
+
+			return output_t;
 		}
 		return null;
 	}
 
+	/**
+	 * The SignatureDef inputs and outputs contain names of the form
+	 * {@code <operation_name>:<output_index>}, where for this model,
+	 * {@code <output_index>} is always 0. This function trims the {@code :0}
+	 * suffix to get the operation name.
+	 */
+	private static String opName(final TensorInfo t) {
+		final String n = t.getName();
+		if (n.endsWith(":0")) {
+			return n.substring(0, n.lastIndexOf(":0"));
+		}
+		return n;
+}
+	
 	public static void showError( final String errorMsg ) {
 		JOptionPane.showMessageDialog(
 				null,

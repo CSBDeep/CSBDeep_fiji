@@ -3,8 +3,8 @@ package mpicbg.csbd.tensorflow;
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 
-import org.tensorflow.Shape;
 import org.tensorflow.Tensor;
+import org.tensorflow.framework.TensorShapeProto;
 
 public class DatasetTensorBridge {
 
@@ -17,7 +17,7 @@ public class DatasetTensorBridge {
 	public static int T = 4;
 
 	private final Dataset dataset;
-	private Shape initialInputTensorShape;
+	private TensorShapeProto inputTensorShape, outputTensorShape;
 
 	private final String[] datasetDimNames;
 	private final int[] datasetDimIndices;
@@ -69,14 +69,14 @@ public class DatasetTensorBridge {
 	public void setMappingDefaults() {
 		System.out.println( "setmappingdefaults" );
 		setMappingInitialized( true );
-		if ( initialInputTensorShape.numDimensions() == 5 ) {
+		if ( inputTensorShape.getDimCount() == 5 ) {
 			dimMapping[ 0 ] = T;
 			dimMapping[ 1 ] = Z;
 			dimMapping[ 2 ] = Y;
 			dimMapping[ 3 ] = X;
 			dimMapping[ 4 ] = C;
 		} else {
-			if ( initialInputTensorShape.numDimensions() == 4 ) {
+			if ( inputTensorShape.getDimCount() == 4 ) {
 				// If all is 1, we take this one
 				if ( dataset.getChannels() <= 1 && dataset.getFrames() == 1 && dataset.getDepth() == 1 ) {
 					dimMapping[ 0 ] = UNSET;
@@ -110,12 +110,32 @@ public class DatasetTensorBridge {
 		}
 	}
 
-	public void setInputTensorShape( final Shape shape ) {
-		initialInputTensorShape = shape;
+	public void setInputTensorShape( final TensorShapeProto shape ) {
+		inputTensorShape = shape;
+		String shapetxt = "[";
+		for(int i = 0; i < shape.getDimCount(); i++){
+			if(i != 0){
+				shapetxt += ", ";
+			}
+			shapetxt += shape.getDim( i ).getSize();
+		}
+		System.out.println( "DatasetTensorBridge::setInputTensorShape: input node shape " + shapetxt + "]");
+	}
+	
+	public void setOutputTensorShape( final TensorShapeProto shape ) {
+		outputTensorShape = shape;
+		String shapetxt = "[";
+		for(int i = 0; i < shape.getDimCount(); i++){
+			if(i != 0){
+				shapetxt += ", ";
+			}
+			shapetxt += shape.getDim( i ).getSize();
+		}
+		System.out.println( "DatasetTensorBridge::setOutputTensorShape: output node shape " + shapetxt + "]");
 	}
 
-	public Shape getInitialInputTensorShape() {
-		return initialInputTensorShape;
+	public TensorShapeProto getInitialInputTensorShape() {
+		return inputTensorShape;
 	}
 
 	public int numDimensions() {
@@ -139,7 +159,7 @@ public class DatasetTensorBridge {
 	}
 
 	public void setMappingInputTensorDim( final int inputTensorDim, final int mapping ) {
-		dimMapping[ inputTensorDim + dimMapping.length - initialInputTensorShape.numDimensions() ] =
+		dimMapping[ inputTensorDim + dimMapping.length - inputTensorShape.getDimCount() ] =
 				mapping;
 	}
 
@@ -154,7 +174,7 @@ public class DatasetTensorBridge {
 
 
 	public boolean complete() {
-		return initialInputTensorShape != null && dataset != null;
+		return inputTensorShape != null && dataset != null;
 	}
 
 	public void printMapping() {

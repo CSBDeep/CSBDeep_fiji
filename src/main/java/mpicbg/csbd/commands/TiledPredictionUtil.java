@@ -4,8 +4,16 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-import org.tensorflow.Graph;
+import net.imglib2.Cursor;
+import net.imglib2.FinalInterval;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.view.Views;
+
+import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
+import org.tensorflow.framework.SignatureDef;
 
 import mpicbg.csbd.imglib2.ArrangedView;
 import mpicbg.csbd.imglib2.CombinedView;
@@ -14,12 +22,6 @@ import mpicbg.csbd.normalize.Normalizer;
 import mpicbg.csbd.tensorflow.DatasetConverter;
 import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 import mpicbg.csbd.tensorflow.TensorFlowRunner;
-import net.imglib2.Cursor;
-import net.imglib2.FinalInterval;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.view.Views;
 
 public class TiledPredictionUtil {
 
@@ -28,10 +30,11 @@ public class TiledPredictionUtil {
 			final int nTiles,
 			final int blockMultiple,
 			final int overlap,
-			final DatasetConverter<T> datasetConverter,
+			final DatasetConverter< T > datasetConverter,
 			final DatasetTensorBridge bridge,
 			final Normalizer normalizer,
-			final Graph graph,
+			final SavedModelBundle model,
+			final SignatureDef signature,
 			final String inputNodeName,
 			final String outputNodeName) { // TODO output type
 		// Get the dimensions of the image
@@ -76,7 +79,7 @@ public class TiledPredictionUtil {
 			RandomAccessibleInterval<T> tile = cursor.next();
 			//uiService.show(tile);
 			RandomAccessibleInterval<FloatType> tileExecuted = executeGraphWithPadding(tile,
-					datasetConverter, bridge, normalizer, graph, inputNodeName, outputNodeName);
+					datasetConverter, bridge, normalizer, model, signature, inputNodeName, outputNodeName);
 			// Remove padding
 			tileExecuted = Views.zeroMin(Views.expandZero(tileExecuted, negPadding));
 			//uiService.show(tileExecuted);
@@ -87,7 +90,7 @@ public class TiledPredictionUtil {
 		for (int i = 0; i < grid.length; i++) {
 			grid[i] = i == largestDim ? nTiles : 1;
 		}
-		RandomAccessibleInterval<FloatType> result = new CombinedView<FloatType>(new ArrangedView<>(results, grid));
+		RandomAccessibleInterval<FloatType> result = new CombinedView<>(new ArrangedView<>(results, grid));
 		return expandDimToSize(result, largestDim, shape[largestDim]);
 	}
 	
@@ -102,16 +105,18 @@ public class TiledPredictionUtil {
 	}
 
 	private static <T extends RealType<T>> RandomAccessibleInterval<FloatType> executeGraphWithPadding(
-			final RandomAccessibleInterval<T> input,
-			final DatasetConverter<T> datasetConverter,
+			final RandomAccessibleInterval< T > tile,
+			final DatasetConverter< T > datasetConverter,
 			final DatasetTensorBridge bridge,
 			final Normalizer normalizer,
-			final Graph graph,
+			final SavedModelBundle model,
+			final SignatureDef signature,
 			final String inputNodeName,
 			final String outputNodeName) {
-		Tensor inputTensor = datasetConverter.datasetToTensor(input, bridge, normalizer);
+		Tensor inputTensor = datasetConverter.datasetToTensor(tile, bridge, normalizer);
 		Tensor outputTensor = TensorFlowRunner.executeGraph(
-													graph,
+													model,
+													signature,
 													inputTensor,
 													inputNodeName,
 													outputNodeName );

@@ -28,11 +28,8 @@ public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T >
 
 	public NetProject() {
 
-		modelFileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_project.zip";
+		modelFileUrl = "https://github.com/frauzufall/CSBDeep-data/raw/master/net_project/model_pro_avg_resnet_3_3x3_32__session_4_5_6_7_cx_0_cy_2_augment__2017-09-20_21-47-38_581863.zip";
 		modelName = "net_project";
-		graphFileName = "model_pro_avg.pb";
-		inputNodeName = "input";
-		outputNodeName = "output";
 
 		header = "This is the projection network command.";
 
