@@ -22,7 +22,8 @@ public class TensorFlowRunner {
 			final String inputNodeName,
 			final String outputNodeName ) {
 
-		System.out.println( "executeInceptionGraph with input shape " + Arrays.toString( image.shape() ) );
+		System.out.println(
+				"executeInceptionGraph with input shape " + Arrays.toString( image.shape() ) );
 
 		Tensor output_t = null;
 		try {
@@ -30,9 +31,9 @@ public class TensorFlowRunner {
 			 * execute graph
 			 */
 			output_t = model.session().runner() //
-					.feed(opName(sig.getInputsOrThrow(inputNodeName)), image) //
-					.fetch(opName(sig.getOutputsOrThrow(outputNodeName))) //
-				.run().get( 0 );
+					.feed( opName( sig.getInputsOrThrow( inputNodeName ) ), image ) //
+					.fetch( opName( sig.getOutputsOrThrow( outputNodeName ) ) ) //
+					.run().get( 0 );
 		} catch ( final Exception e ) {
 			e.printStackTrace();
 		}
@@ -55,14 +56,12 @@ public class TensorFlowRunner {
 	 * {@code <output_index>} is always 0. This function trims the {@code :0}
 	 * suffix to get the operation name.
 	 */
-	private static String opName(final TensorInfo t) {
+	private static String opName( final TensorInfo t ) {
 		final String n = t.getName();
-		if (n.endsWith(":0")) {
-			return n.substring(0, n.lastIndexOf(":0"));
-		}
+		if ( n.endsWith( ":0" ) ) { return n.substring( 0, n.lastIndexOf( ":0" ) ); }
 		return n;
-}
-	
+	}
+
 	public static void showError( final String errorMsg ) {
 		JOptionPane.showMessageDialog(
 				null,

@@ -70,10 +70,10 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 	@Parameter( label = "Adjust image <-> tensorflow mapping", callback = "openTFMappingDialog" )
 	private Button changeTFMapping;
 
-	@Parameter( label="Number of tiles", min="1" )
+	@Parameter( label = "Number of tiles", min = "1" )
 	protected int nTiles = 1;
 
-	@Parameter( label="Overlap between tiles", min="0", stepSize="16")
+	@Parameter( label = "Overlap between tiles", min = "0", stepSize = "16" )
 	protected int overlap = 32;
 
 	@Parameter
@@ -90,7 +90,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 
 	@Parameter
 	private PrefService prefService;
-	
+
 	@Parameter
 	private ThreadService threadService;
 
@@ -101,8 +101,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 	private SignatureDef sig;
 	private DatasetTensorBridge bridge;
 	private boolean processedDataset = false;
-	private final DatasetConverter<T> datasetConverter = new DefaultDatasetConverter<>();
-
+	private final DatasetConverter< T > datasetConverter = new DefaultDatasetConverter<>();
 
 	// Same as the tag used in export_saved_model in the Python code.
 	private static final String MODEL_TAG = "serve";
@@ -115,8 +114,9 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 	public AnyNetwork() {
 		try {
 			System.loadLibrary( "tensorflow_jni" );
-		} catch (UnsatisfiedLinkError e) {
-			System.out.println("Couldn't load tensorflow from library path. Using CPU version from jar file.");
+		} catch ( UnsatisfiedLinkError e ) {
+			System.out.println(
+					"Couldn't load tensorflow from library path. Using CPU version from jar file." );
 		}
 	}
 
@@ -162,7 +162,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 			modelChanged();
 		}
 	}
-	
+
 	/** Executed whenever the {@link #modelFile} parameter changes. */
 	protected void modelChanged() {
 
@@ -190,17 +190,19 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 			if ( sig != null && sig.isInitialized() ) {
 				if ( sig.getInputsCount() > 0 ) {
 					inputNodeName = sig.getInputsMap().keySet().iterator().next();
-					if(bridge != null){
-						bridge.setInputTensorShape( sig.getInputsOrThrow( inputNodeName ).getTensorShape() );
+					if ( bridge != null ) {
+						bridge.setInputTensorShape(
+								sig.getInputsOrThrow( inputNodeName ).getTensorShape() );
 					}
 				}
 				if ( sig.getOutputsCount() > 0 ) {
 					outputNodeName = sig.getOutputsMap().keySet().iterator().next();
-					if(bridge != null){
-						bridge.setOutputTensorShape( sig.getOutputsOrThrow( outputNodeName ).getTensorShape() );
+					if ( bridge != null ) {
+						bridge.setOutputTensorShape(
+								sig.getOutputsOrThrow( outputNodeName ).getTensorShape() );
 					}
 				}
-				if (bridge != null && !bridge.isMappingInitialized() ) {
+				if ( bridge != null && !bridge.isMappingInitialized() ) {
 					bridge.setMappingDefaults();
 				}
 			}
@@ -232,22 +234,9 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 		prepareNormalization( input );
 		testNormalization( input, uiService );
 
-//		try (
-//				final Tensor image = datasetConverter.datasetToTensor( input, bridge, this );) {
-//			outputImage = datasetConverter.tensorToDataset(
-//					TensorFlowRunner.executeGraph(
-//							getGraph(),
-//							image,
-//							inputNodeName,
-//							outputNodeName ),
-//					bridge );
-//			if ( outputImage != null ) {
-//				outputImage.setName( "CSBDeepened_" + input.getName() );
-//				uiService.show( outputImage );
-//			}
-//		}
-		RandomAccessibleInterval<FloatType> tiledPrediction =
-				TiledPredictionUtil.tiledPrediction((RandomAccessibleInterval) input.getImgPlus(),
+		RandomAccessibleInterval< FloatType > tiledPrediction =
+				TiledPredictionUtil.tiledPrediction(
+						( RandomAccessibleInterval ) input.getImgPlus(),
 						nTiles,
 						32,
 						overlap,
@@ -258,9 +247,9 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 						sig,
 						inputNodeName,
 						outputNodeName,
-						threadService);
-		if(tiledPrediction != null){
-			uiService.show(tiledPrediction);			
+						threadService );
+		if ( tiledPrediction != null ) {
+			uiService.show( tiledPrediction );
 		}
 //		uiService.show(arrayToDataset(datasetToArray(input)));
 
@@ -299,7 +288,6 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 			ij.command().run( AnyNetwork.class, true );
 		}
 
-		
 //		// Tests
 //		final ImgFactory< UnsignedByteType > factory = new ArrayImgFactory<>();
 //		final Img< UnsignedByteType > img = IO.openImgs( "/Users/bw/Pictures/Lenna.png", factory, new UnsignedByteType() ).get( 0 ).getImg();

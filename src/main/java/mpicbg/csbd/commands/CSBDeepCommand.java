@@ -55,17 +55,17 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	@Parameter
 	protected UIService uiService;
-	
+
 	@Parameter
 	protected ThreadService threadService;
 
 	@Parameter( type = ItemIO.OUTPUT )
 	protected Dataset outputImage;
 
-	@Parameter( label="Number of tiles", min="1" )
+	@Parameter( label = "Number of tiles", min = "1" )
 	protected int nTiles = 1;
 
-	@Parameter( label="Overlap between tiles", min="0", stepSize="16")
+	@Parameter( label = "Overlap between tiles", min = "0", stepSize = "16" )
 	protected int overlap = 32;
 
 	protected String modelFileUrl;
@@ -79,7 +79,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected DatasetTensorBridge bridge;
 	protected boolean processedDataset = false;
 
-	private final DatasetConverter<T> datasetConverter = new DefaultDatasetConverter<>();
+	private final DatasetConverter< T > datasetConverter = new DefaultDatasetConverter<>();
 
 	private static final String MODEL_TAG = "serve";
 	// Same as
@@ -89,11 +89,12 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY = "serving_default";
 
 	public CSBDeepCommand() {
-		System.out.println("CSBDeepCommand constructor");
+		System.out.println( "CSBDeepCommand constructor" );
 		try {
 			System.loadLibrary( "tensorflow_jni" );
-		} catch (UnsatisfiedLinkError e) {
-			System.out.println("Couldn't load tensorflow from library path. Using CPU version from jar file.");
+		} catch ( UnsatisfiedLinkError e ) {
+			System.out.println(
+					"Couldn't load tensorflow from library path. Using CPU version from jar file." );
 		}
 	}
 
@@ -149,17 +150,19 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 				if ( sig != null && sig.isInitialized() ) {
 					if ( sig.getInputsCount() > 0 ) {
 						inputNodeName = sig.getInputsMap().keySet().iterator().next();
-						if(bridge != null){
-							bridge.setInputTensorShape( sig.getInputsOrThrow( inputNodeName ).getTensorShape() );
+						if ( bridge != null ) {
+							bridge.setInputTensorShape(
+									sig.getInputsOrThrow( inputNodeName ).getTensorShape() );
 						}
 					}
 					if ( sig.getOutputsCount() > 0 ) {
 						outputNodeName = sig.getOutputsMap().keySet().iterator().next();
-						if(bridge != null){
-							bridge.setOutputTensorShape( sig.getOutputsOrThrow( outputNodeName ).getTensorShape() );
+						if ( bridge != null ) {
+							bridge.setOutputTensorShape(
+									sig.getOutputsOrThrow( outputNodeName ).getTensorShape() );
 						}
 					}
-					if (bridge != null && !bridge.isMappingInitialized() ) {
+					if ( bridge != null && !bridge.isMappingInitialized() ) {
 						bridge.setMappingDefaults();
 					}
 				}
@@ -196,11 +199,22 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 		prepareNormalization( input );
 		testNormalization( input, uiService );
-		
-		RandomAccessibleInterval<FloatType> tiledPrediction = TiledPredictionUtil.tiledPrediction((RandomAccessibleInterval) input.getImgPlus(),
-				nTiles, 32, overlap, datasetConverter, bridge, this, model, sig, inputNodeName, outputNodeName, threadService);
-		if(tiledPrediction != null){
-			uiService.show(tiledPrediction);			
+
+		RandomAccessibleInterval< FloatType > tiledPrediction = TiledPredictionUtil.tiledPrediction(
+				( RandomAccessibleInterval ) input.getImgPlus(),
+				nTiles,
+				32,
+				overlap,
+				datasetConverter,
+				bridge,
+				this,
+				model,
+				sig,
+				inputNodeName,
+				outputNodeName,
+				threadService );
+		if ( tiledPrediction != null ) {
+			uiService.show( tiledPrediction );
 		}
 		// TODO remove comment and add tiled prediction
 //		try (
