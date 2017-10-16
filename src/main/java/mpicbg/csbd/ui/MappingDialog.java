@@ -52,7 +52,7 @@ public class MappingDialog {
 					final JTextField field = new JTextField();
 					field.setText(
 							String.valueOf(
-									bridge.getInitialInputTensorShape().getDim( dimCount ).getSize() ) );
+									bridge.getAbstractInputTensorShape().getDim( dimCount ).getSize() ) );
 					field.setEditable( false );
 					inputDimPanel.add( new JLabel( dimCount + ":", SwingConstants.RIGHT ) );
 					inputDimPanel.add( field );
@@ -64,7 +64,7 @@ public class MappingDialog {
 					final JComboBox< String > dimDrop = new JComboBox<>( dimStringsLengthArr );
 					dimDrop.setSelectedIndex( bridge.getMapping( i ) );
 					mappingPanel.add(
-							new JLabel( dimCount + " [" + bridge.getInitialInputTensorShape().getDim(
+							new JLabel( dimCount + " [" + bridge.getAbstractInputTensorShape().getDim(
 									dimCount ).getSize() + "] :", SwingConstants.RIGHT ) );
 					mappingPanel.add( dimDrop );
 					drops.add( dimDrop );

@@ -1,12 +1,13 @@
 package mpicbg.csbd.tensorflow;
 
+import java.util.Arrays;
+
 import javax.swing.JOptionPane;
 
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
 import org.tensorflow.framework.SignatureDef;
 import org.tensorflow.framework.TensorInfo;
-import org.tensorflow.framework.TensorShapeProto;
 
 public class TensorFlowRunner {
 
@@ -20,15 +21,8 @@ public class TensorFlowRunner {
 			final Tensor image,
 			final String inputNodeName,
 			final String outputNodeName ) {
-		
-		String inputstr = "[";
-		for(int i = 0; i < image.shape().length; i++) {
-			if(i != 0) inputstr += ", ";
-			inputstr += image.shape()[i];
-		}
-		inputstr += "]";
 
-		System.out.println( "executeInceptionGraph with input shape " + inputstr );
+		System.out.println( "executeInceptionGraph with input shape " + Arrays.toString( image.shape() ) );
 
 		Tensor output_t = null;
 		try {
@@ -44,8 +38,6 @@ public class TensorFlowRunner {
 		}
 
 		if ( output_t != null ) {
-			System.out.println(
-					"Output tensor with " + output_t.numDimensions() + " dimensions" );
 
 			if ( output_t.numDimensions() == 0 ) {
 				showError( "Output tensor has no dimensions" );

@@ -9,8 +9,8 @@ import net.imglib2.type.numeric.real.FloatType;
 
 public interface DatasetConverter<T extends RealType<T>>{
 
-	RandomAccessibleInterval<FloatType> tensorToDataset( Tensor tensor, DatasetTensorBridge bridge );
+	RandomAccessibleInterval<FloatType> tensorToDataset( Tensor tensor, int[] mapping );
 
-	Tensor datasetToTensor( RandomAccessibleInterval<T> image, DatasetTensorBridge bridge, Normalizer normalizer );
+	Tensor datasetToTensor( RandomAccessibleInterval<T> image, int[] mapping, Normalizer normalizer );
 
 }

@@ -183,7 +183,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		modelChanged();
 
 		if ( bridge != null ) {
-			if ( bridge.getInitialInputTensorShape() != null ) {
+			if ( bridge.getAbstractInputTensorShape() != null ) {
 				for ( int i = 0; i < mapping.length; i++ ) {
 					bridge.setMapping( i, mapping[ i ] );
 				}

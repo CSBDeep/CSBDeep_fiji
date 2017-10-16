@@ -1,5 +1,6 @@
 package mpicbg.csbd.commands;
 
+import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -7,11 +8,9 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
-import net.imagej.plugins.commands.assign.InvertDataValues;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.meta.IntervalUtils;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
@@ -87,6 +86,27 @@ public class TiledPredictionUtil {
 		// Set padding to negative to remove it later
 		long[] negPadding = padding.clone();
 		negPadding[largestDim] = - padding[largestDim];
+		
+		//get mapping for input tensor (index is input image dimension index, value is tensor index)
+		int[] mappingIn = new int[bridge.getAbstractInputTensorShape().getDimCount()]; 
+		for(int i = 0; i < mappingIn.length; i++){
+			mappingIn[i] = bridge.getTfIndexByDatasetDim(i);
+		}
+		replaceNegativesWithMissingIndices(mappingIn);
+		System.out.println("mapping in: " + Arrays.toString(mappingIn));
+		
+		//check if network reduces dimension, if yes, remote Z from mapping
+		bridge.handleDimensionReduction();
+		
+		//get mapping for input tensor (index is input image dimension index, value is tensor index)
+		int[] mappingOut = new int[bridge.getAbstractOutputTensorShape().getDimCount()];
+		for(int i = 0; i < mappingOut.length; i++){
+			mappingOut[i] = bridge.getTfIndexByDatasetDim(i+5-mappingOut.length);
+		}
+		replaceNegativesWithMissingIndices(mappingOut);
+		System.out.println("mapping out: " + Arrays.toString(mappingOut));
+		
+		boolean multithreading = false;
 
 		// Loop over the tiles and execute the prediction
 		List<RandomAccessibleInterval<FloatType>> results = new ArrayList<>();
@@ -94,20 +114,41 @@ public class TiledPredictionUtil {
 		while (cursor.hasNext()) {
 			RandomAccessibleInterval<T> tile = cursor.next();
 			//uiService.show(tile);
-			futures.add( threadService.run( new Callable<RandomAccessibleInterval<FloatType>>() {
-				@Override
-				public RandomAccessibleInterval<FloatType> call() {
-					return executeGraphWithPadding(tile,
-							datasetConverter, bridge, normalizer, model, signature, inputNodeName, outputNodeName);
+			if(multithreading){
+				futures.add( threadService.run( new Callable<RandomAccessibleInterval<FloatType>>() {
+					@Override
+					public RandomAccessibleInterval<FloatType> call() {
+						return executeGraphWithPadding(tile,
+								datasetConverter, mappingIn, mappingOut, normalizer, model, signature, inputNodeName, outputNodeName);
+					}
+				}));				
+			}else{
+				try {
+					threadService.invoke( new Runnable() {
+
+						@Override
+						public void run() {
+							RandomAccessibleInterval< FloatType > tileExecuted = executeGraphWithPadding(tile,
+									datasetConverter, mappingIn, mappingOut, normalizer, model, signature, inputNodeName, outputNodeName);
+							tileExecuted = Views.zeroMin(Views.expandZero(tileExecuted, negPadding));
+							//uiService.show(tileExecuted);
+							results.add(tileExecuted);
+						}
+						
+					});
+				} catch ( InvocationTargetException | InterruptedException exc ) {
+					// TODO Auto-generated catch block
+					exc.printStackTrace();
+					return null;
 				}
-			}));
-		}
+			}
+		}		
+		
 		for(Future< RandomAccessibleInterval<FloatType> > future : futures){
 			RandomAccessibleInterval< FloatType > tileExecuted = null;
 			try {
 				tileExecuted = future.get();
 			} catch ( InterruptedException | ExecutionException exc ) {
-				// TODO Auto-generated catch block
 				exc.printStackTrace();
 				for(Future< RandomAccessibleInterval<FloatType> > otherfuture : futures){
 					if(!otherfuture.isDone()){
@@ -117,9 +158,10 @@ public class TiledPredictionUtil {
 				return null;
 			}
 			tileExecuted = Views.zeroMin(Views.expandZero(tileExecuted, negPadding));
-			//uiService.show(tileExecuted);
+//			uiService.show(tileExecuted);
 			results.add(tileExecuted);
 		}
+		
 		// Arrange and combine the tiles again
 		long[] grid = new long[results.get(0).numDimensions()];
 		for (int i = 0; i < grid.length; i++) {
@@ -129,6 +171,23 @@ public class TiledPredictionUtil {
 		return expandDimToSize(result, largestDim, shape[largestDim]);
 	}
 	
+	private static void replaceNegativesWithMissingIndices( int[] arr ) {
+		List<Integer> indices = new ArrayList<>(); 
+		for(int i = 0; i < arr.length; i++){
+			indices.add( arr[i] );
+		}
+		for(int i = 0; i < arr.length; i++){
+			if(!indices.contains( i )){
+				for(int j = 0; j < arr.length; j++){
+					if(arr[j] == -1){
+						arr[j] = i;
+						break;
+					}
+				}
+			}
+		}
+	}
+
 	private static <T extends RealType<T>> RandomAccessibleInterval<T> expandDimToSize(RandomAccessibleInterval<T> im, int d, long size) {
 		final int n = im.numDimensions();
 		final long[] min = new long[ n ];
@@ -142,20 +201,21 @@ public class TiledPredictionUtil {
 	private static <T extends RealType<T>> RandomAccessibleInterval<FloatType> executeGraphWithPadding(
 			final RandomAccessibleInterval< T > tile,
 			final DatasetConverter< T > datasetConverter,
-			final DatasetTensorBridge bridge,
+			final int[] mappingIn,
+			final int[] mappingOut,
 			final Normalizer normalizer,
 			final SavedModelBundle model,
 			final SignatureDef signature,
 			final String inputNodeName,
 			final String outputNodeName) {
-		Tensor inputTensor = datasetConverter.datasetToTensor(tile, bridge, normalizer);
+		Tensor inputTensor = datasetConverter.datasetToTensor(tile, mappingIn, normalizer);
 		Tensor outputTensor = TensorFlowRunner.executeGraph(
 													model,
 													signature,
 													inputTensor,
 													inputNodeName,
 													outputNodeName );
-		return datasetConverter.tensorToDataset(outputTensor, bridge);
+		return datasetConverter.tensorToDataset(outputTensor, mappingOut);
 	}
 
 	// TODO remove

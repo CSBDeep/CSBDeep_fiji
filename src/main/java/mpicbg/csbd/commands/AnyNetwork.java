@@ -211,7 +211,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 
 		processDataset();
 
-		if ( bridge.getInitialInputTensorShape() == null ) {
+		if ( bridge.getAbstractInputTensorShape() == null ) {
 			modelChanged();
 		}
 
