@@ -14,7 +14,7 @@ public class DefaultDatasetConverter <T extends RealType<T>> implements DatasetC
 	@Override
 	public RandomAccessibleInterval<FloatType> tensorToDataset(Tensor tensor, DatasetTensorBridge bridge) {
 
-		// Convert back to an image
+		// Convert back to an image // TODO if the output has less dimensions than the input we can't use the same mapping
 		RandomAccessibleInterval<FloatType> outImg = Tensors.imgFloat(tensor, getMapping(bridge));
 //		RandomAccessibleInterval<FloatType> outImg = Tensors.imgDirectFloat(tensor);
 
@@ -58,7 +58,10 @@ public class DefaultDatasetConverter <T extends RealType<T>> implements DatasetC
 	private int[] getMapping(DatasetTensorBridge bridge) {
 		int[] mapping = new int[bridge.getInitialInputTensorShape().getDimCount()];
 		for (int i = 0; i < mapping.length; i++) {
-			mapping[i] = bridge.getMapping(i + 5 - bridge.getInitialInputTensorShape().getDimCount()); // TODO that seems ugly...
+			// TODO do we have inputs with another dimension count than 5? And does the tfIndex starts with 1 in this cases?
+			// Because I once added the following line and it seems strange.
+			int tfIndex = i + 5 - bridge.getInitialInputTensorShape().getDimCount();
+			mapping[bridge.getMapping(tfIndex)] = i;
 		}
 		return mapping;
 	}

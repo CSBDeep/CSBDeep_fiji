@@ -4,11 +4,14 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import net.imagej.plugins.commands.assign.InvertDataValues;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.meta.IntervalUtils;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
 
 import org.tensorflow.SavedModelBundle;
@@ -54,19 +57,26 @@ public class TiledPredictionUtil {
 		// Calculate the blocksize to use
 		double blockwidthIdeal = largestSize / (double) nTiles;
 		long blockwidth = (long) (Math.ceil(blockwidthIdeal / blockMultiple) * blockMultiple);
-		long[] blockSize = Arrays.copyOf(shape, input.numDimensions());
-		blockSize[largestDim] = blockwidth;
 
 		// Expand the image to fit the blocksize
 		RandomAccessibleInterval<T> im = expandDimToSize(input, largestDim, blockwidth * nTiles);
+
+		// Expand other dimensions to fit blockMultiple
+		for (int i = 0; i < im.numDimensions(); i++) {
+			im = i == largestDim ? im : expandDimToSize(im, i, (long) Math.ceil(im.dimension(i) / (double) blockMultiple) * blockMultiple);
+		}
 		printDim("After expand", im);
+
+		// Set the tile size
+		long[] tileSize = Intervals.dimensionsAsLongArray(im);
+		tileSize[largestDim] = blockwidth;
 
 		// Put the padding per dimension in a array
 		long[] padding = new long[im.numDimensions()];
 		padding[largestDim] = overlap;
 
 		// Create the tiled view
-		TiledView<T> tiledView = new TiledView<>(im, blockSize, padding);
+		TiledView<T> tiledView = new TiledView<>(im, tileSize, padding);
 		Cursor<RandomAccessibleInterval<T>> cursor = Views.iterable(tiledView).cursor();
 
 		// Set padding to negative to remove it later
