@@ -27,6 +27,7 @@ import org.scijava.ItemVisibility;
 import org.scijava.io.http.HTTPLocation;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
+import org.scijava.thread.ThreadService;
 import org.scijava.ui.UIService;
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.TensorFlowException;
@@ -54,6 +55,9 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	@Parameter
 	protected UIService uiService;
+	
+	@Parameter
+	protected ThreadService threadService;
 
 	@Parameter( type = ItemIO.OUTPUT )
 	protected Dataset outputImage;
@@ -194,8 +198,10 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		testNormalization( input, uiService );
 		
 		RandomAccessibleInterval<FloatType> tiledPrediction = TiledPredictionUtil.tiledPrediction((RandomAccessibleInterval) input.getImgPlus(),
-				nTiles, 32, overlap, datasetConverter, bridge, this, model, sig, inputNodeName, outputNodeName);
-		uiService.show(tiledPrediction);
+				nTiles, 32, overlap, datasetConverter, bridge, this, model, sig, inputNodeName, outputNodeName, threadService);
+		if(tiledPrediction != null){
+			uiService.show(tiledPrediction);			
+		}
 		// TODO remove comment and add tiled prediction
 //		try (
 //				final Tensor image = datasetConverter.datasetToTensor( input, bridge, this );) {

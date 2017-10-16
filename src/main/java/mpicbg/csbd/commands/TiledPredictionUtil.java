@@ -3,6 +3,9 @@ package mpicbg.csbd.commands;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
 
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
@@ -11,6 +14,7 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
 
+import org.scijava.thread.ThreadService;
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
 import org.tensorflow.framework.SignatureDef;
@@ -36,7 +40,8 @@ public class TiledPredictionUtil {
 			final SavedModelBundle model,
 			final SignatureDef signature,
 			final String inputNodeName,
-			final String outputNodeName) { // TODO output type
+			final String outputNodeName,
+			final ThreadService threadService) { // TODO output type
 		// Get the dimensions of the image
 		long[] shape = new long[input.numDimensions()];
 		input.dimensions(shape);
@@ -75,12 +80,32 @@ public class TiledPredictionUtil {
 
 		// Loop over the tiles and execute the prediction
 		List<RandomAccessibleInterval<FloatType>> results = new ArrayList<>();
+		List<Future< RandomAccessibleInterval<FloatType> > > futures = new ArrayList<>();
 		while (cursor.hasNext()) {
 			RandomAccessibleInterval<T> tile = cursor.next();
 			//uiService.show(tile);
-			RandomAccessibleInterval<FloatType> tileExecuted = executeGraphWithPadding(tile,
-					datasetConverter, bridge, normalizer, model, signature, inputNodeName, outputNodeName);
-			// Remove padding
+			futures.add( threadService.run( new Callable<RandomAccessibleInterval<FloatType>>() {
+				@Override
+				public RandomAccessibleInterval<FloatType> call() {
+					return executeGraphWithPadding(tile,
+							datasetConverter, bridge, normalizer, model, signature, inputNodeName, outputNodeName);
+				}
+			}));
+		}
+		for(Future< RandomAccessibleInterval<FloatType> > future : futures){
+			RandomAccessibleInterval< FloatType > tileExecuted = null;
+			try {
+				tileExecuted = future.get();
+			} catch ( InterruptedException | ExecutionException exc ) {
+				// TODO Auto-generated catch block
+				exc.printStackTrace();
+				for(Future< RandomAccessibleInterval<FloatType> > otherfuture : futures){
+					if(!otherfuture.isDone()){
+						otherfuture.cancel(true);						
+					}
+				}
+				return null;
+			}
 			tileExecuted = Views.zeroMin(Views.expandZero(tileExecuted, negPadding));
 			//uiService.show(tileExecuted);
 			results.add(tileExecuted);

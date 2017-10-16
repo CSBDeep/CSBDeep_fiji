@@ -20,8 +20,15 @@ public class TensorFlowRunner {
 			final Tensor image,
 			final String inputNodeName,
 			final String outputNodeName ) {
+		
+		String inputstr = "[";
+		for(int i = 0; i < image.shape().length; i++) {
+			if(i != 0) inputstr += ", ";
+			inputstr += image.shape()[i];
+		}
+		inputstr += "]";
 
-		System.out.println( "executeInceptionGraph" );
+		System.out.println( "executeInceptionGraph with input shape " + inputstr );
 
 		Tensor output_t = null;
 		try {

@@ -32,6 +32,7 @@ import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.prefs.PrefService;
+import org.scijava.thread.ThreadService;
 import org.scijava.ui.UIService;
 import org.scijava.widget.Button;
 import org.tensorflow.SavedModelBundle;
@@ -89,6 +90,9 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 
 	@Parameter
 	private PrefService prefService;
+	
+	@Parameter
+	private ThreadService threadService;
 
 	@Parameter( type = ItemIO.OUTPUT )
 	private Dataset outputImage;
@@ -253,8 +257,11 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 						model,
 						sig,
 						inputNodeName,
-						outputNodeName);
-		uiService.show(tiledPrediction);
+						outputNodeName,
+						threadService);
+		if(tiledPrediction != null){
+			uiService.show(tiledPrediction);			
+		}
 //		uiService.show(arrayToDataset(datasetToArray(input)));
 
 	}
