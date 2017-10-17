@@ -22,6 +22,8 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 
+import org.scijava.Cancelable;
+import org.scijava.Initializable;
 import org.scijava.ItemIO;
 import org.scijava.ItemVisibility;
 import org.scijava.io.http.HTTPLocation;
@@ -39,7 +41,10 @@ import mpicbg.csbd.tensorflow.DatasetConverter;
 import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 import mpicbg.csbd.tensorflow.DefaultDatasetConverter;
 
-public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer {
+public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer
+		implements
+		Cancelable,
+		Initializable {
 
 	@Parameter( visibility = ItemVisibility.MESSAGE )
 	protected String header;
@@ -88,7 +93,8 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	// API.
 	protected static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY = "serving_default";
 
-	public CSBDeepCommand() {
+	@Override
+	public void initialize() {
 		System.out.println( "CSBDeepCommand constructor" );
 		try {
 			System.loadLibrary( "tensorflow_jni" );
@@ -242,6 +248,24 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 				errorMsg,
 				"Error",
 				JOptionPane.ERROR_MESSAGE );
+	}
+
+	@Override
+	public boolean isCanceled() {
+		// TODO Auto-generated method stub
+		return false;
+	}
+
+	@Override
+	public void cancel( String reason ) {
+		// TODO Auto-generated method stub
+
+	}
+
+	@Override
+	public String getCancelReason() {
+		// TODO Auto-generated method stub
+		return null;
 	}
 
 }

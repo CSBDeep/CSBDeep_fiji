@@ -14,19 +14,18 @@ import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imglib2.type.numeric.RealType;
 
-import org.scijava.Cancelable;
 import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
 
 /**
  */
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Project", headless = true )
-public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T >
-		implements
-		Command,
-		Cancelable {
+public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T > implements Command {
 
-	public NetProject() {
+	@Override
+	public void initialize() {
+
+		super.initialize();
 
 		modelFileUrl = "https://github.com/frauzufall/CSBDeep-data/raw/master/net_project/model_pro_avg_resnet_3_3x3_32__session_4_5_6_7_cx_0_cy_2_augment__2017-09-20_21-47-38_581863.zip";
 		modelName = "net_project";
@@ -55,19 +54,6 @@ public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T >
 			ij.command().run( NetProject.class, true );
 		}
 
-	}
-
-	@Override
-	public boolean isCanceled() {
-		return false;
-	}
-
-	@Override
-	public void cancel( final String reason ) {}
-
-	@Override
-	public String getCancelReason() {
-		return null;
 	}
 
 	@Override

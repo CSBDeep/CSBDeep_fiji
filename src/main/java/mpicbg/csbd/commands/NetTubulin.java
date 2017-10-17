@@ -14,19 +14,18 @@ import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imglib2.type.numeric.RealType;
 
-import org.scijava.Cancelable;
 import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
 
 /**
  */
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Tubulin", headless = true )
-public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
-		implements
-		Command,
-		Cancelable {
+public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T > implements Command {
 
-	public NetTubulin() {
+	@Override
+	public void initialize() {
+
+		super.initialize();
 
 		modelFileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_tubulin.zip";
 		modelName = "net_tubulin";
@@ -55,19 +54,6 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 			ij.command().run( NetTubulin.class, true );
 		}
 
-	}
-
-	@Override
-	public boolean isCanceled() {
-		return false;
-	}
-
-	@Override
-	public void cancel( final String reason ) {}
-
-	@Override
-	public String getCancelReason() {
-		return null;
 	}
 
 	@Override

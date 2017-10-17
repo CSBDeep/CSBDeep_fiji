@@ -24,6 +24,7 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 
 import org.scijava.Cancelable;
+import org.scijava.Initializable;
 import org.scijava.ItemIO;
 import org.scijava.ItemVisibility;
 import org.scijava.command.Command;
@@ -52,7 +53,8 @@ import mpicbg.csbd.ui.MappingDialog;
 public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 		implements
 		Command,
-		Cancelable {
+		Cancelable,
+		Initializable {
 
 	@Parameter( visibility = ItemVisibility.MESSAGE )
 	private final String header = "This command removes noise from your images.";
@@ -111,7 +113,8 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 	// API.
 	private static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY = "serving_default";
 
-	public AnyNetwork() {
+	@Override
+	public void initialize() {
 		try {
 			System.loadLibrary( "tensorflow_jni" );
 		} catch ( UnsatisfiedLinkError e ) {

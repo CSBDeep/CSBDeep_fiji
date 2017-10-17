@@ -14,7 +14,6 @@ import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imglib2.type.numeric.RealType;
 
-import org.scijava.Cancelable;
 import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
 
@@ -25,10 +24,12 @@ import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Tribolium", headless = true )
 public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 		implements
-		Command,
-		Cancelable {
+		Command {
 
-	public NetTribolium() {
+	@Override
+	public void initialize() {
+
+		super.initialize();
 
 		modelFileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_tribolium.zip";
 		modelName = "net_tribolium";
@@ -57,19 +58,6 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 			ij.command().run( NetTribolium.class, true );
 		}
 
-	}
-
-	@Override
-	public boolean isCanceled() {
-		return false;
-	}
-
-	@Override
-	public void cancel( final String reason ) {}
-
-	@Override
-	public String getCancelReason() {
-		return null;
 	}
 
 	@Override
