@@ -154,10 +154,19 @@ public class TiledPredictionUtil {
 											signature,
 											inputNodeName,
 											outputNodeName );
-							tileExecuted =
-									Views.zeroMin( Views.expandZero( tileExecuted, negPadding ) );
-							//uiService.show(tileExecuted);
-							results.add( tileExecuted );
+							if ( tileExecuted != null ) {
+
+								long[] negPaddingPlus = new long[ tileExecuted.numDimensions() ];
+								for ( int i = 0; i < negPadding.length; i++ ) {
+									negPaddingPlus[ i ] = negPadding[ i ];
+								}
+								tileExecuted =
+										Views.zeroMin(
+												Views.expandZero( tileExecuted, negPaddingPlus ) );
+
+//								//uiService.show(tileExecuted);
+								results.add( tileExecuted );
+							}
 						}
 
 					} );
@@ -187,14 +196,18 @@ public class TiledPredictionUtil {
 			results.add( tileExecuted );
 		}
 
-		// Arrange and combine the tiles again
-		long[] grid = new long[ results.get( 0 ).numDimensions() ];
-		for ( int i = 0; i < grid.length; i++ ) {
-			grid[ i ] = i == largestDim ? nTiles : 1;
+		if ( results.size() > 0 ) {
+			// Arrange and combine the tiles again
+			long[] grid = new long[ results.get( 0 ).numDimensions() ];
+			for ( int i = 0; i < grid.length; i++ ) {
+				grid[ i ] = i == largestDim ? nTiles : 1;
+			}
+			RandomAccessibleInterval< FloatType > result =
+					new CombinedView<>( new ArrangedView<>( results, grid ) );
+			return expandDimToSize( result, largestDim, shape[ largestDim ] );
 		}
-		RandomAccessibleInterval< FloatType > result =
-				new CombinedView<>( new ArrangedView<>( results, grid ) );
-		return expandDimToSize( result, largestDim, shape[ largestDim ] );
+
+		return null;
 	}
 
 	private static void replaceNegativesWithMissingIndices( int[] arr ) {
@@ -237,13 +250,16 @@ public class TiledPredictionUtil {
 					final String inputNodeName,
 					final String outputNodeName ) {
 		Tensor inputTensor = datasetConverter.datasetToTensor( tile, mappingIn, normalizer );
-		Tensor outputTensor = TensorFlowRunner.executeGraph(
-				model,
-				signature,
-				inputTensor,
-				inputNodeName,
-				outputNodeName );
-		return datasetConverter.tensorToDataset( outputTensor, mappingOut );
+		if ( inputTensor != null ) {
+			Tensor outputTensor = TensorFlowRunner.executeGraph(
+					model,
+					signature,
+					inputTensor,
+					inputNodeName,
+					outputNodeName );
+			return datasetConverter.tensorToDataset( outputTensor, mappingOut );
+		}
+		return null;
 	}
 
 	// TODO remove

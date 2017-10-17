@@ -1,9 +1,12 @@
 package mpicbg.csbd.tensorflow;
 
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.List;
 
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
+import net.imagej.axis.AxisType;
 
 import org.tensorflow.framework.TensorShapeProto;
 
@@ -28,7 +31,12 @@ public class DatasetTensorBridge {
 	private boolean mappingInitialized = false;
 
 	public DatasetTensorBridge( final Dataset image ) {
+
+		//check if image has unknown dimensions. if yes, assign unused dimensions
+		assignUnknownDimensions( image );
+
 		dataset = image;
+
 		final int maxdim = 5;
 		datasetDimNames = new String[ maxdim ];
 		datasetDimNames[ X ] = "X";
@@ -57,6 +65,38 @@ public class DatasetTensorBridge {
 		datasetDimLengths[ Z ] = image.getDepth();
 		datasetDimLengths[ C ] = image.getChannels();
 		datasetDimLengths[ T ] = image.getFrames();
+	}
+
+	private void assignUnknownDimensions( Dataset image ) {
+		AxisType[] axes = Axes.knownTypes();
+		List< AxisType > unusedAxes = new ArrayList<>();
+		List< Integer > unknownIndices = new ArrayList<>();
+		for ( int j = 0; j < axes.length; j++ ) {
+			boolean knownAxis = false;
+			for ( int i = 0; i < image.numDimensions(); i++ ) {
+				if ( image.axis( i ).type() == axes[ j ] ) {
+					knownAxis = true;
+					break;
+				}
+			}
+			if ( !knownAxis ) unusedAxes.add( axes[ j ] );
+		}
+
+		for ( int i = 0; i < image.numDimensions(); i++ ) {
+			boolean knownAxis = false;
+			for ( int j = 0; j < axes.length; j++ ) {
+				if ( image.axis( i ).type() == axes[ j ] ) {
+					knownAxis = true;
+					break;
+				}
+			}
+			if ( !knownAxis ) unknownIndices.add( i );
+		}
+
+		for ( int i = 0; i < unknownIndices.size() && i < unusedAxes.size(); i++ ) {
+			image.axis( unknownIndices.get( i ) ).setType( unusedAxes.get( i ) );
+		}
+
 	}
 
 	public long getDatasetDimLengthFromTFIndex( final int tfIndex5D ) {
@@ -129,6 +169,7 @@ public class DatasetTensorBridge {
 				tfMapping[ dimMapping[ i ] ] = i;
 			}
 		}
+		printMapping();
 	}
 
 	public void setInputTensorShape( final TensorShapeProto shape ) {
