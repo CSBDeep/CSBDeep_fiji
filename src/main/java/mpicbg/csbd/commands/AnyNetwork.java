@@ -221,7 +221,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 			modelChanged();
 		}
 
-		MappingDialog.create( bridge, sig );
+		MappingDialog.create( bridge );
 	}
 
 	@Override

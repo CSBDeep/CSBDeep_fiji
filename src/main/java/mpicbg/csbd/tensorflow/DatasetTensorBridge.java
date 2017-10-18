@@ -1,8 +1,13 @@
 package mpicbg.csbd.tensorflow;
 
 import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.Objects;
+import java.util.Set;
 
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
@@ -12,25 +17,14 @@ import org.tensorflow.framework.TensorShapeProto;
 
 public class DatasetTensorBridge {
 
-	final int maxdim = 5;
-
-	// STATICS
-	public static int UNSET = -1;
-	public static int X = 0;
-	public static int Y = 1;
-	public static int Z = 2;
-	public static int C = 3;
-	public static int T = 4;
-
 	private final Dataset dataset;
 	private TensorShapeProto inputTensorShape, outputTensorShape;
 
-	private final String[] datasetDimNames;
-	private final int[] datasetDimIndices, datasetIndicesDim;
-	private final long[] datasetDimLengths;
-	private final int[] dimMapping = { UNSET, UNSET, UNSET, UNSET, UNSET };
-	private final int[] dimType = { UNSET, UNSET, UNSET, UNSET, UNSET };
-	private final int[] tfMapping = { UNSET, UNSET, UNSET, UNSET, UNSET };
+	AxisType[] axes = Axes.knownTypes();
+	private final Map< AxisType, Integer > axisDataset;
+	private final Map< AxisType, Integer > axisTF;
+	private final Map< AxisType, Long > axisSize;
+
 	private boolean mappingInitialized = false;
 
 	public DatasetTensorBridge( final Dataset image ) {
@@ -40,37 +34,21 @@ public class DatasetTensorBridge {
 
 		dataset = image;
 
-		datasetDimNames = new String[ maxdim ];
-		datasetDimNames[ X ] = "X";
-		datasetDimNames[ Y ] = "Y";
-		datasetDimNames[ Z ] = "Z";
-		datasetDimNames[ C ] = "C";
-		datasetDimNames[ T ] = "T";
-		datasetDimIndices = new int[ maxdim ];
-		datasetDimIndices[ X ] = image.dimensionIndex( Axes.X );
-		datasetDimIndices[ Y ] = image.dimensionIndex( Axes.Y );
-		datasetDimIndices[ Z ] = image.dimensionIndex( Axes.Z );
-		datasetDimIndices[ C ] = image.dimensionIndex( Axes.CHANNEL );
-		datasetDimIndices[ T ] = image.dimensionIndex( Axes.TIME );
-		datasetIndicesDim = new int[ maxdim ];
-		for ( int i = 0; i < maxdim; i++ ) {
-			datasetIndicesDim[ i ] = -1;
+		axisDataset = new HashMap<>();
+		axisTF = new HashMap<>();
+		axisSize = new HashMap<>();
+
+		for ( int i = 0; i < axes.length; i++ ) {
+			AxisType axis = axes[ i ];
+			axisDataset.put( axis, image.dimensionIndex( axis ) );
+			axisTF.put( axis, -1 );
+			axisSize.put( axis, image.dimension( axis ) );
 		}
-		for ( int i = 0; i < maxdim; i++ ) {
-			if ( datasetDimIndices[ i ] >= 0 ) {
-				datasetIndicesDim[ datasetDimIndices[ i ] ] = i;
-			}
-		}
-		datasetDimLengths = new long[ maxdim ];
-		datasetDimLengths[ X ] = image.getWidth();
-		datasetDimLengths[ Y ] = image.getHeight();
-		datasetDimLengths[ Z ] = image.getDepth();
-		datasetDimLengths[ C ] = image.getChannels();
-		datasetDimLengths[ T ] = image.getFrames();
+
 	}
 
 	private void assignUnknownDimensions( Dataset image ) {
-		AxisType[] axes = Axes.knownTypes();
+
 		List< AxisType > unusedAxes = new ArrayList<>();
 		List< Integer > unknownIndices = new ArrayList<>();
 		for ( int j = 0; j < axes.length; j++ ) {
@@ -101,27 +79,39 @@ public class DatasetTensorBridge {
 
 	}
 
-	public int getMaxTFDim() {
-		return maxdim;
+	public Long getDatasetDimSizeFromTFIndex( final int tfIndex5D ) {
+		if ( axisTF.containsValue(
+				tfIndex5D ) ) { return axisSize.get( getKeyByValue( axisTF, tfIndex5D ) ); }
+		return ( long ) 1;
 	}
 
-	public long getDatasetDimLengthFromTFIndex( final int tfIndex5D ) {
-		if ( dimMapping[ tfIndex5D ] < 0 ) { return 1; }
-		return datasetDimLengths[ dimMapping[ tfIndex5D ] ];
+	public Integer getDatasetDimIndexByTFIndex( final int tfIndex5D ) {
+		if ( axisTF.containsValue(
+				tfIndex5D ) ) { return axisDataset.get( getKeyByValue( axisTF, tfIndex5D ) ); }
+		return null;
 	}
 
-	public int getDatasetDimIndexByTFIndex( final int tfIndex5D ) {
-		if ( dimMapping[ tfIndex5D ] < 0 ) { return -1; }
-		return datasetDimIndices[ dimMapping[ tfIndex5D ] ];
+	public String getDatasetDimNameByTFIndex( final int tfIndex5D ) {
+		if ( axisTF.containsValue(
+				tfIndex5D ) ) { return getDatasetDimName( getKeyByValue( axisTF, tfIndex5D ) ); }
+		return null;
 	}
 
-	public int getTfIndexByDatasetDim( final int datasetDim ) {
-		if ( datasetIndicesDim[ datasetDim ] < 0 ) return -1;
-		return tfMapping[ datasetIndicesDim[ datasetDim ] ];
+	public Integer getTfIndexByDatasetDim( final int datasetDim ) {
+		if ( axisDataset.containsValue(
+				datasetDim ) ) { return axisTF.get( getKeyByValue( axisDataset, datasetDim ) ); }
+		return -1;
 	}
 
-	public int getDimTypeByDatasetDim( final int datasetDim ) {
-		return dimType[ datasetDim ];
+	public Integer getTfIndexByDimType( final AxisType type ) {
+		if ( axisTF.containsKey( type ) ) { return axisTF.get( type ); }
+		return -1;
+	}
+
+	public AxisType getDimTypeByDatasetDim( final int datasetDim ) {
+		if ( axisDataset.containsValue(
+				datasetDim ) ) { return getKeyByValue( axisDataset, datasetDim ); }
+		return null;
 	}
 
 	public boolean isMappingInitialized() {
@@ -136,75 +126,53 @@ public class DatasetTensorBridge {
 		System.out.println( "setmappingdefaults" );
 		setMappingInitialized( true );
 		if ( inputTensorShape.getDimCount() == 5 ) {
-			dimMapping[ 0 ] = T;
-			dimMapping[ 1 ] = Z;
-			dimMapping[ 2 ] = Y;
-			dimMapping[ 3 ] = X;
-			dimMapping[ 4 ] = C;
+			axisTF.put( Axes.TIME, 0 );
+			axisTF.put( Axes.Z, 1 );
+			axisTF.put( Axes.Y, 2 );
+			axisTF.put( Axes.X, 3 );
+			axisTF.put( Axes.CHANNEL, 4 );
 		} else {
 			if ( inputTensorShape.getDimCount() == 4 ) {
-				// If all is 1, we take this one
-				if ( dataset.getChannels() <= 1 && dataset.getFrames() == 1 && dataset.getDepth() == 1 ) {
-					dimMapping[ 0 ] = UNSET;
-					dimMapping[ 1 ] = Z;
-					dimMapping[ 2 ] = Y;
-					dimMapping[ 3 ] = X;
-					dimMapping[ 4 ] = C;
-					// Otherwise if channels > 1 we make it depend on frames...
-				} else if ( dataset.getChannels() > 1 && dataset.getFrames() > 1 ) {
-					dimMapping[ 0 ] = UNSET;
-					dimMapping[ 1 ] = T;
-					dimMapping[ 2 ] = Y;
-					dimMapping[ 3 ] = X;
-					dimMapping[ 4 ] = C;
-					// ... depth size ...
-				} else if ( dataset.getChannels() > 1 && dataset.getDepth() > 1 ) {
-					dimMapping[ 0 ] = UNSET;
-					dimMapping[ 1 ] = Z;
-					dimMapping[ 2 ] = Y;
-					dimMapping[ 3 ] = X;
-					dimMapping[ 4 ] = C;
-					// And in all other cases we do this:
+				axisTF.put( Axes.unknown(), 0 );
+				axisTF.put( Axes.Y, 2 );
+				axisTF.put( Axes.X, 3 );
+				if ( dataset.dimension( Axes.Z ) > 1 ) {
+					axisTF.put( Axes.Z, 1 );
+					if ( dataset.dimension( Axes.CHANNEL ) > 1 ) {
+						axisTF.put( Axes.CHANNEL, 4 );
+					} else {
+						axisTF.put( Axes.TIME, 4 );
+					}
 				} else {
-					dimMapping[ 0 ] = UNSET;
-					dimMapping[ 1 ] = Z;
-					dimMapping[ 2 ] = Y;
-					dimMapping[ 3 ] = X;
-					dimMapping[ 4 ] = C;
+					if ( dataset.dimension( Axes.CHANNEL ) > 1 ) {
+						axisTF.put( Axes.CHANNEL, 1 );
+						axisTF.put( Axes.TIME, 4 );
+					} else {
+						axisTF.put( Axes.TIME, 1 );
+						axisTF.put( Axes.CHANNEL, 4 );
+					}
 				}
-			}
-		}
-		for ( int i = 0; i < dimMapping.length; i++ ) {
-			dimType[ i ] = datasetIndicesDim[ i ];
-			if ( dimMapping[ i ] >= 0 ) {
-				tfMapping[ dimMapping[ i ] ] = i;
 			}
 		}
 		printMapping();
 	}
 
+	public void setTFMappingByKnownAxesIndex( int tfIndex5D, int knownAxesIndex ) {
+		if ( knownAxesIndex < axes.length ) {
+			axisTF.put( axes[ knownAxesIndex ], tfIndex5D );
+		}
+	}
+
 	public void setInputTensorShape( final TensorShapeProto shape ) {
 		inputTensorShape = shape;
-		String shapetxt = "[";
-		for ( int i = 0; i < shape.getDimCount(); i++ ) {
-			if ( i != 0 ) {
-				shapetxt += ", ";
-			}
-			shapetxt += shape.getDim( i ).getSize();
-		}
-		System.out.println( "DatasetTensorBridge::setInputTensorShape: " + shapetxt + "]" );
+		System.out.println(
+				"DatasetTensorBridge::setInputTensorShape: " + shape.getDimList() + "]" );
 	}
 
 	public void setOutputTensorShape( final TensorShapeProto shape ) {
 		outputTensorShape = shape;
-		String shapetxt = "[";
-		for ( int i = 0; i < shape.getDimCount(); i++ ) {
-			if ( i != 0 ) {
-				shapetxt += ", ";
-			}
-			shapetxt += shape.getDim( i ).getSize();
-		}
-		System.out.println( "DatasetTensorBridge::setOutputTensorShape: " + shapetxt + "]" );
+		System.out.println(
+				"DatasetTensorBridge::setOutputTensorShape: " + shape.getDimList() + "]" );
 	}
 
 	public TensorShapeProto getAbstractInputTensorShape() {
@@ -216,52 +184,21 @@ public class DatasetTensorBridge {
 	}
 
 	public int numDimensions() {
-		return datasetDimNames.length;
+		return axes.length;
 	}
 
-	public long getDatasetDimLength( final int index ) {
-		return datasetDimLengths[ index ];
+	public long getDatasetDimSize( final int knownAxesIndex ) {
+		if ( axes.length > knownAxesIndex ) { return axisSize.get(
+				axes[ knownAxesIndex ] ); }
+		return 1;
 	}
 
-	public String getDatasetDimName( final int index ) {
-		return datasetDimNames[ index ];
+	public String getDatasetDimName( final AxisType axis ) {
+		return axis.getLabel().substring( 0, 1 );
 	}
 
-	public int[] getMapping() {
-		int[] res = dimMapping.clone();
-		for ( int i = 0; i < res.length; i++ ) {
-			if ( res[ i ] < 0 ) res[ i ] = 0;
-		}
-		return res;
-	}
-
-	public int getMapping( final int tfIndex5D ) {
-		return dimMapping[ tfIndex5D ];
-	}
-
-	public void setMapping( final int tfIndex5D, final int mapping ) {
-		dimMapping[ tfIndex5D ] = mapping;
-		if ( mapping < 0 ) {
-			dimType[ tfIndex5D ] = UNSET;
-		} else {
-			dimType[ tfIndex5D ] = datasetIndicesDim[ mapping ];
-		}
-
-		for ( int i = 0; i < dimMapping.length; i++ ) {
-			if ( dimMapping[ i ] >= 0 ) {
-				tfMapping[ dimMapping[ i ] ] = i;
-			}
-		}
-	}
-
-	public void setMappingInputTensorDim( final int inputTensorDim, final int mapping ) {
-		dimMapping[ inputTensorDim + dimMapping.length - inputTensorShape.getDimCount() ] =
-				mapping;
-		for ( int i = 0; i < dimMapping.length; i++ ) {
-			if ( dimMapping[ i ] >= 0 ) {
-				tfMapping[ dimMapping[ i ] ] = i;
-			}
-		}
+	public String getDatasetDimName( final int knownAxesIndex ) {
+		return getDatasetDimName( axes[ knownAxesIndex ] );
 	}
 
 	public boolean complete() {
@@ -270,10 +207,9 @@ public class DatasetTensorBridge {
 
 	public void printMapping() {
 		System.out.println( "--------------" );
-		System.out.println( "datasetDimIndices:" + Arrays.toString( datasetDimIndices ) );
-		System.out.println( "datasetIndicesDim:" + Arrays.toString( datasetIndicesDim ) );
-		System.out.println( "dimMapping:" + Arrays.toString( dimMapping ) );
-		System.out.println( "tfMapping:" + Arrays.toString( tfMapping ) );
+		System.out.println( "axisDataset:" + axisDataset.toString() );
+		System.out.println( "axisSize:" + axisSize.toString() );
+		System.out.println( "axisTF:" + axisTF.toString() );
 		System.out.println( "--------------" );
 	}
 
@@ -283,49 +219,40 @@ public class DatasetTensorBridge {
 		}
 	}
 
-	/*
-	 * moves Z dimension in mapping to the first position and set it to -1
-	 * example:
-	 * mapping: [T,Z,Y,X,C] -> [-1,T,Y,X,C]
-	 * mapping: [T,Y,X,C,Z] -> [-1,T,Y,X,C]
-	 *
-	 */
 	public boolean removeZFromMapping() {
 		boolean shift = false;
 		printMapping();
-		for ( int i = numDimensions() - 1; i >= 0; i-- ) {
-			if ( dataset.dimensionIndex( Axes.Z ) == getMapping( i ) ) {
+		if ( axisTF.containsKey( Axes.Z ) ) {
+			int tfindex = axisTF.get( Axes.Z );
+			if ( tfindex >= 0 ) {
+				axisTF.put( Axes.Z, -1 );
 				shift = true;
-			}
-			if ( shift ) {
-				if ( i > 0 ) {
-					setMapping( i, getMapping( i - 1 ) );
-				} else {
-					setMapping( i, -1 );
+				for ( int i = tfindex + 1; i < numDimensions(); i++ ) {
+					if ( axisTF.containsValue( i ) ) {
+						axisTF.put( getKeyByValue( axisTF, i ), i - 1 );
+					}
 				}
-
 			}
 		}
 		printMapping();
 		return shift;
 	}
 
-	/*
-	 * get index of value in searcharray but do not count negative entries
-	 * example:
-	 * searcharray: [-1, -1, 0, 1, 2], val: 0, returns 2
-	 * searcharray: [-1, -1, 0, 1, 2], val: 2, returns 4
-	 *
-	 */
-	private int getIndexByIndexIgnoreNegatives( final int[] searcharray, final int val ) {
-		int count = 0;
-		for ( int i = 0; i < searcharray.length; i++ ) {
-			if ( i == val ) { return count; }
-			if ( searcharray[ i ] >= 0 ) {
-				count++;
+	public static < T, E > Set< T > getKeysByValue( Map< T, E > map, E value ) {
+		Set< T > keys = new HashSet<>();
+		for ( Entry< T, E > entry : map.entrySet() ) {
+			if ( Objects.equals( value, entry.getValue() ) ) {
+				keys.add( entry.getKey() );
 			}
 		}
-		return -1;
+		return keys;
+	}
+
+	public static < T, E > T getKeyByValue( Map< T, E > map, E value ) {
+		for ( Entry< T, E > entry : map.entrySet() ) {
+			if ( Objects.equals( value, entry.getValue() ) ) { return entry.getKey(); }
+		}
+		return null;
 	}
 
 }

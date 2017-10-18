@@ -187,20 +187,20 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		_run();
 	}
 
-	public void runWithMapping( final int[] mapping ) {
-
-		if ( input == null ) { return; }
-		modelChanged();
-
-		if ( bridge != null ) {
-			if ( bridge.getAbstractInputTensorShape() != null ) {
-				for ( int i = 0; i < mapping.length; i++ ) {
-					bridge.setMapping( i, mapping[ i ] );
-				}
-			}
-		}
-		_run();
-	}
+//	public void runWithMapping( final int[] mapping ) {
+//
+//		if ( input == null ) { return; }
+//		modelChanged();
+//
+//		if ( bridge != null ) {
+//			if ( bridge.getAbstractInputTensorShape() != null ) {
+//				for ( int i = 0; i < mapping.length; i++ ) {
+//					bridge.setMapping( i, mapping[ i ] );
+//				}
+//			}
+//		}
+//		_run();
+//	}
 
 	private void _run() {
 

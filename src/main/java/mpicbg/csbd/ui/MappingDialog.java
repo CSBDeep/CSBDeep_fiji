@@ -12,13 +12,11 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
-import org.tensorflow.framework.SignatureDef;
-
 import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 
 public class MappingDialog {
 
-	public static void create( final DatasetTensorBridge bridge, final SignatureDef sig ) {
+	public static void create( final DatasetTensorBridge bridge ) {
 
 		if ( bridge.complete() ) {
 			final List< JComboBox< String > > drops = new ArrayList<>();
@@ -30,46 +28,50 @@ public class MappingDialog {
 
 			imgDimPanel.setBorder( BorderFactory.createTitledBorder( "Image" ) );
 			mappingPanel.setBorder( BorderFactory.createTitledBorder( "Mapping" ) );
-
 			inputDimPanel.setBorder( BorderFactory.createTitledBorder( "Model input" ) );
 
-			final List< String > dimStringsLength = new ArrayList<>();
+			final List< String > dimStringsSize = new ArrayList<>();
 			for ( int i = 0; i < bridge.numDimensions(); i++ ) {
+
+				String dimName = bridge.getDatasetDimName( i );
+				long dimSize = bridge.getDatasetDimSize( i );
+
 				final JTextField field = new JTextField();
-				field.setText( String.valueOf( bridge.getDatasetDimLength( i ) ) );
+				field.setText( String.valueOf( dimSize ) );
 				field.setEditable( false );
-				imgDimPanel.add(
-						new JLabel( bridge.getDatasetDimName( i ) + ":", SwingConstants.RIGHT ) );
+				imgDimPanel.add( new JLabel( dimName + ":", SwingConstants.RIGHT ) );
 				imgDimPanel.add( field );
-				dimStringsLength.add(
-						bridge.getDatasetDimName( i ) + " [" + bridge.getDatasetDimLength(
-								i ) + "]" );
+				dimStringsSize.add( MappingDialog.dimString( dimName, dimSize ) );
 			}
 
-			int dimCount = 0;
+			int tfDimCount = 0;
 			for ( int i = 0; i < bridge.numDimensions(); i++ ) {
-				if ( bridge.getMapping( i ) >= 0 ) {
+				if ( bridge.getDatasetDimIndexByTFIndex( i ) != null ) {
+
+					String dimName = bridge.getDatasetDimNameByTFIndex( i );
+					long dimSize = bridge.getDatasetDimSizeFromTFIndex( i );
+					String tfDimSize = String.valueOf(
+							bridge.getAbstractInputTensorShape().getDim( tfDimCount ).getSize() );
+
 					final JTextField field = new JTextField();
-					field.setText(
-							String.valueOf(
-									bridge.getAbstractInputTensorShape().getDim( dimCount ).getSize() ) );
+					field.setText( tfDimSize );
 					field.setEditable( false );
-					inputDimPanel.add( new JLabel( dimCount + ":", SwingConstants.RIGHT ) );
+					inputDimPanel.add( new JLabel( tfDimCount + ":", SwingConstants.RIGHT ) );
 					inputDimPanel.add( field );
 					inputDimPanel.add( field );
-					final String[] dimStringsLengthArr = new String[ dimStringsLength.size() ];
-					for ( int j = 0; j < dimStringsLength.size(); j++ ) {
-						dimStringsLengthArr[ j ] = dimStringsLength.get( j );
+
+					final String[] dimStringsLengthArr = new String[ dimStringsSize.size() ];
+					for ( int j = 0; j < dimStringsSize.size(); j++ ) {
+						dimStringsLengthArr[ j ] = dimStringsSize.get( j );
 					}
 					final JComboBox< String > dimDrop = new JComboBox<>( dimStringsLengthArr );
-					dimDrop.setSelectedIndex( bridge.getMapping( i ) );
+					dimDrop.setSelectedItem( MappingDialog.dimString( dimName, dimSize ) );
 					mappingPanel.add(
-							new JLabel( dimCount + " [" + bridge.getAbstractInputTensorShape().getDim(
-									dimCount ).getSize() + "] :", SwingConstants.RIGHT ) );
+							new JLabel( tfDimCount + " [" + tfDimSize + "] :", SwingConstants.RIGHT ) );
 					mappingPanel.add( dimDrop );
 					drops.add( dimDrop );
 
-					dimCount++;
+					tfDimCount++;
 				}
 			}
 
@@ -84,9 +86,7 @@ public class MappingDialog {
 			dialogPanel.setLayout( col1Layout );
 
 			dialogPanel.add( imgDimPanel );
-
 			dialogPanel.add( inputDimPanel );
-
 			dialogPanel.add( mappingPanel );
 
 			final int result = JOptionPane.showConfirmDialog(
@@ -94,13 +94,14 @@ public class MappingDialog {
 					dialogPanel,
 					"Please match image and tensorflow model dimensions",
 					JOptionPane.OK_CANCEL_OPTION );
+
 			if ( result == JOptionPane.OK_OPTION ) {
 				bridge.printMapping();
 				for ( int i = 0; i < drops.size(); i++ ) {
 					System.out.println(
 							"selected index for tf index " + i + ": " + drops.get(
 									i ).getSelectedIndex() );
-					bridge.setMappingInputTensorDim( i, drops.get( i ).getSelectedIndex() );
+					bridge.setTFMappingByKnownAxesIndex( i, drops.get( i ).getSelectedIndex() );
 				}
 				bridge.printMapping();
 			}
@@ -109,6 +110,10 @@ public class MappingDialog {
 					"Model and/or input image not initialized. call updateModel(); and updateImage() before opening mapping dialog" );
 		}
 
+	}
+
+	public static String dimString( String dimName, long dimSize ) {
+		return dimName + " [" + dimSize + "]";
 	}
 
 }

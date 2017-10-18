@@ -16,7 +16,7 @@ public class DefaultDatasetConverter< T extends RealType< T > > implements Datas
 	public RandomAccessibleInterval< FloatType > tensorToDataset( Tensor tensor, int[] mapping ) {
 
 		RandomAccessibleInterval< FloatType > outImg = Tensors.imgFloat( tensor, mapping );
-		return outImg;//Views.dropSingletonDimensions( outImg );
+		return Views.dropSingletonDimensions( outImg );
 	}
 
 	@Override

@@ -8,6 +8,7 @@ import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
+import net.imagej.axis.AxisType;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccessibleInterval;
@@ -53,7 +54,7 @@ public class TiledPredictionUtil {
 		int largestDim = 0;
 		long largestSize = 0;
 		for ( int d = 0; d < input.numDimensions(); d++ ) {
-			if ( shape[ d ] > largestSize ) {
+			if ( bridge.getDimTypeByDatasetDim( d ).isXY() && shape[ d ] > largestSize ) {
 				largestSize = shape[ d ];
 				largestDim = d;
 			}
@@ -69,11 +70,13 @@ public class TiledPredictionUtil {
 
 		// Expand other dimensions to fit blockMultiple
 		for ( int i = 0; i < im.numDimensions(); i++ ) {
-			im = i == largestDim ? im : expandDimToSize(
-					im,
-					i,
-					( long ) Math.ceil(
-							im.dimension( i ) / ( double ) blockMultiple ) * blockMultiple );
+			if ( bridge.getDimTypeByDatasetDim( i ).isXY() ) {
+				im = i == largestDim ? im : expandDimToSize(
+						im,
+						i,
+						( long ) Math.ceil(
+								im.dimension( i ) / ( double ) blockMultiple ) * blockMultiple );
+			}
 		}
 		printDim( "After expand", im );
 
@@ -106,12 +109,12 @@ public class TiledPredictionUtil {
 
 		//get mapping for input tensor (index is input image dimension index, value is tensor index)
 		int[] mappingOut = new int[ bridge.getAbstractOutputTensorShape().getDimCount() ];
-		int[] mappingOutDimType = new int[ mappingOut.length ];
+		AxisType[] mappingOutDimType = new AxisType[ mappingOut.length ];
 		for ( int i = 0; i < mappingOut.length; i++ ) {
 			mappingOut[ i ] =
-					bridge.getTfIndexByDatasetDim( i + bridge.getMaxTFDim() - mappingOut.length );
+					bridge.getTfIndexByDatasetDim( i );
 			mappingOutDimType[ i ] =
-					bridge.getDimTypeByDatasetDim( i + bridge.getMaxTFDim() - mappingOut.length );
+					bridge.getDimTypeByDatasetDim( i );
 		}
 		replaceNegativesWithMissingIndices( mappingOut );
 		System.out.println( "mapping out: " + Arrays.toString( mappingOut ) );
@@ -210,47 +213,46 @@ public class TiledPredictionUtil {
 			RandomAccessibleInterval< FloatType > result =
 					new CombinedView<>( new ArrangedView<>( results, grid ) );
 
-			RandomAccessibleInterval< FloatType > expandedresult =
+			RandomAccessibleInterval< FloatType > fittedResult =
 					expandDimToSize( result, largestDim, shape[ largestDim ] );
 
 //			ImageJ ij = new ImageJ();
 //			ij.ui().show( "_result", result );
 //			ij.ui().show( "_expandedresult", expandedresult );
 
-			int lastdim = expandedresult.numDimensions() - 1;
-			for ( int i = 0; i < mappingOut.length; i++ ) {
-				if ( mappingOut[ i ] == bridge.getMaxTFDim() - 1 ) {
-					lastdim = i;
-				}
-			}
+			int lastdim = fittedResult.numDimensions() - 1;
 
-			if ( expandedresult.dimension( lastdim ) == 2 ) {
+			if ( fittedResult.dimension( lastdim ) == 2 ) {
 
-				ArrayList< RandomAccessibleInterval< FloatType > > res = new ArrayList<>();
-
-				long[] minint = new long[ expandedresult.numDimensions() ];
-				long[] maxint = new long[ expandedresult.numDimensions() ];
-				for ( int i = 0; i < minint.length; i++ ) {
-					if ( i != lastdim ) {
-						minint[ i ] = expandedresult.min( i );
-						maxint[ i ] = expandedresult.max( i );
-					}
-				}
-				minint[ lastdim ] = 0;
-				maxint[ lastdim ] = 0;
-				res.add( Views.zeroMin( Views.interval( expandedresult, minint, maxint ) ) );
-
-				minint[ lastdim ] = 1;
-				maxint[ lastdim ] = 1;
-				res.add( Views.zeroMin( Views.interval( expandedresult, minint, maxint ) ) );
-
-				return res;
-			}
+			return splitChannels( fittedResult, lastdim ); }
 
 			return new ArrayList<>();
 		}
 
 		return new ArrayList<>();
+	}
+
+	public static < T extends RealType< T > > List< RandomAccessibleInterval< FloatType > >
+			splitChannels( RandomAccessibleInterval< FloatType > img, int channelDim ) {
+		ArrayList< RandomAccessibleInterval< FloatType > > res = new ArrayList<>();
+
+		long[] minint = new long[ img.numDimensions() ];
+		long[] maxint = new long[ img.numDimensions() ];
+		for ( int i = 0; i < minint.length; i++ ) {
+			if ( i != channelDim ) {
+				minint[ i ] = img.min( i );
+				maxint[ i ] = img.max( i );
+			}
+		}
+		minint[ channelDim ] = 0;
+		maxint[ channelDim ] = 0;
+		res.add( Views.zeroMin( Views.interval( img, minint, maxint ) ) );
+
+		minint[ channelDim ] = 1;
+		maxint[ channelDim ] = 1;
+		res.add( Views.zeroMin( Views.interval( img, minint, maxint ) ) );
+
+		return res;
 	}
 
 	private static void replaceNegativesWithMissingIndices( int[] arr ) {
@@ -292,6 +294,7 @@ public class TiledPredictionUtil {
 					final SignatureDef signature,
 					final String inputNodeName,
 					final String outputNodeName ) {
+
 		Tensor inputTensor = datasetConverter.datasetToTensor( tile, mappingIn, normalizer );
 		if ( inputTensor != null ) {
 			Tensor outputTensor = TensorFlowRunner.executeGraph(
@@ -300,7 +303,9 @@ public class TiledPredictionUtil {
 					inputTensor,
 					inputNodeName,
 					outputNodeName );
-			return datasetConverter.tensorToDataset( outputTensor, mappingOut );
+			if ( outputTensor != null ) { return datasetConverter.tensorToDataset(
+					outputTensor,
+					mappingOut ); }
 		}
 		return null;
 	}

@@ -17,8 +17,6 @@ import net.imglib2.type.numeric.RealType;
 import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
 
-import mpicbg.csbd.tensorflow.DatasetTensorBridge;
-
 /**
  */
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Tribolium", headless = true )
@@ -63,12 +61,12 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 	@Override
 	public void run() {
 
-		final int[] mapping = { DatasetTensorBridge.T,
-								DatasetTensorBridge.C,
-								DatasetTensorBridge.Y,
-								DatasetTensorBridge.X,
-								DatasetTensorBridge.Z };
-		super.runWithMapping( mapping );
+//		final int[] mapping = { DatasetTensorBridge.T,
+//								DatasetTensorBridge.C,
+//								DatasetTensorBridge.Y,
+//								DatasetTensorBridge.X,
+//								DatasetTensorBridge.Z };
+		super.run();
 
 	}
 }
