@@ -12,6 +12,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 
 import javax.swing.JOptionPane;
 
@@ -237,7 +238,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 		prepareNormalization( input );
 		testNormalization( input, uiService );
 
-		RandomAccessibleInterval< FloatType > tiledPrediction =
+		List< RandomAccessibleInterval< FloatType > > tiledPrediction =
 				TiledPredictionUtil.tiledPrediction(
 						( RandomAccessibleInterval ) input.getImgPlus(),
 						nTiles,
@@ -251,10 +252,10 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 						inputNodeName,
 						outputNodeName,
 						threadService );
-		if ( tiledPrediction != null ) {
-			uiService.show( tiledPrediction );
+		if ( tiledPrediction.size() > 0 ) {
+			uiService.show( "result", tiledPrediction.get( 0 ) );
+			uiService.show( "control", tiledPrediction.get( 1 ) );
 		}
-//		uiService.show(arrayToDataset(datasetToArray(input)));
 
 	}
 
@@ -272,7 +273,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 	 * @throws Exception
 	 */
 	public static void main( final String... args ) throws Exception {
-		// create the ImageJ application context with all available services
+
 		final ImageJ ij = new ImageJ();
 
 		ij.launch( args );

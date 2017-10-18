@@ -31,19 +31,20 @@ import mpicbg.csbd.tensorflow.TensorFlowRunner;
 
 public class TiledPredictionUtil {
 
-	public static < T extends RealType< T > > RandomAccessibleInterval< FloatType > tiledPrediction(
-			final RandomAccessibleInterval< T > input,
-			final int nTiles,
-			final int blockMultiple,
-			final int overlap,
-			final DatasetConverter< T > datasetConverter,
-			final DatasetTensorBridge bridge,
-			final Normalizer normalizer,
-			final SavedModelBundle model,
-			final SignatureDef signature,
-			final String inputNodeName,
-			final String outputNodeName,
-			final ThreadService threadService ) { // TODO output type
+	public static < T extends RealType< T > > List< RandomAccessibleInterval< FloatType > >
+			tiledPrediction(
+					final RandomAccessibleInterval< T > input,
+					final int nTiles,
+					final int blockMultiple,
+					final int overlap,
+					final DatasetConverter< T > datasetConverter,
+					final DatasetTensorBridge bridge,
+					final Normalizer normalizer,
+					final SavedModelBundle model,
+					final SignatureDef signature,
+					final String inputNodeName,
+					final String outputNodeName,
+					final ThreadService threadService ) { // TODO output type
 		// Get the dimensions of the image
 		long[] shape = new long[ input.numDimensions() ];
 		input.dimensions( shape );
@@ -105,8 +106,12 @@ public class TiledPredictionUtil {
 
 		//get mapping for input tensor (index is input image dimension index, value is tensor index)
 		int[] mappingOut = new int[ bridge.getAbstractOutputTensorShape().getDimCount() ];
+		int[] mappingOutDimType = new int[ mappingOut.length ];
 		for ( int i = 0; i < mappingOut.length; i++ ) {
-			mappingOut[ i ] = bridge.getTfIndexByDatasetDim( i + 5 - mappingOut.length );
+			mappingOut[ i ] =
+					bridge.getTfIndexByDatasetDim( i + bridge.getMaxTFDim() - mappingOut.length );
+			mappingOutDimType[ i ] =
+					bridge.getDimTypeByDatasetDim( i + bridge.getMaxTFDim() - mappingOut.length );
 		}
 		replaceNegativesWithMissingIndices( mappingOut );
 		System.out.println( "mapping out: " + Arrays.toString( mappingOut ) );
@@ -173,7 +178,7 @@ public class TiledPredictionUtil {
 				} catch ( InvocationTargetException | InterruptedException exc ) {
 					// TODO Auto-generated catch block
 					exc.printStackTrace();
-					return null;
+					return new ArrayList<>();
 				}
 			}
 		}
@@ -189,7 +194,7 @@ public class TiledPredictionUtil {
 						otherfuture.cancel( true );
 					}
 				}
-				return null;
+				return new ArrayList<>();
 			}
 			tileExecuted = Views.zeroMin( Views.expandZero( tileExecuted, negPadding ) );
 //			uiService.show(tileExecuted);
@@ -204,10 +209,48 @@ public class TiledPredictionUtil {
 			}
 			RandomAccessibleInterval< FloatType > result =
 					new CombinedView<>( new ArrangedView<>( results, grid ) );
-			return expandDimToSize( result, largestDim, shape[ largestDim ] );
+
+			RandomAccessibleInterval< FloatType > expandedresult =
+					expandDimToSize( result, largestDim, shape[ largestDim ] );
+
+//			ImageJ ij = new ImageJ();
+//			ij.ui().show( "_result", result );
+//			ij.ui().show( "_expandedresult", expandedresult );
+
+			int lastdim = expandedresult.numDimensions() - 1;
+			for ( int i = 0; i < mappingOut.length; i++ ) {
+				if ( mappingOut[ i ] == bridge.getMaxTFDim() - 1 ) {
+					lastdim = i;
+				}
+			}
+
+			if ( expandedresult.dimension( lastdim ) == 2 ) {
+
+				ArrayList< RandomAccessibleInterval< FloatType > > res = new ArrayList<>();
+
+				long[] minint = new long[ expandedresult.numDimensions() ];
+				long[] maxint = new long[ expandedresult.numDimensions() ];
+				for ( int i = 0; i < minint.length; i++ ) {
+					if ( i != lastdim ) {
+						minint[ i ] = expandedresult.min( i );
+						maxint[ i ] = expandedresult.max( i );
+					}
+				}
+				minint[ lastdim ] = 0;
+				maxint[ lastdim ] = 0;
+				res.add( Views.zeroMin( Views.interval( expandedresult, minint, maxint ) ) );
+
+				minint[ lastdim ] = 1;
+				maxint[ lastdim ] = 1;
+				res.add( Views.zeroMin( Views.interval( expandedresult, minint, maxint ) ) );
+
+				return res;
+			}
+
+			return new ArrayList<>();
 		}
 
-		return null;
+		return new ArrayList<>();
 	}
 
 	private static void replaceNegativesWithMissingIndices( int[] arr ) {

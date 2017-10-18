@@ -13,6 +13,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
+import java.util.List;
 
 import javax.swing.JOptionPane;
 
@@ -206,21 +207,23 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		prepareNormalization( input );
 		testNormalization( input, uiService );
 
-		RandomAccessibleInterval< FloatType > tiledPrediction = TiledPredictionUtil.tiledPrediction(
-				( RandomAccessibleInterval ) input.getImgPlus(),
-				nTiles,
-				32,
-				overlap,
-				datasetConverter,
-				bridge,
-				this,
-				model,
-				sig,
-				inputNodeName,
-				outputNodeName,
-				threadService );
-		if ( tiledPrediction != null ) {
-			uiService.show( tiledPrediction );
+		List< RandomAccessibleInterval< FloatType > > tiledPrediction =
+				TiledPredictionUtil.tiledPrediction(
+						( RandomAccessibleInterval ) input.getImgPlus(),
+						nTiles,
+						32,
+						overlap,
+						datasetConverter,
+						bridge,
+						this,
+						model,
+						sig,
+						inputNodeName,
+						outputNodeName,
+						threadService );
+		if ( tiledPrediction.size() == 2 ) {
+			uiService.show( tiledPrediction.get( 0 ) );
+			uiService.show( tiledPrediction.get( 1 ) );
 		}
 		// TODO remove comment and add tiled prediction
 //		try (

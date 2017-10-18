@@ -12,6 +12,8 @@ import org.tensorflow.framework.TensorShapeProto;
 
 public class DatasetTensorBridge {
 
+	final int maxdim = 5;
+
 	// STATICS
 	public static int UNSET = -1;
 	public static int X = 0;
@@ -27,6 +29,7 @@ public class DatasetTensorBridge {
 	private final int[] datasetDimIndices, datasetIndicesDim;
 	private final long[] datasetDimLengths;
 	private final int[] dimMapping = { UNSET, UNSET, UNSET, UNSET, UNSET };
+	private final int[] dimType = { UNSET, UNSET, UNSET, UNSET, UNSET };
 	private final int[] tfMapping = { UNSET, UNSET, UNSET, UNSET, UNSET };
 	private boolean mappingInitialized = false;
 
@@ -37,7 +40,6 @@ public class DatasetTensorBridge {
 
 		dataset = image;
 
-		final int maxdim = 5;
 		datasetDimNames = new String[ maxdim ];
 		datasetDimNames[ X ] = "X";
 		datasetDimNames[ Y ] = "Y";
@@ -99,6 +101,10 @@ public class DatasetTensorBridge {
 
 	}
 
+	public int getMaxTFDim() {
+		return maxdim;
+	}
+
 	public long getDatasetDimLengthFromTFIndex( final int tfIndex5D ) {
 		if ( dimMapping[ tfIndex5D ] < 0 ) { return 1; }
 		return datasetDimLengths[ dimMapping[ tfIndex5D ] ];
@@ -112,6 +118,10 @@ public class DatasetTensorBridge {
 	public int getTfIndexByDatasetDim( final int datasetDim ) {
 		if ( datasetIndicesDim[ datasetDim ] < 0 ) return -1;
 		return tfMapping[ datasetIndicesDim[ datasetDim ] ];
+	}
+
+	public int getDimTypeByDatasetDim( final int datasetDim ) {
+		return dimType[ datasetDim ];
 	}
 
 	public boolean isMappingInitialized() {
@@ -165,6 +175,7 @@ public class DatasetTensorBridge {
 			}
 		}
 		for ( int i = 0; i < dimMapping.length; i++ ) {
+			dimType[ i ] = datasetIndicesDim[ i ];
 			if ( dimMapping[ i ] >= 0 ) {
 				tfMapping[ dimMapping[ i ] ] = i;
 			}
@@ -230,6 +241,12 @@ public class DatasetTensorBridge {
 
 	public void setMapping( final int tfIndex5D, final int mapping ) {
 		dimMapping[ tfIndex5D ] = mapping;
+		if ( mapping < 0 ) {
+			dimType[ tfIndex5D ] = UNSET;
+		} else {
+			dimType[ tfIndex5D ] = datasetIndicesDim[ mapping ];
+		}
+
 		for ( int i = 0; i < dimMapping.length; i++ ) {
 			if ( dimMapping[ i ] >= 0 ) {
 				tfMapping[ dimMapping[ i ] ] = i;
