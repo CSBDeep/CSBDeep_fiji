@@ -215,7 +215,6 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 						overlap,
 						datasetConverter,
 						bridge,
-						this,
 						model,
 						sig,
 						inputNodeName,
