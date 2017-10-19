@@ -25,7 +25,6 @@ import org.tensorflow.framework.SignatureDef;
 import mpicbg.csbd.imglib2.ArrangedView;
 import mpicbg.csbd.imglib2.CombinedView;
 import mpicbg.csbd.imglib2.TiledView;
-import mpicbg.csbd.normalize.Normalizer;
 import mpicbg.csbd.tensorflow.DatasetConverter;
 import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 import mpicbg.csbd.tensorflow.TensorFlowRunner;
@@ -40,25 +39,14 @@ public class TiledPredictionUtil {
 					final int overlap,
 					final DatasetConverter< T > datasetConverter,
 					final DatasetTensorBridge bridge,
-					final Normalizer normalizer,
 					final SavedModelBundle model,
 					final SignatureDef signature,
 					final String inputNodeName,
 					final String outputNodeName,
 					final ThreadService threadService ) { // TODO output type
-		// Get the dimensions of the image
-		long[] shape = new long[ input.numDimensions() ];
-		input.dimensions( shape );
 
-		// Get the largest dimension and its size
-		int largestDim = 0;
-		long largestSize = 0;
-		for ( int d = 0; d < input.numDimensions(); d++ ) {
-			if ( bridge.getDimTypeByDatasetDim( d ).isXY() && shape[ d ] > largestSize ) {
-				largestSize = shape[ d ];
-				largestDim = d;
-			}
-		}
+		int largestDim = getLargestDim( input, bridge );
+		long largestSize = input.dimension( largestDim );
 
 		// Calculate the blocksize to use
 		double blockwidthIdeal = largestSize / ( double ) nTiles;
@@ -98,26 +86,9 @@ public class TiledPredictionUtil {
 
 		//get mapping for input tensor (index is input image dimension index, value is tensor index)
 		int[] mappingIn = new int[ bridge.getAbstractInputTensorShape().getDimCount() ];
-		for ( int i = 0; i < mappingIn.length; i++ ) {
-			mappingIn[ i ] = bridge.getTfIndexByDatasetDim( i );
-		}
-		replaceNegativesWithMissingIndices( mappingIn );
-		System.out.println( "mapping in: " + Arrays.toString( mappingIn ) );
-
-		//check if network reduces dimension, if yes, remote Z from mapping
-		bridge.handleDimensionReduction();
-
 		//get mapping for input tensor (index is input image dimension index, value is tensor index)
 		int[] mappingOut = new int[ bridge.getAbstractOutputTensorShape().getDimCount() ];
-		AxisType[] mappingOutDimType = new AxisType[ mappingOut.length ];
-		for ( int i = 0; i < mappingOut.length; i++ ) {
-			mappingOut[ i ] =
-					bridge.getTfIndexByDatasetDim( i );
-			mappingOutDimType[ i ] =
-					bridge.getDimTypeByDatasetDim( i );
-		}
-		replaceNegativesWithMissingIndices( mappingOut );
-		System.out.println( "mapping out: " + Arrays.toString( mappingOut ) );
+		calculateMapping( mappingIn, mappingOut, bridge );
 
 		boolean multithreading = false;
 
@@ -138,7 +109,6 @@ public class TiledPredictionUtil {
 										datasetConverter,
 										mappingIn,
 										mappingOut,
-										normalizer,
 										model,
 										signature,
 										inputNodeName,
@@ -157,7 +127,6 @@ public class TiledPredictionUtil {
 											datasetConverter,
 											mappingIn,
 											mappingOut,
-											normalizer,
 											model,
 											signature,
 											inputNodeName,
@@ -214,7 +183,7 @@ public class TiledPredictionUtil {
 					new CombinedView<>( new ArrangedView<>( results, grid ) );
 
 			RandomAccessibleInterval< FloatType > fittedResult =
-					expandDimToSize( result, largestDim, shape[ largestDim ] );
+					expandDimToSize( result, largestDim, largestSize );
 
 //			ImageJ ij = new ImageJ();
 //			ij.ui().show( "_result", result );
@@ -232,8 +201,47 @@ public class TiledPredictionUtil {
 		return new ArrayList<>();
 	}
 
+	private static < T extends RealType< T > > int
+			getLargestDim( RandomAccessibleInterval< T > input, DatasetTensorBridge bridge ) {
+		// Get the largest dimension and its size
+		int largestDim = 0;
+		long largestSize = 0;
+		for ( int d = 0; d < input.numDimensions(); d++ ) {
+			long dimSize = input.dimension( d );
+			if ( bridge.getDimTypeByDatasetDim( d ).isXY() && dimSize > largestSize ) {
+				largestSize = dimSize;
+				largestDim = d;
+			}
+		}
+		return largestDim;
+	}
+
+	private static void
+			calculateMapping( int[] mappingIn, int[] mappingOut, DatasetTensorBridge bridge ) {
+
+		for ( int i = 0; i < mappingIn.length; i++ ) {
+			mappingIn[ i ] = bridge.getTfIndexByDatasetDim( i );
+		}
+		replaceNegativesWithMissingIndices( mappingIn );
+		System.out.println( "mapping in: " + Arrays.toString( mappingIn ) );
+
+		//check if network reduces dimension, if yes, remote Z from mapping
+		bridge.handleDimensionReduction();
+
+		AxisType[] mappingOutDimType = new AxisType[ mappingOut.length ];
+		for ( int i = 0; i < mappingOut.length; i++ ) {
+			mappingOut[ i ] =
+					bridge.getTfIndexByDatasetDim( i );
+			mappingOutDimType[ i ] =
+					bridge.getDimTypeByDatasetDim( i );
+		}
+		replaceNegativesWithMissingIndices( mappingOut );
+		System.out.println( "mapping out: " + Arrays.toString( mappingOut ) );
+	}
+
 	public static < T extends RealType< T > > List< RandomAccessibleInterval< FloatType > >
 			splitChannels( RandomAccessibleInterval< FloatType > img, int channelDim ) {
+
 		ArrayList< RandomAccessibleInterval< FloatType > > res = new ArrayList<>();
 
 		long[] minint = new long[ img.numDimensions() ];
@@ -289,13 +297,12 @@ public class TiledPredictionUtil {
 					final DatasetConverter< T > datasetConverter,
 					final int[] mappingIn,
 					final int[] mappingOut,
-					final Normalizer normalizer,
 					final SavedModelBundle model,
 					final SignatureDef signature,
 					final String inputNodeName,
 					final String outputNodeName ) {
 
-		Tensor inputTensor = datasetConverter.datasetToTensor( tile, mappingIn, normalizer );
+		Tensor inputTensor = datasetConverter.datasetToTensor( tile, mappingIn );
 		if ( inputTensor != null ) {
 			Tensor outputTensor = TensorFlowRunner.executeGraph(
 					model,

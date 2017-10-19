@@ -8,8 +8,6 @@ import net.imglib2.view.Views;
 
 import org.tensorflow.Tensor;
 
-import mpicbg.csbd.normalize.Normalizer;
-
 public class DefaultDatasetConverter< T extends RealType< T > > implements DatasetConverter< T > {
 
 	@Override
@@ -22,19 +20,15 @@ public class DefaultDatasetConverter< T extends RealType< T > > implements Datas
 	@Override
 	public Tensor datasetToTensor(
 			RandomAccessibleInterval< T > image,
-			int[] mapping,
-			Normalizer normalizer ) {
-
-		// Normalize the image
-		RandomAccessibleInterval< FloatType > im = normalizer.normalizeImage( image );
+			int[] mapping ) {
 
 		// Add dimensions until it fits the input tensor
-		while ( im.numDimensions() < mapping.length ) {
-			im = Views.addDimension( im, 0, 0 );
+		while ( image.numDimensions() < mapping.length ) {
+			image = Views.addDimension( image, 0, 0 );
 		}
 
 		// Create the tensor
-		return Tensors.tensor( im, mapping );
+		return Tensors.tensor( image, mapping );
 	}
 
 }

@@ -240,13 +240,12 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 
 		List< RandomAccessibleInterval< FloatType > > tiledPrediction =
 				TiledPredictionUtil.tiledPrediction(
-						( RandomAccessibleInterval ) input.getImgPlus(),
+						normalizeImage( ( RandomAccessibleInterval ) input.getImgPlus() ),
 						nTiles,
 						32,
 						overlap,
 						datasetConverter,
 						bridge,
-						this,
 						model,
 						sig,
 						inputNodeName,
