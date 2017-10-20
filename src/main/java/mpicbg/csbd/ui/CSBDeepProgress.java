@@ -98,6 +98,8 @@ public class CSBDeepProgress extends JPanel
 		//WARNINGS
 		JPanel notePanel = new JPanel();
 		notePanel.setLayout( new BoxLayout( notePanel, BoxLayout.Y_AXIS ) );
+		notePanel.setMinimumSize( new Dimension( 280, 0 ) );
+		notePanel.setPreferredSize( new Dimension( 280, 0 ) );
 		Border borderline = BorderFactory.createLineBorder( Color.red );
 		TitledBorder warningborder = BorderFactory.createTitledBorder( borderline, "Warning" );
 		warningborder.setTitleColor( Color.red );
@@ -194,8 +196,8 @@ public class CSBDeepProgress extends JPanel
 		for ( int i = 0; i < stepDone.length; i++ ) {
 			if ( !stepDone[ i ] ) alldone = false;
 		}
-		okButton.setEnabled( alldone );
-		cancelButton.setEnabled( !alldone );
+		okButton.setEnabled( alldone || currentStepFailing );
+		cancelButton.setEnabled( !alldone && !currentStepFailing );
 
 	}
 
@@ -249,7 +251,10 @@ public class CSBDeepProgress extends JPanel
 
 	public void addLog( String data ) {
 		try {
-			taskOutput.getDocument().insertString( 0, data + "\n", null );
+			taskOutput.getDocument().insertString(
+					taskOutput.getDocument().getLength(),
+					data + "\n",
+					null );
 		} catch ( BadLocationException exc ) {
 			// TODO Auto-generated catch block
 			exc.printStackTrace();
