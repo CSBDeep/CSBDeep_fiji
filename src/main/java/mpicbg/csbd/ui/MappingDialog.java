@@ -51,7 +51,8 @@ public class MappingDialog {
 					String dimName = bridge.getDatasetDimNameByTFIndex( i );
 					long dimSize = bridge.getDatasetDimSizeFromTFIndex( i );
 					String tfDimSize = String.valueOf(
-							bridge.getAbstractInputTensorShape().getDim( tfDimCount ).getSize() );
+							bridge.getInputTensorInfo().getTensorShape().getDim(
+									tfDimCount ).getSize() );
 
 					final JTextField field = new JTextField();
 					field.setText( tfDimSize );

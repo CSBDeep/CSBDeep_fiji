@@ -255,6 +255,8 @@ public class CSBDeepProgress extends JPanel
 					taskOutput.getDocument().getLength(),
 					data + "\n",
 					null );
+//			taskOutput.scrollRectToVisible(
+//					new Rectangle( 0, this.getBounds( null ).height, 1, 1 ) );
 		} catch ( BadLocationException exc ) {
 			// TODO Auto-generated catch block
 			exc.printStackTrace();

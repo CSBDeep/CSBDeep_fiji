@@ -43,9 +43,8 @@ import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
 
 import mpicbg.csbd.normalize.PercentileNormalizer;
-import mpicbg.csbd.tensorflow.DatasetConverter;
 import mpicbg.csbd.tensorflow.DatasetTensorBridge;
-import mpicbg.csbd.tensorflow.DefaultDatasetConverter;
+import mpicbg.csbd.ui.CSBDeepProgress;
 import mpicbg.csbd.ui.MappingDialog;
 
 /**
@@ -104,7 +103,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 	private SignatureDef sig;
 	private DatasetTensorBridge bridge;
 	private boolean processedDataset = false;
-	private final DatasetConverter< T > datasetConverter = new DefaultDatasetConverter<>();
+	private boolean useTensorFlowGPU = true;
 
 	// Same as the tag used in export_saved_model in the Python code.
 	private static final String MODEL_TAG = "serve";
@@ -119,6 +118,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 		try {
 			System.loadLibrary( "tensorflow_jni" );
 		} catch ( UnsatisfiedLinkError e ) {
+			useTensorFlowGPU = false;
 			System.out.println(
 					"Couldn't load tensorflow from library path. Using CPU version from jar file." );
 		}
@@ -195,15 +195,13 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 				if ( sig.getInputsCount() > 0 ) {
 					inputNodeName = sig.getInputsMap().keySet().iterator().next();
 					if ( bridge != null ) {
-						bridge.setInputTensorShape(
-								sig.getInputsOrThrow( inputNodeName ).getTensorShape() );
+						bridge.setInputTensor( sig.getInputsOrThrow( inputNodeName ) );
 					}
 				}
 				if ( sig.getOutputsCount() > 0 ) {
 					outputNodeName = sig.getOutputsMap().keySet().iterator().next();
 					if ( bridge != null ) {
-						bridge.setOutputTensorShape(
-								sig.getOutputsOrThrow( outputNodeName ).getTensorShape() );
+						bridge.setOutputTensor( sig.getOutputsOrThrow( outputNodeName ) );
 					}
 				}
 				if ( bridge != null && !bridge.isMappingInitialized() ) {
@@ -217,7 +215,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 
 		processDataset();
 
-		if ( bridge.getAbstractInputTensorShape() == null ) {
+		if ( bridge.getInputTensorInfo() == null ) {
 			modelChanged();
 		}
 
@@ -227,33 +225,55 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 	@Override
 	public void run() {
 
+		CSBDeepProgress progressWindow = CSBDeepProgress.create( useTensorFlowGPU, false );
+
+		progressWindow.setStepStart( CSBDeepProgress.STEP_LOADMODEL );
+
 		savePreferences();
+
+		progressWindow.addLog( "Loading model " + modelFile.getName() + ".. " );
 
 		if ( input == null ) { return; }
 
 		if ( model == null ) {
 			modelChanged();
+			if ( model == null ) {
+				progressWindow.setCurrentStepFail();
+				return;
+			}
 		}
 
+		progressWindow.setCurrentStepDone();
+		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
+
+		progressWindow.addLog( "Preparing normalization.. " );
 		prepareNormalization( input );
+
+		progressWindow.addLog(
+				"Displaying normalized test image.." );
 		testNormalization( input, uiService );
 
-		List< RandomAccessibleInterval< FloatType > > tiledPrediction =
-				TiledPredictionUtil.tiledPrediction(
-						normalizeImage( ( RandomAccessibleInterval ) input.getImgPlus() ),
-						nTiles,
-						32,
-						overlap,
-						datasetConverter,
-						bridge,
-						model,
-						sig,
-						inputNodeName,
-						outputNodeName,
-						threadService );
-		if ( tiledPrediction.size() > 0 ) {
-			uiService.show( "result", tiledPrediction.get( 0 ) );
-			uiService.show( "control", tiledPrediction.get( 1 ) );
+		progressWindow.addLog(
+				"Normalize (" + percentileBottom + " - " + percentileTop + " -> " + min + " - " + max + "] .. " );
+
+		RandomAccessibleInterval< FloatType > normalizedInput = normalizeImage(
+				( RandomAccessibleInterval ) input.getImgPlus() );
+
+		TiledPrediction tiledPrediction =
+				new TiledPrediction( normalizedInput, bridge, model, progressWindow );
+		List< RandomAccessibleInterval< FloatType > > result =
+				tiledPrediction.run( nTiles, 32, overlap );
+
+		if ( result.size() > 0 ) {
+			progressWindow.addLog( "Displaying result image.." );
+			uiService.show( "result", result.get( 0 ) );
+			progressWindow.addLog( "Displaying control image.." );
+			uiService.show( "control", result.get( 1 ) );
+			progressWindow.addLog( "All done!" );
+			progressWindow.setCurrentStepDone();
+		} else {
+			progressWindow.addError( "TiledPrediction returned no result data." );
+			progressWindow.setCurrentStepFail();
 		}
 
 	}

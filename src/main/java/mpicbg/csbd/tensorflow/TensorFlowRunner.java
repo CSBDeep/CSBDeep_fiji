@@ -6,7 +6,6 @@ import javax.swing.JOptionPane;
 
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
-import org.tensorflow.framework.SignatureDef;
 import org.tensorflow.framework.TensorInfo;
 
 public class TensorFlowRunner {
@@ -17,10 +16,9 @@ public class TensorFlowRunner {
 	 */
 	public static Tensor executeGraph(
 			final SavedModelBundle model,
-			final SignatureDef sig,
 			final Tensor image,
-			final String inputNodeName,
-			final String outputNodeName ) {
+			final TensorInfo inputTensorInfo,
+			final TensorInfo outputTensorInfo ) {
 
 		System.out.println(
 				"executeInceptionGraph with input shape " + Arrays.toString( image.shape() ) );
@@ -31,8 +29,8 @@ public class TensorFlowRunner {
 			 * execute graph
 			 */
 			output_t = model.session().runner() //
-					.feed( opName( sig.getInputsOrThrow( inputNodeName ) ), image ) //
-					.fetch( opName( sig.getOutputsOrThrow( outputNodeName ) ) ) //
+					.feed( opName( inputTensorInfo ), image ) //
+					.fetch( opName( outputTensorInfo ) ) //
 					.run().get( 0 );
 		} catch ( final Exception e ) {
 			e.printStackTrace();

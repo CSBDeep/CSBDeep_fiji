@@ -13,12 +13,12 @@ import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
 
-import org.tensorflow.framework.TensorShapeProto;
+import org.tensorflow.framework.TensorInfo;
 
 public class DatasetTensorBridge {
 
 	private final Dataset dataset;
-	private TensorShapeProto inputTensorShape, outputTensorShape;
+	private TensorInfo inputTensor, outputTensor;
 
 	AxisType[] axes = Axes.knownTypes();
 	private final Map< AxisType, Integer > axisDataset;
@@ -125,14 +125,14 @@ public class DatasetTensorBridge {
 	public void setMappingDefaults() {
 		System.out.println( "setmappingdefaults" );
 		setMappingInitialized( true );
-		if ( inputTensorShape.getDimCount() == 5 ) {
+		if ( inputTensor.getTensorShape().getDimCount() == 5 ) {
 			axisTF.put( Axes.TIME, 0 );
 			axisTF.put( Axes.Z, 1 );
 			axisTF.put( Axes.Y, 2 );
 			axisTF.put( Axes.X, 3 );
 			axisTF.put( Axes.CHANNEL, 4 );
 		} else {
-			if ( inputTensorShape.getDimCount() == 4 ) {
+			if ( inputTensor.getTensorShape().getDimCount() == 4 ) {
 				axisTF.put( Axes.unknown(), 0 );
 				axisTF.put( Axes.Y, 2 );
 				axisTF.put( Axes.X, 3 );
@@ -163,24 +163,24 @@ public class DatasetTensorBridge {
 		}
 	}
 
-	public void setInputTensorShape( final TensorShapeProto shape ) {
-		inputTensorShape = shape;
+	public void setInputTensor( final TensorInfo tensorInfo ) {
+		inputTensor = tensorInfo;
 		System.out.println(
-				"DatasetTensorBridge::setInputTensorShape: " + shape.getDimList() + "]" );
+				"DatasetTensorBridge::setInputTensorShape: " + tensorInfo.getTensorShape().getDimList() + "]" );
 	}
 
-	public void setOutputTensorShape( final TensorShapeProto shape ) {
-		outputTensorShape = shape;
+	public void setOutputTensor( TensorInfo tensorInfo ) {
+		outputTensor = tensorInfo;
 		System.out.println(
-				"DatasetTensorBridge::setOutputTensorShape: " + shape.getDimList() + "]" );
+				"DatasetTensorBridge::setOutputTensorShape: " + tensorInfo.getTensorShape().getDimList() + "]" );
 	}
 
-	public TensorShapeProto getAbstractInputTensorShape() {
-		return inputTensorShape;
+	public TensorInfo getInputTensorInfo() {
+		return inputTensor;
 	}
 
-	public TensorShapeProto getAbstractOutputTensorShape() {
-		return outputTensorShape;
+	public TensorInfo getOutputTensorInfo() {
+		return outputTensor;
 	}
 
 	public int numDimensions() {
@@ -202,7 +202,7 @@ public class DatasetTensorBridge {
 	}
 
 	public boolean complete() {
-		return inputTensorShape != null && dataset != null;
+		return inputTensor != null && dataset != null;
 	}
 
 	public void printMapping() {
@@ -214,7 +214,7 @@ public class DatasetTensorBridge {
 	}
 
 	public void handleDimensionReduction() {
-		if ( inputTensorShape.getDimCount() == outputTensorShape.getDimCount() + 1 ) {
+		if ( inputTensor.getTensorShape().getDimCount() == outputTensor.getTensorShape().getDimCount() + 1 ) {
 			removeZFromMapping();
 		}
 	}
