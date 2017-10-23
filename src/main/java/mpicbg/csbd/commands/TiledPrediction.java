@@ -1,14 +1,13 @@
 package mpicbg.csbd.commands;
 
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import net.imagej.ImageJ;
 import net.imagej.axis.AxisType;
 import net.imglib2.Cursor;
 import net.imglib2.FinalInterval;
@@ -18,7 +17,6 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
 
-import org.scijava.thread.ThreadService;
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
 
@@ -30,39 +28,48 @@ import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 import mpicbg.csbd.tensorflow.TensorFlowRunner;
 import mpicbg.csbd.ui.CSBDeepProgress;
 
-public class TiledPrediction {
+public class TiledPrediction
+		implements
+		Callable< List< RandomAccessibleInterval< FloatType > > > {
 
 	private RandomAccessibleInterval< FloatType > input;
 	private SavedModelBundle model;
 	private DatasetTensorBridge bridge;
 
 	private int nTiles;
+	private int blockMultiple;
+	private int overlap;
 	private int largestDim;
 	private long largestSize;
 	private long[] padding;
 
 	private int[] mappingIn, mappingOut;
 
-	private ThreadService threadService;
-
 	private final CSBDeepProgress progressWindow;
 
-	private int doneTileCount;
+	private Integer doneTileCount;
+
+	private boolean cancelPressed = false;
+
+	ExecutorService pool = Executors.newCachedThreadPool();
 
 	public TiledPrediction(
 			final RandomAccessibleInterval< FloatType > input,
 			final DatasetTensorBridge bridge,
 			final SavedModelBundle model,
-			CSBDeepProgress progressWindow ) {
+			CSBDeepProgress progressWindow,
+			final int nTiles,
+			final int blockMultiple,
+			final int overlap ) {
 
 		this.progressWindow = progressWindow;
-
-		final ImageJ ij = new ImageJ();
-		threadService = ij.thread();
 
 		this.input = input;
 		this.bridge = bridge;
 		this.model = model;
+		this.nTiles = nTiles;
+		this.blockMultiple = blockMultiple;
+		this.overlap = overlap;
 
 	}
 
@@ -167,96 +174,60 @@ public class TiledPrediction {
 		progressWindow.setProgressBarValue( 0 );
 		doneTileCount = 0;
 
-		while ( cursor.hasNext() ) {
+		while ( cursor.hasNext() && !cancelPressed ) {
 			RandomAccessibleInterval< FloatType > tile = cursor.next();
 			//uiService.show(tile);
-			if ( multithreading ) {
-				futures.add(
-						threadService.run( new Callable< RandomAccessibleInterval< FloatType > >() {
+			Future< RandomAccessibleInterval< FloatType > > future = pool.submit(
+					new TileRunner( tile, negPadding, progressWindow ) );
 
-							@Override
-							public RandomAccessibleInterval< FloatType > call() {
-								progressWindow.addLog(
-										"Processing tile " + ( doneTileCount + 1 ) + " / " + nTiles + ".." );
-								return executeGraphWithPadding( tile );
-							}
-						} ) );
-			} else {
+			progressWindow.addLog(
+					"Processing tile " + ( doneTileCount + 1 ) + " / " + nTiles + ".." );
+
+			futures.add( future );
+
+			if ( !multithreading ) {
 				try {
-					threadService.invoke( new Runnable() {
-
-						@Override
-						public void run() {
-							progressWindow.addLog(
-									"Processing tile " + ( doneTileCount + 1 ) + " / " + nTiles + ".." );
-							RandomAccessibleInterval< FloatType > tileExecuted =
-									executeGraphWithPadding( tile );
-							if ( tileExecuted != null ) {
-
-								long[] negPaddingPlus = new long[ tileExecuted.numDimensions() ];
-								for ( int i = 0; i < negPadding.length; i++ ) {
-									negPaddingPlus[ i ] = negPadding[ i ];
-								}
-								tileExecuted =
-										Views.zeroMin(
-												Views.expandZero( tileExecuted, negPaddingPlus ) );
-
-//								ImageJ ij = new ImageJ();
-//								ij.ui().show( tileExecuted );
-								doneTileCount++;
-								progressWindow.setProgressBarValue( doneTileCount );
-								results.add( tileExecuted );
-							}
-						}
-
-					} );
-				} catch ( InvocationTargetException | InterruptedException exc ) {
-					// TODO Auto-generated catch block
+					results.add( future.get() );
+					upTileCount();
+				} catch ( InterruptedException exc ) {
+					pool.shutdownNow();
+					progressWindow.setCurrentStepFail();
+					return null;
+				} catch ( Exception exc ) {
+					pool.shutdownNow();
 					exc.printStackTrace();
 					progressWindow.setCurrentStepFail();
-					return new ArrayList<>();
+					return null;
+				}
+			}
+		}
+		if ( multithreading ) {
+			for ( Future< RandomAccessibleInterval< FloatType > > future : futures ) {
+				try {
+					results.add( future.get() );
+					upTileCount();
+				} catch ( Exception exc ) {
+					pool.shutdownNow();
+					exc.printStackTrace();
+					progressWindow.setCurrentStepFail();
+					return null;
 				}
 			}
 		}
 
-		for ( Future< RandomAccessibleInterval< FloatType > > future : futures ) {
-			RandomAccessibleInterval< FloatType > tileExecuted = null;
-			try {
-				tileExecuted = future.get();
-			} catch ( InterruptedException | ExecutionException exc ) {
-				exc.printStackTrace();
-				for ( Future< RandomAccessibleInterval< FloatType > > otherfuture : futures ) {
-					if ( !otherfuture.isDone() ) {
-						otherfuture.cancel( true );
-					}
-				}
-				progressWindow.setCurrentStepFail();
-				return new ArrayList<>();
-			}
-			if ( tileExecuted != null ) {
-
-				long[] negPaddingPlus = new long[ tileExecuted.numDimensions() ];
-				for ( int i = 0; i < negPadding.length; i++ ) {
-					negPaddingPlus[ i ] = negPadding[ i ];
-				}
-				tileExecuted =
-						Views.zeroMin(
-								Views.expandZero( tileExecuted, negPaddingPlus ) );
-
-				doneTileCount++;
-				progressWindow.setProgressBarValue( doneTileCount );
-				results.add( tileExecuted );
-			}
-
-		}
 		progressWindow.setCurrentStepDone();
 		return results;
+	}
+
+	private void upTileCount() {
+		doneTileCount++;
+		progressWindow.setProgressBarValue( doneTileCount );
 	}
 
 	private List< RandomAccessibleInterval< FloatType > >
 			postprocess( List< RandomAccessibleInterval< FloatType > > results ) {
 
-		if ( results.size() > 0 ) {
+		if ( results != null && results.size() > 0 ) {
 
 			progressWindow.setStepStart( CSBDeepProgress.STEP_POSTPROCESSING );
 
@@ -285,16 +256,15 @@ public class TiledPrediction {
 					lastdim ) > 0 ) { return splitChannels( fittedResult, lastdim ); }
 
 			progressWindow.setCurrentStepFail();
-			return new ArrayList<>();
+			return null;
 		}
 
 		progressWindow.setCurrentStepFail();
 		return new ArrayList<>();
 	}
 
-	public List< RandomAccessibleInterval< FloatType > >
-			run( final int nTiles, final int blockMultiple, final int overlap ) {
-
+	@Override
+	public List< RandomAccessibleInterval< FloatType > > call() {
 		try {
 
 			TiledView< FloatType > tiledView = preprocess( nTiles, blockMultiple, overlap );
@@ -307,7 +277,7 @@ public class TiledPrediction {
 			e.printStackTrace();
 			progressWindow.setCurrentStepFail();
 		}
-		return new ArrayList<>();
+		return null;
 	}
 
 	private static < T extends RealType< T > > int
@@ -414,6 +384,43 @@ public class TiledPrediction {
 					mappingOut ); }
 		}
 		return null;
+	}
+
+	class TileRunner implements Callable< RandomAccessibleInterval< FloatType > > {
+
+		RandomAccessibleInterval< FloatType > tile;
+		CSBDeepProgress progressWindow;
+		long[] negPadding;
+
+		public TileRunner(
+				RandomAccessibleInterval< FloatType > tile,
+				long[] negPadding,
+				CSBDeepProgress progressWindow ) {
+			this.tile = tile;
+			this.negPadding = negPadding;
+			this.progressWindow = progressWindow;
+		}
+
+		@Override
+		public RandomAccessibleInterval< FloatType > call() throws Exception {
+			RandomAccessibleInterval< FloatType > result =
+					executeGraphWithPadding( tile );
+			if ( result != null ) {
+
+				long[] negPaddingPlus = new long[ result.numDimensions() ];
+				for ( int i = 0; i < negPadding.length; i++ ) {
+					negPaddingPlus[ i ] = negPadding[ i ];
+				}
+				result = Views.zeroMin( Views.expandZero( result, negPaddingPlus ) );
+
+//						ImageJ ij = new ImageJ();
+//						ij.ui().show( tileExecuted );
+
+			}
+			return result;
+
+		}
+
 	}
 
 }

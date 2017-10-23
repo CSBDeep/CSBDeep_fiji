@@ -32,7 +32,6 @@ import javax.swing.text.StyleConstants;
 
 public class CSBDeepProgress extends JPanel
 		implements
-		ActionListener,
 		PropertyChangeListener {
 
 	final JButton okButton, cancelButton;
@@ -63,6 +62,14 @@ public class CSBDeepProgress extends JPanel
 
 	JLabel imageDimMismatch =
 			new JLabel( "<html>The input image was cropped to fit<br />the model dimension requirements.</html>", SwingConstants.RIGHT );
+
+	public JButton getCancelBtn() {
+		return cancelButton;
+	}
+
+	public JButton getOkBtn() {
+		return okButton;
+	}
 
 	public CSBDeepProgress( boolean usesTF, boolean croppedInput ) {
 
@@ -140,13 +147,6 @@ public class CSBDeepProgress extends JPanel
 		setBorder( BorderFactory.createEmptyBorder( 20, 20, 20, 20 ) );
 
 		okButton = new JButton( "Ok" );
-		okButton.addActionListener( new ActionListener() {
-
-			@Override
-			public void actionPerformed( ActionEvent e ) {
-
-			}
-		} );
 		okButton.setEnabled( false );
 		cancelButton = new JButton( "Cancel" );
 		cancelButton.addActionListener( new ActionListener() {
@@ -283,12 +283,6 @@ public class CSBDeepProgress extends JPanel
 
 	}
 
-	@Override
-	public void actionPerformed( ActionEvent e ) {
-		// TODO Auto-generated method stub
-
-	}
-
 	public static CSBDeepProgress create( boolean usesTF, boolean croppedInput ) {
 		//Create and set up the window.
 		JFrame frame = new JFrame( "CSBDeep progress" );
@@ -296,6 +290,7 @@ public class CSBDeepProgress extends JPanel
 
 		//Create and set up the content pane.
 		CSBDeepProgress newContentPane = new CSBDeepProgress( usesTF, croppedInput );
+		newContentPane.getOkBtn().addActionListener( e -> frame.dispose() );
 		newContentPane.setOpaque( true ); //content panes must be opaque
 		frame.setContentPane( newContentPane );
 

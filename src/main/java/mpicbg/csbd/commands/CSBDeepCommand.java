@@ -10,10 +10,15 @@ package mpicbg.csbd.commands;
 
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import javax.swing.JOptionPane;
 
@@ -30,7 +35,6 @@ import org.scijava.ItemVisibility;
 import org.scijava.io.http.HTTPLocation;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
-import org.scijava.thread.ThreadService;
 import org.scijava.ui.UIService;
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.TensorFlowException;
@@ -44,7 +48,8 @@ import mpicbg.csbd.ui.CSBDeepProgress;
 public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer
 		implements
 		Cancelable,
-		Initializable {
+		Initializable,
+		ActionListener {
 
 	@Parameter( visibility = ItemVisibility.MESSAGE )
 	protected String header;
@@ -60,9 +65,6 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	@Parameter
 	protected UIService uiService;
-
-	@Parameter
-	protected ThreadService threadService;
 
 	@Parameter( type = ItemIO.OUTPUT )
 	protected Dataset outputImage;
@@ -84,6 +86,10 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected DatasetTensorBridge bridge;
 	protected boolean processedDataset = false;
 	private boolean useTensorFlowGPU = true;
+
+	CSBDeepProgress progressWindow;
+
+	ExecutorService pool = Executors.newCachedThreadPool();
 
 	private static final String MODEL_TAG = "serve";
 	// Same as
@@ -201,7 +207,9 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	private void _run() {
 
-		CSBDeepProgress progressWindow = CSBDeepProgress.create( useTensorFlowGPU, false );
+		progressWindow = CSBDeepProgress.create( useTensorFlowGPU, false );
+
+		progressWindow.getCancelBtn().addActionListener( this );
 
 		progressWindow.setStepStart( CSBDeepProgress.STEP_LOADMODEL );
 
@@ -233,21 +241,30 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		RandomAccessibleInterval< FloatType > normalizedInput = normalizeImage(
 				( RandomAccessibleInterval ) input.getImgPlus() );
 
-		TiledPrediction tiledPrediction =
-				new TiledPrediction( normalizedInput, bridge, model, progressWindow );
-		List< RandomAccessibleInterval< FloatType > > result =
-				tiledPrediction.run( nTiles, 32, overlap );
-
-		if ( result.size() > 0 ) {
-			progressWindow.addLog( "Displaying result image.." );
-			uiService.show( "result", result.get( 0 ) );
-			progressWindow.addLog( "Displaying control image.." );
-			uiService.show( "control", result.get( 1 ) );
-			progressWindow.addLog( "All done!" );
-			progressWindow.setCurrentStepDone();
-		} else {
-			progressWindow.addError( "TiledPrediction returned no result data." );
+		List< RandomAccessibleInterval< FloatType > > result = null;
+		try {
+			result = pool.submit(
+					new TiledPrediction( normalizedInput, bridge, model, progressWindow, nTiles, 32, overlap ) ).get();
+		} catch ( ExecutionException exc ) {
 			progressWindow.setCurrentStepFail();
+			exc.printStackTrace();
+		} catch ( InterruptedException exc ) {
+			progressWindow.addError( "Process canceled." );
+			progressWindow.setCurrentStepFail();
+		}
+
+		if ( result != null ) {
+			if ( result.size() > 0 ) {
+				progressWindow.addLog( "Displaying result image.." );
+				uiService.show( "result", result.get( 0 ) );
+				progressWindow.addLog( "Displaying control image.." );
+				uiService.show( "control", result.get( 1 ) );
+				progressWindow.addLog( "All done!" );
+				progressWindow.setCurrentStepDone();
+			} else {
+				progressWindow.addError( "TiledPrediction returned no result data." );
+				progressWindow.setCurrentStepFail();
+			}
 		}
 
 	}
@@ -276,6 +293,14 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	public String getCancelReason() {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public void actionPerformed( ActionEvent e ) {
+		if ( e.getSource().equals( progressWindow.getCancelBtn() ) ) {
+			pool.shutdownNow();
+			progressWindow.setCurrentStepFail();
+		}
 	}
 
 }
