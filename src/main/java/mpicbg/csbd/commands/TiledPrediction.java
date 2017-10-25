@@ -325,17 +325,8 @@ public class TiledPrediction
 
 		ArrayList< RandomAccessibleInterval< FloatType > > res = new ArrayList<>();
 
-		long[] minint = new long[ img.numDimensions() ];
-		long[] maxint = new long[ img.numDimensions() ];
-
-		for ( int i = 0; i < minint.length; i++ ) {
-			for ( int j = 0; j < minint.length; j++ ) {
-				minint[ j ] = img.min( j );
-				maxint[ j ] = img.max( j );
-			}
-			minint[ channelDim ] = i;
-			maxint[ channelDim ] = i;
-			res.add( Views.zeroMin( Views.interval( img, minint, maxint ) ) );
+		for (int i = 0; i < img.dimension(channelDim); i++) {
+			res.add( Views.zeroMin( Views.hyperSlice(img, channelDim, i) ) );
 		}
 
 		return res;
