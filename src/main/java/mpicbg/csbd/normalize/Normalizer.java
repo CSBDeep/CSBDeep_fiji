@@ -1,6 +1,7 @@
 package mpicbg.csbd.normalize;
 
 import net.imagej.Dataset;
+import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.RealType;
@@ -8,9 +9,9 @@ import net.imglib2.type.numeric.real.FloatType;
 
 import org.scijava.ui.UIService;
 
-public interface Normalizer {
+public interface Normalizer< T extends RealType< T > > {
 
-	void prepareNormalization( Dataset input );
+	void prepareNormalization( IterableInterval<T> input );
 
 	void testNormalization( Dataset input, UIService uiService );
 
@@ -18,5 +19,5 @@ public interface Normalizer {
 
 	float normalize( float val );
 	
-	<T extends RealType<T>> Img<FloatType> normalizeImage( RandomAccessibleInterval<T> im);
+	Img<FloatType> normalizeImage( RandomAccessibleInterval<T> im);
 }

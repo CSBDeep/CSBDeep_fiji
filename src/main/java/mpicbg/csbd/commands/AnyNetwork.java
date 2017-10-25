@@ -25,6 +25,7 @@ import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.ops.OpService;
 import net.imagej.tensorflow.TensorFlowService;
+import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
@@ -54,7 +55,7 @@ import mpicbg.csbd.ui.MappingDialog;
 /**
  */
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Any network", headless = true )
-public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
+public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer< T >
 		implements
 		Command,
 		Cancelable,
@@ -255,7 +256,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer
 		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
 
 		progressWindow.addLog( "Preparing normalization.. " );
-		prepareNormalization( input );
+		prepareNormalization( (IterableInterval) input.getImgPlus() );
 
 		progressWindow.addLog(
 				"Displaying normalized test image.." );

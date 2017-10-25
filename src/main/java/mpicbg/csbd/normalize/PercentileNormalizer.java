@@ -2,6 +2,7 @@ package mpicbg.csbd.normalize;
 
 import net.imagej.Dataset;
 import net.imglib2.Cursor;
+import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
@@ -15,7 +16,7 @@ import org.scijava.ItemVisibility;
 import org.scijava.plugin.Parameter;
 import org.scijava.ui.UIService;
 
-public class PercentileNormalizer implements Normalizer {
+public class PercentileNormalizer< T extends RealType< T > > implements Normalizer< T > {
 
 	@Parameter( visibility = ItemVisibility.MESSAGE )
 	protected String normtext = "Normalization";
@@ -66,7 +67,7 @@ public class PercentileNormalizer implements Normalizer {
 	}
 
 	@Override
-	public void prepareNormalization( final Dataset input ) {
+	public void prepareNormalization( final IterableInterval<T> input ) {
 		if ( normalizeInput ) {
 			final float[] ps =
 					percentiles( input, new float[] { percentileBottom, percentileTop } );
@@ -76,8 +77,8 @@ public class PercentileNormalizer implements Normalizer {
 		}
 	}
 
-	protected static float[] percentiles( final Dataset d, final float[] percentiles ) {
-		final Cursor< RealType< ? > > cursor = d.cursor();
+	protected static <T extends RealType<T>> float[] percentiles( final IterableInterval<T> d, final float[] percentiles ) {
+		final Cursor< T > cursor = d.cursor();
 		int items = 1;
 		int i = 0;
 		for ( ; i < d.numDimensions(); i++ ) {
@@ -117,7 +118,7 @@ public class PercentileNormalizer implements Normalizer {
 	}
 
 	@Override
-	public <T extends RealType<T>> Img<FloatType> normalizeImage(RandomAccessibleInterval<T> im) {
+	public Img<FloatType> normalizeImage(RandomAccessibleInterval<T> im) {
 		final ImgFactory< FloatType > factory = new ArrayImgFactory<>();
 		final Img< FloatType > output = factory.create(im, new FloatType());
 		

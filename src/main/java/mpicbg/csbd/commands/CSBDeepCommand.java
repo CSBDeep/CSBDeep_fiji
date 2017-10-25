@@ -24,6 +24,7 @@ import javax.swing.JOptionPane;
 
 import net.imagej.Dataset;
 import net.imagej.tensorflow.TensorFlowService;
+import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
@@ -45,7 +46,7 @@ import mpicbg.csbd.normalize.PercentileNormalizer;
 import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 import mpicbg.csbd.ui.CSBDeepProgress;
 
-public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer
+public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
 		implements
 		Cancelable,
 		Initializable,
@@ -229,7 +230,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
 
 		progressWindow.addLog( "Preparing normalization.. " );
-		prepareNormalization( input );
+		prepareNormalization( ( IterableInterval ) input.getImgPlus() );
 
 		progressWindow.addLog(
 				"Displaying normalized test image.." );
