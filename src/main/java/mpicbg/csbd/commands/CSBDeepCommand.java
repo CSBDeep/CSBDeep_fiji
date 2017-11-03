@@ -12,9 +12,11 @@ import com.google.protobuf.InvalidProtocolBufferException;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -23,6 +25,7 @@ import java.util.concurrent.Executors;
 import javax.swing.JOptionPane;
 
 import net.imagej.Dataset;
+import net.imagej.axis.AxisType;
 import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
@@ -34,6 +37,8 @@ import org.scijava.Initializable;
 import org.scijava.ItemIO;
 import org.scijava.ItemVisibility;
 import org.scijava.io.http.HTTPLocation;
+import org.scijava.io.location.FileLocation;
+import org.scijava.io.location.Location;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.ui.UIService;
@@ -90,7 +95,8 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	CSBDeepProgress progressWindow;
 
-	ExecutorService pool = Executors.newCachedThreadPool();
+	ExecutorService pool = Executors.newSingleThreadExecutor();
+	List< TiledPrediction > predictions = new ArrayList<>();
 
 	private static final String MODEL_TAG = "serve";
 	// Same as
@@ -130,7 +136,13 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 //		System.out.println("loadGraph");
 
-		final HTTPLocation source = new HTTPLocation( modelFileUrl );
+		File file = new File( modelFileUrl );
+		Location source;
+		if ( !file.exists() ) {
+			source = new HTTPLocation( modelFileUrl );
+		} else {
+			source = new FileLocation( file );
+		}
 		try {
 			model = tensorFlowService.loadModel( source, modelName, MODEL_TAG );
 		} catch ( TensorFlowException | IOException e ) {
@@ -188,30 +200,43 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 		if ( input == null ) { return; }
 		modelChanged();
-		_run();
+		initGui();
+		initModel();
+		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
+		executeModel( normalizeInput() );
 	}
 
-//	public void runWithMapping( final int[] mapping ) {
-//
-//		if ( input == null ) { return; }
-//		modelChanged();
-//
-//		if ( bridge != null ) {
-//			if ( bridge.getAbstractInputTensorShape() != null ) {
-//				for ( int i = 0; i < mapping.length; i++ ) {
-//					bridge.setMapping( i, mapping[ i ] );
-//				}
-//			}
-//		}
-//		_run();
-//	}
+	public void setMapping( final AxisType[] mapping ) {
+		if ( bridge != null ) {
+			if ( bridge.getInputTensorInfo() != null ) {
+				bridge.resetMapping();
+				for ( int i = 0; i < mapping.length; i++ ) {
+					bridge.setTFMapping( i, mapping[ i ] );
+				}
+				bridge.printMapping();
+			}
+		}
+	}
 
-	private void _run() {
+	public void runWithMapping( final AxisType[] mapping ) {
 
+		if ( input == null ) { return; }
+		modelChanged();
+
+		setMapping( mapping );
+		initGui();
+		initModel();
+		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
+		executeModel( normalizeInput() );
+	}
+
+	protected void initGui() {
 		progressWindow = CSBDeepProgress.create( useTensorFlowGPU, false );
-
 		progressWindow.getCancelBtn().addActionListener( this );
 
+	}
+
+	protected void initModel() {
 		progressWindow.setStepStart( CSBDeepProgress.STEP_LOADMODEL );
 
 		progressWindow.addLog( "Loading model " + modelName + ".. " );
@@ -227,8 +252,10 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		}
 
 		progressWindow.setCurrentStepDone();
-		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
 
+	}
+
+	protected RandomAccessibleInterval< FloatType > normalizeInput() {
 		progressWindow.addLog( "Preparing normalization.. " );
 		prepareNormalization( ( IterableInterval ) input.getImgPlus() );
 
@@ -241,11 +268,18 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 		RandomAccessibleInterval< FloatType > normalizedInput = normalizeImage(
 				( RandomAccessibleInterval ) input.getImgPlus() );
+		return normalizedInput;
+
+	}
+
+	protected void executeModel( RandomAccessibleInterval< FloatType > modelInput ) {
 
 		List< RandomAccessibleInterval< FloatType > > result = null;
 		try {
-			result = pool.submit(
-					new TiledPrediction( normalizedInput, bridge, model, progressWindow, nTiles, 32, overlap ) ).get();
+			TiledPrediction prediction =
+					new TiledPrediction( modelInput, bridge, model, progressWindow, nTiles, 32, overlap );
+			predictions.add( prediction );
+			result = pool.submit( prediction ).get();
 		} catch ( ExecutionException exc ) {
 			progressWindow.setCurrentStepFail();
 			exc.printStackTrace();
@@ -262,9 +296,6 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 				uiService.show( "control", result.get( 1 ) );
 				progressWindow.addLog( "All done!" );
 				progressWindow.setCurrentStepDone();
-			} else {
-				progressWindow.addError( "TiledPrediction returned no result data." );
-				progressWindow.setCurrentStepFail();
 			}
 		}
 
@@ -299,7 +330,11 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	@Override
 	public void actionPerformed( ActionEvent e ) {
 		if ( e.getSource().equals( progressWindow.getCancelBtn() ) ) {
+			for ( TiledPrediction prediction : predictions ) {
+				prediction.cancel();
+			}
 			pool.shutdownNow();
+			progressWindow.addError( "Process canceled." );
 			progressWindow.setCurrentStepFail();
 		}
 	}

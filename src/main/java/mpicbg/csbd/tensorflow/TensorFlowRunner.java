@@ -18,23 +18,15 @@ public class TensorFlowRunner {
 			final SavedModelBundle model,
 			final Tensor image,
 			final TensorInfo inputTensorInfo,
-			final TensorInfo outputTensorInfo ) {
+			final TensorInfo outputTensorInfo ) throws Exception {
 
 		System.out.println(
 				"executeInceptionGraph with input shape " + Arrays.toString( image.shape() ) );
 
-		Tensor output_t = null;
-		try {
-			/*
-			 * execute graph
-			 */
-			output_t = model.session().runner() //
-					.feed( opName( inputTensorInfo ), image ) //
-					.fetch( opName( outputTensorInfo ) ) //
-					.run().get( 0 );
-		} catch ( final Exception e ) {
-			e.printStackTrace();
-		}
+		Tensor output_t = model.session().runner() //
+				.feed( opName( inputTensorInfo ), image ) //
+				.fetch( opName( outputTensorInfo ) ) //
+				.run().get( 0 );
 
 		if ( output_t != null ) {
 

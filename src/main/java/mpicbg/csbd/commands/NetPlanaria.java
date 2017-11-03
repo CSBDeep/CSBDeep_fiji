@@ -12,6 +12,8 @@ import java.io.File;
 
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
+import net.imagej.axis.Axes;
+import net.imagej.axis.AxisType;
 import net.imglib2.type.numeric.RealType;
 
 import org.scijava.command.Command;
@@ -19,18 +21,21 @@ import org.scijava.plugin.Plugin;
 
 /**
  */
-@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Tubulin", headless = true )
-public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T > implements Command {
+@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Planaria", headless = true )
+public class NetPlanaria< T extends RealType< T > > extends CSBDeepCommand< T >
+		implements
+		Command {
 
 	@Override
 	public void initialize() {
 
 		super.initialize();
 
-		modelFileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_tubulin.zip";
-		modelName = "net_tubulin";
+		modelFileUrl =
+				"/home/random/Development/imagej/plugins/CSBDeep-data/net_planaria_registered/resunet3_2_3_32__cond_1_2_3_sub_5_nz_16__2017-09-25_23-05-37_896633.zip";
+		modelName = "net_planaria";
 
-		header = "This is the tubulin network command.";
+		header = "This is the planaria network command.";
 
 	}
 
@@ -41,7 +46,8 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T > i
 		ij.launch( args );
 
 		// ask the user for a file to open
-		final File file = ij.ui().chooseFile( null, "open" );
+//		final File file = ij.ui().chooseFile( null, "open" );
+		final File file = new File( "../CSBDeep-data/net_planaria_registered/input.tif" );
 
 		if ( file != null && file.exists() ) {
 			// load the dataset
@@ -51,14 +57,16 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T > i
 			ij.ui().show( dataset );
 
 			// invoke the plugin
-			ij.command().run( NetTubulin.class, true );
+			ij.command().run( NetPlanaria.class, true );
 		}
 
 	}
 
 	@Override
 	public void run() {
-		super.run();
+
+		final AxisType[] mapping = { Axes.TIME, Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
+		super.runWithMapping( mapping );
 
 	}
 }

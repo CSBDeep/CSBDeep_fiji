@@ -256,7 +256,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
 
 		progressWindow.addLog( "Preparing normalization.. " );
-		prepareNormalization( (IterableInterval) input.getImgPlus() );
+		prepareNormalization( ( IterableInterval ) input.getImgPlus() );
 
 		progressWindow.addLog(
 				"Displaying normalized test image.." );
@@ -316,7 +316,9 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 		ij.launch( args );
 
 		// ask the user for a file to open
-		final File file = ij.ui().chooseFile( null, "open" );
+//		final File file = ij.ui().chooseFile( null, "open" );
+		final File file =
+				new File( "/home/random/Development/imagej/plugins/CSBDeep-data/net_iso/input.tif" );
 
 		if ( file != null && file.exists() ) {
 			// load the dataset

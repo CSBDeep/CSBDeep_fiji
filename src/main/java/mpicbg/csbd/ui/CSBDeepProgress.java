@@ -97,6 +97,7 @@ public class CSBDeepProgress extends JPanel
 		progressBar.setStringPainted( true );
 
 		taskOutput = new JTextPane();
+		taskOutput.setAutoscrolls( true );
 		taskOutput.setMinimumSize( new Dimension( 0, 80 ) );
 		taskOutput.setPreferredSize( new Dimension( 0, 80 ) );
 		taskOutput.setMargin( new Insets( 5, 5, 5, 5 ) );
@@ -230,7 +231,7 @@ public class CSBDeepProgress extends JPanel
 
 	private void setStepStatus( int step, int status ) {
 
-		if ( status < stepStatus.length ) {
+		if ( status < stepStatus.length && step >= 0 ) {
 			JLabel statuslabel = stepStatus[ step ];
 			switch ( status ) {
 			case STATUS_RUNNING:
@@ -255,8 +256,7 @@ public class CSBDeepProgress extends JPanel
 					taskOutput.getDocument().getLength(),
 					data + "\n",
 					null );
-//			taskOutput.scrollRectToVisible(
-//					new Rectangle( 0, this.getBounds( null ).height, 1, 1 ) );
+			taskOutput.setCaretPosition( taskOutput.getDocument().getLength() );
 		} catch ( BadLocationException exc ) {
 			// TODO Auto-generated catch block
 			exc.printStackTrace();
@@ -271,6 +271,8 @@ public class CSBDeepProgress extends JPanel
 					taskOutput.getDocument().getLength(),
 					data + "\n",
 					red );
+			taskOutput.setCaretPosition( taskOutput.getDocument().getLength() );
+
 		} catch ( BadLocationException exc ) {
 			// TODO Auto-generated catch block
 			exc.printStackTrace();

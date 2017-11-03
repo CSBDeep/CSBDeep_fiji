@@ -7,13 +7,10 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
 
-import org.scijava.command.Command;
-import org.scijava.plugin.Plugin;
-
-import mpicbg.csbd.ui.CSBDeepProgress;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
+import net.imagej.axis.AxisType;
 import net.imglib2.Cursor;
 import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccess;
@@ -32,29 +29,42 @@ import net.imglib2.util.Intervals;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
+import org.scijava.command.Command;
+import org.scijava.plugin.Parameter;
+import org.scijava.plugin.Plugin;
+
+import mpicbg.csbd.tensorflow.DatasetTensorBridge;
+import mpicbg.csbd.ui.CSBDeepProgress;
+
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Iso", headless = true )
-public class NetIso<T extends RealType<T>> extends CSBDeepCommand<T> implements Command {
+public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > implements Command {
+
+	@Parameter( label = "Scale Z", min = "1", max = "15" )
+	protected float scale = 10.2f;
 
 	@Override
 	public void initialize() {
 
 		super.initialize();
 
-		modelFileUrl = "http://example.com/path/to/model.zip"; // TODO real url
+		modelFileUrl =
+				"/home/random/Development/imagej/plugins/CSBDeep-data/net_iso/resunet_2_5_32__subsample_10.20_perturb_augment__2017-10-18_01-35-15_499616.zip"; // TODO real url
 		modelName = "net_iso";
 
 		header = "This is the iso network command.";
 
 	}
 
-	public static void main(String[] args) throws IOException {
+	public static void main( String[] args ) throws IOException {
 		// create the ImageJ application context with all available services
 		final ImageJ ij = new ImageJ();
 
 		ij.launch( args );
 
 		// ask the user for a file to open
-		final File file = ij.ui().chooseFile( null, "open" );
+//		final File file = ij.ui().chooseFile( null, "open" );
+		final File file =
+				new File( "/home/random/Development/imagej/plugins/CSBDeep-data/net_iso/input-1.tif" );
 
 		if ( file != null && file.exists() ) {
 			// load the dataset
@@ -68,7 +78,6 @@ public class NetIso<T extends RealType<T>> extends CSBDeepCommand<T> implements 
 		}
 	}
 
-
 	@Override
 	public void run() {
 		// TODO super.run() normalizes the whole image at once. But for this
@@ -79,103 +88,93 @@ public class NetIso<T extends RealType<T>> extends CSBDeepCommand<T> implements 
 		// Below is copied from CSBDeepCommand.run()
 		if ( input == null ) { return; }
 		modelChanged();
-		
-		// Set the mapping TODO there is probably a smarter way...
-		int dimChannel = input.dimensionIndex(Axes.CHANNEL);
-		int dimX = input.dimensionIndex(Axes.X);
-		int dimY = input.dimensionIndex(Axes.Y);
-		int dimZ = input.dimensionIndex(Axes.Z);
-		bridge.setTFMappingByKnownAxesIndex(0, dimZ);
-		bridge.setTFMappingByKnownAxesIndex(1, dimChannel);
-		bridge.setTFMappingByKnownAxesIndex(2, dimY);
-		bridge.setTFMappingByKnownAxesIndex(3, dimX);
 
-		bridge.printMapping();
+//		// Set the mapping TODO there is probably a smarter way...
+//		int dimChannel = input.dimensionIndex( Axes.CHANNEL );
+//		int dimX = input.dimensionIndex( Axes.X );
+//		int dimY = input.dimensionIndex( Axes.Y );
+//		int dimZ = input.dimensionIndex( Axes.Z );
+//		bridge.setTFMappingByKnownAxesIndex( 0, dimZ );
+//		bridge.setTFMappingByKnownAxesIndex( 1, dimChannel );
+//		bridge.setTFMappingByKnownAxesIndex( 2, dimY );
+//		bridge.setTFMappingByKnownAxesIndex( 3, dimX );
+		AxisType[] mapping = { Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
+		setMapping( mapping );
 
-		// Below is copied from CSBDeepCommand._run()
-		progressWindow = CSBDeepProgress.create( false, false ); // TODO use GPU?
+		int dimChannel = input.dimensionIndex( Axes.CHANNEL );
+		int dimX = input.dimensionIndex( Axes.X );
+		int dimY = input.dimensionIndex( Axes.Y );
+		int dimZ = input.dimensionIndex( Axes.Z );
 
-		progressWindow.getCancelBtn().addActionListener( this );
+		initGui();
 
-		progressWindow.setStepStart( CSBDeepProgress.STEP_LOADMODEL );
-
-		progressWindow.addLog( "Loading model " + modelName + ".. " );
-
-		if ( input == null ) { return; }
-
-		if ( model == null ) {
-			modelChanged();
-			if ( model == null ) {
-				progressWindow.setCurrentStepFail();
-				return;
-			}
-		}
-
-		progressWindow.setCurrentStepDone();
+		initModel();
 		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
 
-		progressWindow.addLog( "Preparing normalization.. " );
-		
+		progressWindow.addLog( "Normalize input.. " );
+
 		// =============================================================================
 		// The normalization needs to be done per channel
-		
+
 		int n = input.numDimensions();
 
 		// ========= NORMALIZATION
 		// TODO maybe there is a better solution than splitting the image, normalizing each channel and combining it again.
-		IntervalView<T> channel0 = Views.hyperSlice(input.typedImg((T) input.firstElement()), dimChannel, 0);
-		IntervalView<T> channel1 = Views.hyperSlice(input.typedImg((T) input.firstElement()), dimChannel, 1);
+		IntervalView< T > channel0 =
+				Views.hyperSlice( input.typedImg( ( T ) input.firstElement() ), dimChannel, 0 );
+		IntervalView< T > channel1 =
+				Views.hyperSlice( input.typedImg( ( T ) input.firstElement() ), dimChannel, 1 );
 
 		prepareNormalization( channel0 );
-		Img<FloatType> normalizedChannel0 = normalizeImage(channel0);
+		Img< FloatType > normalizedChannel0 = normalizeImage( channel0 );
 
 		prepareNormalization( channel1 );
-		Img<FloatType> normalizedChannel1 = normalizeImage(channel1);
+		Img< FloatType > normalizedChannel1 = normalizeImage( channel1 );
 
-		RandomAccessibleInterval<FloatType> normalizedInput = Views
-				.permute(Views.stack(normalizedChannel0, normalizedChannel1), n - 1, dimChannel);
+		RandomAccessibleInterval< FloatType > normalizedInput = Views.permute(
+				Views.stack( normalizedChannel0, normalizedChannel1 ),
+				n - 1,
+				dimChannel );
 
-		uiService.show("Normalized image", normalizedInput);
+		progressWindow.addLog( "Input normalized." );
+
+		uiService.show( "Normalized image", normalizedInput );
 
 		// ========= UPSAMPLING
-		RealRandomAccessible<FloatType> interpolated = Views.interpolate(Views.extendBorder(normalizedInput),
-				new NLinearInterpolatorFactory<>());
+		RealRandomAccessible< FloatType > interpolated =
+				Views.interpolate(
+						Views.extendBorder( normalizedInput ),
+						new NLinearInterpolatorFactory<>() );
 
 		// Affine transformation to scale the Z axis
-		double s = 10.2; // TODO add as parameter
-		double[] scales = IntStream.range(0, n).mapToDouble(i -> i == dimZ ? s : 1).toArray();
-		AffineGet scaling = new Scale(scales);
+		double s = scale; // TODO add as parameter
+		double[] scales = IntStream.range( 0, n ).mapToDouble( i -> i == dimZ ? s : 1 ).toArray();
+		AffineGet scaling = new Scale( scales );
 
 		// Scale min and max to create an interval afterwards
-		double[] targetMin = new double[n];
-		double[] targetMax = new double[n];
-		scaling.apply(Intervals.minAsDoubleArray(normalizedInput), targetMin);
-		scaling.apply(Intervals.maxAsDoubleArray(normalizedInput), targetMax);
+		double[] targetMin = new double[ n ];
+		double[] targetMax = new double[ n ];
+		scaling.apply( Intervals.minAsDoubleArray( normalizedInput ), targetMin );
+		scaling.apply( Intervals.maxAsDoubleArray( normalizedInput ), targetMax );
 
 		// Apply the transformation
-		RandomAccessible<FloatType> scaled = RealViews.affine(interpolated, scaling);
-		RandomAccessibleInterval<FloatType> upsampled = Views.interval(scaled,
-				Arrays.stream(targetMin).mapToLong(d -> (long) Math.ceil(d)).toArray(),
-				Arrays.stream(targetMax).mapToLong(d -> (long) Math.floor(d)).toArray());
+		RandomAccessible< FloatType > scaled = RealViews.affine( interpolated, scaling );
+		RandomAccessibleInterval< FloatType > upsampled = Views.interval(
+				scaled,
+				Arrays.stream( targetMin ).mapToLong( d -> ( long ) Math.ceil( d ) ).toArray(),
+				Arrays.stream( targetMax ).mapToLong( d -> ( long ) Math.floor( d ) ).toArray() );
 
 		// ========== ROTATION
 
 		// Create the first rotated image
-		RandomAccessibleInterval<FloatType> rotated0 = Views.permute(upsampled, dimX, dimZ);
-		
+		RandomAccessibleInterval< FloatType > rotated0 = Views.permute( upsampled, dimX, dimZ );
+
+//		uiService.show( "upsampled", upsampled );
+
 		// Create the second rotated image
-		RandomAccessibleInterval<FloatType> rotated1 = Views.permute(rotated0, dimY, dimZ);
-		
-		// =============================================================================
-//		progressWindow.addLog(
-//				"Displaying normalized test image.." );
-//		testNormalization( input, uiService );
-//
-//		progressWindow.addLog(
-//				"Normalize (" + percentileBottom + " - " + percentileTop + " -> " + min + " - " + max + "] .. " );
-//
-//		RandomAccessibleInterval< FloatType > normalizedInput = normalizeImage(
-//				( RandomAccessibleInterval ) input.getImgPlus() );
+		RandomAccessibleInterval< FloatType > rotated1 = Views.permute( rotated0, dimY, dimZ );
+
+//		uiService.show( "rotated1", rotated0 );
 
 		List< RandomAccessibleInterval< FloatType > > result0 = null;
 		List< RandomAccessibleInterval< FloatType > > result1 = null;
@@ -188,10 +187,13 @@ public class NetIso<T extends RealType<T>> extends CSBDeepCommand<T> implements 
 			// correspond to the slices of the 3D image.
 
 			// TODO the progess window will show 100% after the first part
+			bridge.permuteInputAxes( dimX, dimZ );
 			result0 = pool.submit(
-					new TiledPrediction( rotated0, bridge, model, progressWindow, nTiles, 4, 0 ) ).get();
+					new BatchedTiledPrediction( rotated0, bridge, model, progressWindow, nTiles, 4, 0 ) ).get();
+			DatasetTensorBridge bridge1 = bridge.clone();
+			bridge1.permuteInputAxes( dimY, dimZ );
 			result1 = pool.submit(
-					new TiledPrediction( rotated1, bridge, model, progressWindow, nTiles, 4, 0 ) ).get();
+					new BatchedTiledPrediction( rotated1, bridge1, model, progressWindow, nTiles, 4, 0 ) ).get();
 			// ============================================================================================
 		} catch ( ExecutionException exc ) {
 			progressWindow.setCurrentStepFail();
@@ -222,12 +224,22 @@ public class NetIso<T extends RealType<T>> extends CSBDeepCommand<T> implements 
 //				});
 
 				// Calculate the geometric mean of the two predictions
-				RandomAccessibleInterval< FloatType > prediction = ArrayImgs.floats(Intervals.dimensionsAsLongArray(result0.get(0)));
-				pointwiseGeometricMean(Views.iterable(result0.get(0)), result1.get(0), prediction);
+				RandomAccessibleInterval< FloatType > prediction =
+						ArrayImgs.floats( Intervals.dimensionsAsLongArray( result0.get( 0 ) ) );
+				pointwiseGeometricMean(
+						Views.iterable( result0.get( 0 ) ),
+						result1.get( 0 ),
+						prediction );
 
 				// Calculate the geometric mean of the two control outputs
-				RandomAccessibleInterval< FloatType > control = ArrayImgs.floats(Intervals.dimensionsAsLongArray(result0.get(0)));
-				pointwiseGeometricMean(Views.iterable(result0.get(1)), result1.get(1), control);
+				RandomAccessibleInterval< FloatType > control =
+						ArrayImgs.floats( Intervals.dimensionsAsLongArray( result0.get( 0 ) ) );
+				pointwiseGeometricMean(
+						Views.iterable( result0.get( 1 ) ),
+						result1.get( 1 ),
+						control );
+
+//				Dataset prediction_d = prediction;
 
 				progressWindow.addLog( "Displaying result image.." );
 				uiService.show( "result", prediction );
@@ -242,17 +254,20 @@ public class NetIso<T extends RealType<T>> extends CSBDeepCommand<T> implements 
 		}
 	}
 
-	private static <T extends RealType<T>, U extends RealType<U>, V extends RealType<V>> void pointwiseGeometricMean(
-			IterableInterval<T> in1, RandomAccessibleInterval<U> in2, RandomAccessibleInterval<V> out) {
-		Cursor<T> i1 = in1.cursor();
-		RandomAccess<U> i2 = in2.randomAccess();
-		RandomAccess<V> o = out.randomAccess();
+	private static < T extends RealType< T >, U extends RealType< U >, V extends RealType< V > >
+			void pointwiseGeometricMean(
+					IterableInterval< T > in1,
+					RandomAccessibleInterval< U > in2,
+					RandomAccessibleInterval< V > out ) {
+		Cursor< T > i1 = in1.cursor();
+		RandomAccess< U > i2 = in2.randomAccess();
+		RandomAccess< V > o = out.randomAccess();
 
-		while(i1.hasNext()) {
+		while ( i1.hasNext() ) {
 			i1.fwd();
-			i2.setPosition(i1);
-			o.setPosition(i1);
-			o.get().setReal(Math.sqrt(i1.get().getRealFloat() * i2.get().getRealFloat()));
+			i2.setPosition( i1 );
+			o.setPosition( i1 );
+			o.get().setReal( Math.sqrt( i1.get().getRealFloat() * i2.get().getRealFloat() ) );
 		}
 	}
 }

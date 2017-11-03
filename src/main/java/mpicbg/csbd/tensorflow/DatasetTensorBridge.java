@@ -21,9 +21,9 @@ public class DatasetTensorBridge {
 	private TensorInfo inputTensor, outputTensor;
 
 	AxisType[] axes = Axes.knownTypes();
-	private final Map< AxisType, Integer > axisDataset;
-	private final Map< AxisType, Integer > axisTF;
-	private final Map< AxisType, Long > axisSize;
+	private Map< AxisType, Integer > axisDataset;
+	private Map< AxisType, Integer > axisTF;
+	private Map< AxisType, Long > axisSize;
 
 	private boolean mappingInitialized = false;
 
@@ -44,7 +44,19 @@ public class DatasetTensorBridge {
 			axisTF.put( axis, -1 );
 			axisSize.put( axis, image.dimension( axis ) );
 		}
+		System.out.println( "DatasetTensorBridge initialized" );
+		printMapping();
 
+	}
+
+	public DatasetTensorBridge clone() {
+		DatasetTensorBridge _clone = new DatasetTensorBridge( dataset );
+		_clone.inputTensor = this.inputTensor;
+		_clone.outputTensor = this.outputTensor;
+		_clone.axisTF = ( Map< AxisType, Integer > ) ( ( HashMap ) this.axisTF ).clone();
+		_clone.axisDataset = ( Map< AxisType, Integer > ) ( ( HashMap ) this.axisDataset ).clone();
+		_clone.axisSize = ( Map< AxisType, Long > ) ( ( HashMap ) this.axisSize ).clone();
+		return _clone;
 	}
 
 	private void assignUnknownDimensions( Dataset image ) {
@@ -133,7 +145,6 @@ public class DatasetTensorBridge {
 			axisTF.put( Axes.CHANNEL, 4 );
 		} else {
 			if ( inputTensor.getTensorShape().getDimCount() == 4 ) {
-				axisTF.put( Axes.unknown(), 0 );
 				axisTF.put( Axes.Y, 2 );
 				axisTF.put( Axes.X, 3 );
 				if ( dataset.dimension( Axes.Z ) > 1 ) {
@@ -157,10 +168,18 @@ public class DatasetTensorBridge {
 		printMapping();
 	}
 
+	public void resetMapping() {
+		axisTF.clear();
+	}
+
 	public void setTFMappingByKnownAxesIndex( int tfIndex5D, int knownAxesIndex ) {
 		if ( knownAxesIndex < axes.length ) {
 			axisTF.put( axes[ knownAxesIndex ], tfIndex5D );
 		}
+	}
+
+	public void setTFMapping( int index, AxisType axisType ) {
+		axisTF.put( axisType, index );
 	}
 
 	public void setInputTensor( final TensorInfo tensorInfo ) {
@@ -253,6 +272,13 @@ public class DatasetTensorBridge {
 			if ( Objects.equals( value, entry.getValue() ) ) { return entry.getKey(); }
 		}
 		return null;
+	}
+
+	public void permuteInputAxes( int dim1, int dim2 ) {
+		AxisType a1 = getKeyByValue( axisDataset, dim1 );
+		AxisType a2 = getKeyByValue( axisDataset, dim2 );
+		axisDataset.put( a1, dim2 );
+		axisDataset.put( a2, dim1 );
 	}
 
 }

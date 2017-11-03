@@ -12,6 +12,8 @@ import java.io.File;
 
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
+import net.imagej.axis.Axes;
+import net.imagej.axis.AxisType;
 import net.imglib2.type.numeric.RealType;
 
 import org.scijava.command.Command;
@@ -29,7 +31,8 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 
 		super.initialize();
 
-		modelFileUrl = "http://fly.mpi-cbg.de/~pietzsch/CSBDeep-data/net_tribolium.zip";
+		modelFileUrl =
+				"../CSBDeep-data/net_tribolium/resunet3_2_3_32__large_cx_0_1_2_cy_3_nz_16__2017-09-11_01-45-19_961034.zip";
 		modelName = "net_tribolium";
 
 		header = "This is the tribolium network command.";
@@ -43,7 +46,8 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 		ij.launch( args );
 
 		// ask the user for a file to open
-		final File file = ij.ui().chooseFile( null, "open" );
+//		final File file = ij.ui().chooseFile( null, "open" );
+		final File file = new File( "../CSBDeep-data/net_tribolium/input.tif" );
 
 		if ( file != null && file.exists() ) {
 			// load the dataset
@@ -61,12 +65,8 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 	@Override
 	public void run() {
 
-//		final int[] mapping = { DatasetTensorBridge.T,
-//								DatasetTensorBridge.C,
-//								DatasetTensorBridge.Y,
-//								DatasetTensorBridge.X,
-//								DatasetTensorBridge.Z };
-		super.run();
+		final AxisType[] mapping = { Axes.TIME, Axes.CHANNEL, Axes.Y, Axes.X, Axes.Z };
+		super.runWithMapping( mapping );
 
 	}
 }

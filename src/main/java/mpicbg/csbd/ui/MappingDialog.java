@@ -45,7 +45,7 @@ public class MappingDialog {
 			}
 
 			int tfDimCount = 0;
-			for ( int i = 0; i < bridge.numDimensions(); i++ ) {
+			for ( int i = 0; i < bridge.getInputTensorInfo().getTensorShape().getDimCount(); i++ ) {
 				if ( bridge.getDatasetDimIndexByTFIndex( i ) != null ) {
 
 					String dimName = bridge.getDatasetDimNameByTFIndex( i );
