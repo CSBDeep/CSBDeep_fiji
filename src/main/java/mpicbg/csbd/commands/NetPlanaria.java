@@ -53,7 +53,11 @@ public class NetPlanaria< T extends RealType< T > > extends CSBDeepCommand< T >
 	@Override
 	public void run() {
 
-		final AxisType[] mapping = { Axes.TIME, Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
+		AxisType[] mapping = { Axes.TIME, Axes.CHANNEL, Axes.Y, Axes.X, Axes.Z };
+		if ( input.dimension( Axes.CHANNEL ) < input.dimension( Axes.Z ) ) {
+			mapping[ 1 ] = Axes.Z;
+			mapping[ 4 ] = Axes.CHANNEL;
+		}
 		super.runWithMapping( mapping );
 
 	}

@@ -105,6 +105,13 @@ public class TiledPrediction
 			long blockwidth =
 					( long ) ( Math.ceil( blockwidthIdeal / blockMultiple ) * blockMultiple );
 
+			nTiles = ( int ) Math.ceil( largestSize / blockwidth );
+
+			System.out.println( "blockwidthIdeal: " + blockwidthIdeal );
+			System.out.println( "blockwidth: " + blockwidth );
+			System.out.println( "blockMultiple: " + blockMultiple );
+			System.out.println( "nTiles: " + nTiles );
+
 			// Expand the image to fit the blocksize
 			expandedInput = expandDimToSize( input, largestDim, blockwidth * nTiles );
 
