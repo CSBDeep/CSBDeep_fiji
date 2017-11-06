@@ -25,6 +25,7 @@ import java.util.concurrent.Executors;
 import javax.swing.JOptionPane;
 
 import net.imagej.Dataset;
+import net.imagej.DatasetService;
 import net.imagej.axis.AxisType;
 import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.IterableInterval;
@@ -35,7 +36,6 @@ import net.imglib2.type.numeric.real.FloatType;
 import org.scijava.Cancelable;
 import org.scijava.Initializable;
 import org.scijava.ItemIO;
-import org.scijava.ItemVisibility;
 import org.scijava.io.http.HTTPLocation;
 import org.scijava.io.location.FileLocation;
 import org.scijava.io.location.Location;
@@ -57,9 +57,6 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		Initializable,
 		ActionListener {
 
-	@Parameter( visibility = ItemVisibility.MESSAGE )
-	protected String header;
-
 	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
 	protected Dataset input;
 
@@ -71,6 +68,9 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	@Parameter
 	protected UIService uiService;
+
+	@Parameter
+	protected DatasetService datasetService;
 
 	@Parameter( type = ItemIO.OUTPUT )
 	protected Dataset outputImage;

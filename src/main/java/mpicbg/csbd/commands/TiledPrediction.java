@@ -102,6 +102,7 @@ public class TiledPrediction
 			padding = new long[ input.numDimensions() ];
 
 			this.nTiles = nTiles;
+			progressWindow.setProgressBarMax( nTiles );
 
 			// Calculate the blocksize to use
 			double blockwidthIdeal = largestSize / ( double ) nTiles;
@@ -169,7 +170,6 @@ public class TiledPrediction
 		List< RandomAccessibleInterval< FloatType > > results = new ArrayList<>();
 		List< Future< RandomAccessibleInterval< FloatType > > > futures = new ArrayList<>();
 
-		progressWindow.setProgressBarMax( nTiles );
 		progressWindow.setProgressBarValue( 0 );
 		doneTileCount = 0;
 
@@ -180,7 +180,7 @@ public class TiledPrediction
 					new TileRunner( tile, negPadding, progressWindow ) );
 
 			progressWindow.addLog(
-					"Processing tile " + ( doneTileCount + 1 ) + " / " + nTiles + ".." );
+					"Processing tile " + ( doneTileCount + 1 ) + ".." );
 
 			futures.add( future );
 
@@ -249,6 +249,13 @@ public class TiledPrediction
 			RandomAccessibleInterval< FloatType > fittedResult =
 					expandDimToSize( result, largestDim, largestSize );
 
+			// undo Expand other dimensions to fit blockMultiple
+			for ( int i = 0; i < input.numDimensions(); i++ ) {
+				if ( i != largestDim ) {
+					fittedResult = expandDimToSize( fittedResult, i, input.dimension( i ) );
+				}
+			}
+
 //			ImageJ ij = new ImageJ();
 //			ij.ui().show( "_result", result );
 //			ij.ui().show( "_expandedresult", expandedresult );
@@ -272,6 +279,9 @@ public class TiledPrediction
 
 			TiledView< FloatType > tiledView = preprocess( nTiles, blockMultiple, overlap );
 
+			progressWindow.setProgressBarValue( 0 );
+
+			progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
 			List< RandomAccessibleInterval< FloatType > > results = runModel( tiledView );
 
 			return postprocess( results );

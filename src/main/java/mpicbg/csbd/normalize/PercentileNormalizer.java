@@ -12,26 +12,24 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Util;
 
-import org.scijava.ItemVisibility;
-import org.scijava.plugin.Parameter;
 import org.scijava.ui.UIService;
 
 public class PercentileNormalizer< T extends RealType< T > > implements Normalizer< T > {
 
-	@Parameter( visibility = ItemVisibility.MESSAGE )
-	protected String normtext = "Normalization";
+//	@Parameter( visibility = ItemVisibility.MESSAGE )
+//	protected String normtext = "Normalization";
 //    @Parameter(label = "Normalize image")
 	protected boolean normalizeInput = true;
-	@Parameter
-	protected float percentileBottom = 0.1f;
-	@Parameter
-	protected float percentileTop = 0.9f;
-	@Parameter
+//	@Parameter
+	protected float percentileBottom = 0.03f;
+//	@Parameter
+	protected float percentileTop = 0.998f;
+//	@Parameter
 	protected float min = 0;
-	@Parameter
+//	@Parameter
 	protected float max = 100;
-	@Parameter( label = "Clamp normalization" )
-	protected boolean clamp = true;
+//	@Parameter( label = "Clamp normalization" )
+	protected boolean clamp = false;
 
 	protected float percentileBottomVal, percentileTopVal;
 
@@ -67,7 +65,7 @@ public class PercentileNormalizer< T extends RealType< T > > implements Normaliz
 	}
 
 	@Override
-	public void prepareNormalization( final IterableInterval<T> input ) {
+	public void prepareNormalization( final IterableInterval< T > input ) {
 		if ( normalizeInput ) {
 			final float[] ps =
 					percentiles( input, new float[] { percentileBottom, percentileTop } );
@@ -77,7 +75,8 @@ public class PercentileNormalizer< T extends RealType< T > > implements Normaliz
 		}
 	}
 
-	protected static <T extends RealType<T>> float[] percentiles( final IterableInterval<T> d, final float[] percentiles ) {
+	protected static < T extends RealType< T > > float[]
+			percentiles( final IterableInterval< T > d, final float[] percentiles ) {
 		final Cursor< T > cursor = d.cursor();
 		int items = 1;
 		int i = 0;
@@ -118,19 +117,18 @@ public class PercentileNormalizer< T extends RealType< T > > implements Normaliz
 	}
 
 	@Override
-	public Img<FloatType> normalizeImage(RandomAccessibleInterval<T> im) {
+	public Img< FloatType > normalizeImage( RandomAccessibleInterval< T > im ) {
 		final ImgFactory< FloatType > factory = new ArrayImgFactory<>();
-		final Img< FloatType > output = factory.create(im, new FloatType());
-		
+		final Img< FloatType > output = factory.create( im, new FloatType() );
+
 		final RandomAccess< T > in = im.randomAccess();
 		final Cursor< FloatType > out = output.localizingCursor();
-		while ( out.hasNext() )
-		{
+		while ( out.hasNext() ) {
 			out.fwd();
 			in.setPosition( out );
-			out.get().set(normalize(in.get().getRealFloat()));
+			out.get().set( normalize( in.get().getRealFloat() ) );
 		}
-		
+
 		return output;
 	}
 

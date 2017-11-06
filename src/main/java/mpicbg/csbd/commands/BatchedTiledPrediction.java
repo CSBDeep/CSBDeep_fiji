@@ -44,11 +44,17 @@ public class BatchedTiledPrediction extends TiledPrediction {
 			batchDim = bridge.getDatasetDimIndexByTFIndex( 0 );
 			channelDim = bridge.getDatasetDimIndexByTFIndex(
 					bridge.getInputTensorInfo().getTensorShape().getDimCount() - 1 );
-			System.out.println( "!!!!!!!!!batchDim: " + batchDim );
 			TiledView< FloatType > tiledView = preprocess( nTiles, blockMultiple, overlap );
+			System.out.println( "batchDim  : " + batchDim );
+			System.out.println( "channelDim: " + channelDim );
+			System.out.println( "largestDim: " + largestDim );
 			long[] tileSize = tiledView.getBlockSize();
 			batchDimSize = tileSize[ batchDim ];
-			nBatches = ( int ) Math.ceil( batchDimSize / batchSize );
+			System.out.println( "batchDimSize  : " + batchDimSize );
+			nBatches = ( int ) Math.ceil( ( float ) batchDimSize / ( float ) batchSize );
+
+			progressWindow.setProgressBarMax( nTiles * nBatches );
+
 			long expandedBatchDimSize = nBatches * batchSize;
 			tileSize[ batchDim ] = batchSize;
 			RandomAccessibleInterval< FloatType > expandedInput2 =
@@ -57,6 +63,13 @@ public class BatchedTiledPrediction extends TiledPrediction {
 					new TiledView<>( expandedInput2, tileSize, padding );
 
 			List< RandomAccessibleInterval< FloatType > > results = runModel( tiledView2 );
+
+//			final ImageJ ij = new ImageJ();
+//			int i = 0;
+//			for ( RandomAccessibleInterval< FloatType > res : results ) {
+//				ij.ui().show( "res" + i, res );
+//				i++;
+//			}
 
 			return postprocess( results );
 
@@ -112,7 +125,6 @@ public class BatchedTiledPrediction extends TiledPrediction {
 
 			// Expand other dimensions to fit blockMultiple
 			for ( int i = 0; i < expandedInput.numDimensions(); i++ ) {
-//				if ( bridge.getDimTypeByDatasetDim( i ).isXY() ) {
 				if ( i != largestDim && i != batchDim && i != channelDim ) {
 					expandedInput = expandDimToSize(
 							expandedInput,
@@ -121,7 +133,6 @@ public class BatchedTiledPrediction extends TiledPrediction {
 									expandedInput.dimension(
 											i ) / ( double ) blockMultiple ) * blockMultiple );
 				}
-//				}
 			}
 
 			imdims = new long[ expandedInput.numDimensions() ];
@@ -193,11 +204,26 @@ public class BatchedTiledPrediction extends TiledPrediction {
 			RandomAccessibleInterval< FloatType > fittedResult =
 					expandDimToSize( result, largestDim, largestSize );
 
-			RandomAccessibleInterval< FloatType > fittedResult2 =
-					expandDimToSize( fittedResult, batchDim, batchDimSize );
+			fittedResult.dimensions( resDimension );
+			System.out.println( "fittedResult dimensions: " + Arrays.toString( resDimension ) );
 
-			if ( fittedResult2.dimension(
-					channelDim ) > 0 ) { return splitChannels( fittedResult2, channelDim ); }
+			fittedResult = expandDimToSize( fittedResult, batchDim, batchDimSize );
+
+			fittedResult.dimensions( resDimension );
+			System.out.println( "fittedResult2 dimensions: " + Arrays.toString( resDimension ) );
+
+			// undo Expand other dimensions to fit blockMultiple
+			for ( int i = 0; i < input.numDimensions(); i++ ) {
+				if ( i != largestDim && i != batchDim && i != channelDim ) {
+					fittedResult = expandDimToSize( fittedResult, i, input.dimension( i ) );
+				}
+			}
+
+			fittedResult.dimensions( resDimension );
+			System.out.println( "fittedResult3 dimensions: " + Arrays.toString( resDimension ) );
+
+			if ( fittedResult.dimension(
+					channelDim ) > 0 ) { return splitChannels( fittedResult, channelDim ); }
 
 			progressWindow.setCurrentStepFail();
 			return null;

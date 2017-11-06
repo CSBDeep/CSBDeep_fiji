@@ -11,6 +11,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -39,6 +42,7 @@ public class CSBDeepProgress extends JPanel
 	private Component progressBarSpace;
 	private JTextPane taskOutput;
 
+	public static final int STATUS_IDLE = -1;
 	public static final int STATUS_RUNNING = 0;
 	public static final int STATUS_DONE = 1;
 	public static final int STATUS_FAIL = 2;
@@ -56,12 +60,16 @@ public class CSBDeepProgress extends JPanel
 	boolean[] stepDone = new boolean[ stepTitle.length ];
 	int currentStep;
 	boolean currentStepFailing;
+	int currentRound = 1;
+	int numRounds = 1;
 
 	JLabel noTensorFlow =
 			new JLabel( "<html>Couldn't load tensorflow from library<br />path and will therefore use CPU<br />instead of GPU version.<br />This will affect performance.</html>", SwingConstants.RIGHT );
 
 	JLabel imageDimMismatch =
 			new JLabel( "<html>The input image was cropped to fit<br />the model dimension requirements.</html>", SwingConstants.RIGHT );
+
+	private SimpleAttributeSet red = new SimpleAttributeSet();
 
 	public JButton getCancelBtn() {
 		return cancelButton;
@@ -74,6 +82,8 @@ public class CSBDeepProgress extends JPanel
 	public CSBDeepProgress( boolean usesTF, boolean croppedInput ) {
 
 		super( new BorderLayout() );
+
+		StyleConstants.setForeground( red, Color.red );
 
 		final JPanel steps = new JPanel();
 		steps.setLayout( new BoxLayout( steps, BoxLayout.Y_AXIS ) );
@@ -197,6 +207,7 @@ public class CSBDeepProgress extends JPanel
 		for ( int i = 0; i < stepDone.length; i++ ) {
 			if ( !stepDone[ i ] ) alldone = false;
 		}
+		if ( currentRound < numRounds ) alldone = false;
 		okButton.setEnabled( alldone || currentStepFailing );
 		cancelButton.setEnabled( !alldone && !currentStepFailing );
 
@@ -234,6 +245,10 @@ public class CSBDeepProgress extends JPanel
 		if ( status < stepStatus.length && step >= 0 ) {
 			JLabel statuslabel = stepStatus[ step ];
 			switch ( status ) {
+			case STATUS_IDLE:
+				statuslabel.setText( "\u2013" );
+				statuslabel.setForeground( Color.getHSBColor( 0.6f, 0.f, 0.3f ) );
+				break;
 			case STATUS_RUNNING:
 				statuslabel.setText( "\u2794" );
 				statuslabel.setForeground( Color.getHSBColor( 0.6f, 0.f, 0.3f ) );
@@ -251,11 +266,17 @@ public class CSBDeepProgress extends JPanel
 	}
 
 	public void addLog( String data ) {
+		addLog( data, null );
+	}
+
+	public void addLog( String data, SimpleAttributeSet style ) {
+		Date date = new Date();
+		DateFormat df = new SimpleDateFormat( "yyyy-MM-dd HH:mm:ss" );
 		try {
 			taskOutput.getDocument().insertString(
 					taskOutput.getDocument().getLength(),
-					data + "\n",
-					null );
+					df.format( date ) + " | " + data + "\n",
+					style );
 			taskOutput.setCaretPosition( taskOutput.getDocument().getLength() );
 		} catch ( BadLocationException exc ) {
 			// TODO Auto-generated catch block
@@ -264,19 +285,7 @@ public class CSBDeepProgress extends JPanel
 	}
 
 	public void addError( String data ) {
-		SimpleAttributeSet red = new SimpleAttributeSet();
-		StyleConstants.setForeground( red, Color.red );
-		try {
-			taskOutput.getDocument().insertString(
-					taskOutput.getDocument().getLength(),
-					data + "\n",
-					red );
-			taskOutput.setCaretPosition( taskOutput.getDocument().getLength() );
-
-		} catch ( BadLocationException exc ) {
-			// TODO Auto-generated catch block
-			exc.printStackTrace();
-		}
+		addLog( data, red );
 	}
 
 	@Override
@@ -288,7 +297,7 @@ public class CSBDeepProgress extends JPanel
 	public static CSBDeepProgress create( boolean usesTF, boolean croppedInput ) {
 		//Create and set up the window.
 		JFrame frame = new JFrame( "CSBDeep progress" );
-		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
+//		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
 
 		//Create and set up the content pane.
 		CSBDeepProgress newContentPane = new CSBDeepProgress( usesTF, croppedInput );
@@ -301,6 +310,38 @@ public class CSBDeepProgress extends JPanel
 		frame.setVisible( true );
 
 		return newContentPane;
+	}
+
+	public boolean getProgressBarDone() {
+		return progressBar.getValue() == progressBar.getMaximum();
+	}
+
+	public boolean getProgressBarStarting() {
+		return progressBar.getValue() == 0;
+	}
+
+	public void setNextRound() {
+		currentRound++;
+		numRounds = Math.max( numRounds, currentRound );
+		stepDone[ 1 ] = false;
+		stepDone[ 2 ] = false;
+		stepDone[ 3 ] = false;
+		setStepStatus( 1, STATUS_IDLE );
+		setStepStatus( 2, STATUS_IDLE );
+		setStepStatus( 3, STATUS_IDLE );
+		currentStep = 1;
+		stepTitle[ 1 ].setText( "Preprocessing (" + currentRound + "/" + numRounds + ")" );
+		stepTitle[ 2 ].setText( "Run model (" + currentRound + "/" + numRounds + ")" );
+		stepTitle[ 3 ].setText( "Postprocessing (" + currentRound + "/" + numRounds + ")" );
+	}
+
+	public void setNumRounds( int numRounds ) {
+		this.numRounds = numRounds;
+		if ( numRounds > 1 ) {
+			stepTitle[ 1 ].setText( "Preprocessing (1/" + numRounds + ")" );
+			stepTitle[ 2 ].setText( "Run model (1/" + numRounds + ")" );
+			stepTitle[ 3 ].setText( "Postprocessing (1/" + numRounds + ")" );
+		}
 	}
 
 }

@@ -68,6 +68,21 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
 	private Dataset input;
 
+	@Parameter( visibility = ItemVisibility.MESSAGE )
+	protected String normtext = "Normalization";
+	@Parameter
+	protected boolean _normalizeInput = true;
+	@Parameter
+	protected float _percentileBottom = 0.03f;
+	@Parameter
+	protected float _percentileTop = 0.998f;
+	@Parameter
+	protected float _min = 0;
+	@Parameter
+	protected float _max = 100;
+	@Parameter( label = "Clamp normalization" )
+	protected boolean _clamp = false;
+
 	@Parameter( label = "Import model (.zip)", callback = "modelChanged", initializer = "modelInitialized", persist = false )
 	private File modelFile;
 	private final String modelFileKey = "modelfile-anynetwork";
@@ -256,6 +271,14 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
 
 		progressWindow.addLog( "Preparing normalization.. " );
+
+		normalizeInput = _normalizeInput;
+		percentileBottom = _percentileBottom;
+		percentileTop = _percentileTop;
+		min = _min;
+		max = _max;
+		clamp = _clamp;
+
 		prepareNormalization( ( IterableInterval ) input.getImgPlus() );
 
 		progressWindow.addLog(

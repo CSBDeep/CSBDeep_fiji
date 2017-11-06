@@ -33,7 +33,6 @@ import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
-import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 import mpicbg.csbd.ui.CSBDeepProgress;
 
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Iso", headless = true )
@@ -47,11 +46,8 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 		super.initialize();
 
-		modelFileUrl =
-				"/home/random/Development/imagej/plugins/CSBDeep-data/net_iso/resunet_2_5_32__subsample_10.20_perturb_augment__2017-10-18_01-35-15_499616.zip"; // TODO real url
+		modelFileUrl = "http://csbdeep.bioimagecomputing.com/model-iso.zip";
 		modelName = "net_iso";
-
-		header = "This is the iso network command.";
 
 	}
 
@@ -62,9 +58,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		ij.launch( args );
 
 		// ask the user for a file to open
-//		final File file = ij.ui().chooseFile( null, "open" );
-		final File file =
-				new File( "/home/random/Development/imagej/plugins/CSBDeep-data/net_iso/input-1.tif" );
+		final File file = ij.ui().chooseFile( null, "open" );
 
 		if ( file != null && file.exists() ) {
 			// load the dataset
@@ -109,6 +103,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		initGui();
 
 		initModel();
+		progressWindow.setNumRounds( 2 );
 		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
 
 		progressWindow.addLog( "Normalize input.. " );
@@ -136,9 +131,9 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 				n - 1,
 				dimChannel );
 
-		progressWindow.addLog( "Input normalized." );
+		displayAsDataset( "Normalized image", normalizedInput );
 
-		uiService.show( "Normalized image", normalizedInput );
+		progressWindow.addLog( "Upsampling." );
 
 		// ========= UPSAMPLING
 		RealRandomAccessible< FloatType > interpolated =
@@ -147,7 +142,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 						new NLinearInterpolatorFactory<>() );
 
 		// Affine transformation to scale the Z axis
-		double s = scale; // TODO add as parameter
+		double s = scale;
 		double[] scales = IntStream.range( 0, n ).mapToDouble( i -> i == dimZ ? s : 1 ).toArray();
 		AffineGet scaling = new Scale( scales );
 
@@ -164,17 +159,25 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 				Arrays.stream( targetMin ).mapToLong( d -> ( long ) Math.ceil( d ) ).toArray(),
 				Arrays.stream( targetMax ).mapToLong( d -> ( long ) Math.floor( d ) ).toArray() );
 
+		displayAsDataset( "upsampled", upsampled );
+
 		// ========== ROTATION
+
+		progressWindow.addLog( "Rotate around Y.." );
 
 		// Create the first rotated image
 		RandomAccessibleInterval< FloatType > rotated0 = Views.permute( upsampled, dimX, dimZ );
+//		rotated0 = Views.permute( rotated0, dimX, dimY );
 
 //		uiService.show( "upsampled", upsampled );
+
+		progressWindow.addLog( "Rotate around X.." );
 
 		// Create the second rotated image
 		RandomAccessibleInterval< FloatType > rotated1 = Views.permute( rotated0, dimY, dimZ );
 
-//		uiService.show( "rotated1", rotated0 );
+		displayAsDataset( "Input ZY", rotated0 );
+		displayAsDataset( "Input ZX", rotated1 );
 
 		List< RandomAccessibleInterval< FloatType > > result0 = null;
 		List< RandomAccessibleInterval< FloatType > > result1 = null;
@@ -187,13 +190,14 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 			// correspond to the slices of the 3D image.
 
 			// TODO the progess window will show 100% after the first part
-			bridge.permuteInputAxes( dimX, dimZ );
+//			bridge.permuteInputAxes( dimX, dimZ );
 			result0 = pool.submit(
 					new BatchedTiledPrediction( rotated0, bridge, model, progressWindow, nTiles, 4, 0 ) ).get();
-			DatasetTensorBridge bridge1 = bridge.clone();
-			bridge1.permuteInputAxes( dimY, dimZ );
+			progressWindow.setNextRound();
+//			DatasetTensorBridge bridge1 = bridge.clone();
+//			bridge1.permuteInputAxes( dimY, dimZ );
 			result1 = pool.submit(
-					new BatchedTiledPrediction( rotated1, bridge1, model, progressWindow, nTiles, 4, 0 ) ).get();
+					new BatchedTiledPrediction( rotated1, bridge, model, progressWindow, nTiles, 4, 0 ) ).get();
 			// ============================================================================================
 		} catch ( ExecutionException exc ) {
 			progressWindow.setCurrentStepFail();
@@ -204,7 +208,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		}
 
 		if ( result0 != null && result1 != null ) {
-			if ( result0.size() > 0 && result1.size() > 0 ) {
+			if ( result0.size() == 4 && result1.size() == 4 ) {
 
 				// TODO the result doesn't get split by the channels because the
 				// channels are not in the last dimension
@@ -223,28 +227,64 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 //					...
 //				});
 
+				printDim( "result0.get( 0 )", result0.get( 0 ) );
+
+				RandomAccessibleInterval< FloatType > res0_pred =
+						Views.stack( result0.get( 0 ), result0.get( 1 ) );
+				RandomAccessibleInterval< FloatType > res1_pred =
+						Views.stack( result1.get( 0 ), result1.get( 1 ) );
+				RandomAccessibleInterval< FloatType > res0_control =
+						Views.stack( result0.get( 2 ), result0.get( 3 ) );
+				RandomAccessibleInterval< FloatType > res1_control =
+						Views.stack( result1.get( 2 ), result1.get( 3 ) );
+
+				printDim( "res0_pred", res0_pred );
+				printDim( "res1_pred", res1_pred );
+//
+				res0_pred = Views.permute( res0_pred, 0, 2 );
+				res0_control = Views.permute( res0_control, 0, 2 );
+
+				res1_pred = Views.permute( res1_pred, 1, 2 );
+				res1_pred = Views.permute( res1_pred, 0, 2 );
+				res1_control = Views.permute( res1_control, 1, 2 );
+				res1_control = Views.permute( res1_control, 0, 2 );
+
+				printDim( "res0_pred rotated back", res0_pred );
+				printDim( "res1_pred rotated back", res1_pred );
+
+//				res1_control = Views.permute( res1_control, 1, 2 );
+//				bridge.permuteInputAxes( dimX, dimZ );
+
 				// Calculate the geometric mean of the two predictions
 				RandomAccessibleInterval< FloatType > prediction =
-						ArrayImgs.floats( Intervals.dimensionsAsLongArray( result0.get( 0 ) ) );
+						ArrayImgs.floats( Intervals.dimensionsAsLongArray( res0_pred ) );
 				pointwiseGeometricMean(
-						Views.iterable( result0.get( 0 ) ),
-						result1.get( 0 ),
+						Views.iterable( res0_pred ),
+						res1_pred,
 						prediction );
+
+				printDim( "prediction", prediction );
 
 				// Calculate the geometric mean of the two control outputs
 				RandomAccessibleInterval< FloatType > control =
-						ArrayImgs.floats( Intervals.dimensionsAsLongArray( result0.get( 0 ) ) );
+						ArrayImgs.floats( Intervals.dimensionsAsLongArray( res0_pred ) );
 				pointwiseGeometricMean(
-						Views.iterable( result0.get( 1 ) ),
-						result1.get( 1 ),
+						Views.iterable( res0_control ),
+						res1_control,
 						control );
 
-//				Dataset prediction_d = prediction;
-
 				progressWindow.addLog( "Displaying result image.." );
-				uiService.show( "result", prediction );
-				progressWindow.addLog( "Displaying control image.." );
-				uiService.show( "control", control );
+				displayAsDataset( "result", Views.permute( prediction, 2, 3 ) );
+				displayAsDataset( "control", Views.permute( control, 2, 3 ) );
+				displayAsDataset(
+						"result ZY",
+						Views.permute( Views.permute( prediction, 0, 2 ), 2, 3 ) );
+				displayAsDataset(
+						"result ZX",
+						Views.permute(
+								Views.permute( Views.permute( prediction, 0, 2 ), 1, 2 ),
+								2,
+								3 ) );
 				progressWindow.addLog( "All done!" );
 				progressWindow.setCurrentStepDone();
 			} else {
@@ -269,5 +309,19 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 			o.setPosition( i1 );
 			o.get().setReal( Math.sqrt( i1.get().getRealFloat() * i2.get().getRealFloat() ) );
 		}
+	}
+
+	private static void printDim( String title, RandomAccessibleInterval< FloatType > img ) {
+		long[] dims = new long[ img.numDimensions() ];
+		img.dimensions( dims );
+		System.out.println( title + ": " + Arrays.toString( dims ) );
+	}
+
+	private void displayAsDataset( String title, RandomAccessibleInterval< FloatType > img ) {
+		Dataset dataset = datasetService.create( img );
+		for ( int i = 0; i < input.numDimensions(); i++ ) {
+			dataset.setAxis( input.axis( i ), i );
+		}
+		uiService.show( title, dataset );
 	}
 }

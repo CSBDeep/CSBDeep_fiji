@@ -31,11 +31,8 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 
 		super.initialize();
 
-		modelFileUrl =
-				"../CSBDeep-data/net_tribolium/resunet3_2_3_32__large_cx_0_1_2_cy_3_nz_16__2017-09-11_01-45-19_961034.zip";
+		modelFileUrl = "http://csbdeep.bioimagecomputing.com/model-tribolium.zip";
 		modelName = "net_tribolium";
-
-		header = "This is the tribolium network command.";
 
 	}
 
@@ -46,8 +43,7 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 		ij.launch( args );
 
 		// ask the user for a file to open
-//		final File file = ij.ui().chooseFile( null, "open" );
-		final File file = new File( "../CSBDeep-data/net_tribolium/input.tif" );
+		final File file = ij.ui().chooseFile( null, "open" );
 
 		if ( file != null && file.exists() ) {
 			// load the dataset

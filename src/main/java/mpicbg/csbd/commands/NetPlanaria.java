@@ -31,11 +31,8 @@ public class NetPlanaria< T extends RealType< T > > extends CSBDeepCommand< T >
 
 		super.initialize();
 
-		modelFileUrl =
-				"/home/random/Development/imagej/plugins/CSBDeep-data/net_planaria_registered/resunet3_2_3_32__cond_1_2_3_sub_5_nz_16__2017-09-25_23-05-37_896633.zip";
+		modelFileUrl = "http://csbdeep.bioimagecomputing.com/model-planaria.zip";
 		modelName = "net_planaria";
-
-		header = "This is the planaria network command.";
 
 	}
 
@@ -46,8 +43,7 @@ public class NetPlanaria< T extends RealType< T > > extends CSBDeepCommand< T >
 		ij.launch( args );
 
 		// ask the user for a file to open
-//		final File file = ij.ui().chooseFile( null, "open" );
-		final File file = new File( "../CSBDeep-data/net_planaria_registered/input.tif" );
+		final File file = ij.ui().chooseFile( null, "open" );
 
 		if ( file != null && file.exists() ) {
 			// load the dataset
