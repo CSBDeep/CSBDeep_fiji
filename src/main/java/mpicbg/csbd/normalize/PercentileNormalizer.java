@@ -27,7 +27,7 @@ public class PercentileNormalizer< T extends RealType< T > > implements Normaliz
 //	@Parameter
 	protected float min = 0;
 //	@Parameter
-	protected float max = 100;
+	protected float max = 1;
 //	@Parameter( label = "Clamp normalization" )
 	protected boolean clamp = false;
 
