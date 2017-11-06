@@ -2,9 +2,11 @@ package mpicbg.csbd.commands;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.RejectedExecutionException;
 import java.util.stream.IntStream;
 
 import net.imagej.Dataset;
@@ -58,7 +60,9 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		ij.launch( args );
 
 		// ask the user for a file to open
-		final File file = ij.ui().chooseFile( null, "open" );
+//		final File file = ij.ui().chooseFile( null, "open" );
+		File file =
+				new File( "/home/random/Development/imagej/plugins/CSBDeep-data/net_iso/input.tif" );
 
 		if ( file != null && file.exists() ) {
 			// load the dataset
@@ -74,24 +78,10 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 	@Override
 	public void run() {
-		// TODO super.run() normalizes the whole image at once. But for this
-		// command the image has to be normalized per channel. I think there
-		// should be a smarter solution than implementing the whole run() method
-		// here...
 
-		// Below is copied from CSBDeepCommand.run()
 		if ( input == null ) { return; }
 		modelChanged();
 
-//		// Set the mapping TODO there is probably a smarter way...
-//		int dimChannel = input.dimensionIndex( Axes.CHANNEL );
-//		int dimX = input.dimensionIndex( Axes.X );
-//		int dimY = input.dimensionIndex( Axes.Y );
-//		int dimZ = input.dimensionIndex( Axes.Z );
-//		bridge.setTFMappingByKnownAxesIndex( 0, dimZ );
-//		bridge.setTFMappingByKnownAxesIndex( 1, dimChannel );
-//		bridge.setTFMappingByKnownAxesIndex( 2, dimY );
-//		bridge.setTFMappingByKnownAxesIndex( 3, dimX );
 		AxisType[] mapping = { Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
 		setMapping( mapping );
 
@@ -107,9 +97,6 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
 
 		progressWindow.addLog( "Normalize input.. " );
-
-		// =============================================================================
-		// The normalization needs to be done per channel
 
 		int n = input.numDimensions();
 
@@ -133,7 +120,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 		displayAsDataset( "Normalized image", normalizedInput );
 
-		progressWindow.addLog( "Upsampling." );
+		progressWindow.addLog( "Upsampling.." );
 
 		// ========= UPSAMPLING
 		RealRandomAccessible< FloatType > interpolated =
@@ -167,10 +154,6 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 		// Create the first rotated image
 		RandomAccessibleInterval< FloatType > rotated0 = Views.permute( upsampled, dimX, dimZ );
-//		rotated0 = Views.permute( rotated0, dimX, dimY );
-
-//		uiService.show( "upsampled", upsampled );
-
 		progressWindow.addLog( "Rotate around X.." );
 
 		// Create the second rotated image
@@ -179,119 +162,122 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		displayAsDataset( "Input ZY", rotated0 );
 		displayAsDataset( "Input ZX", rotated1 );
 
-		List< RandomAccessibleInterval< FloatType > > result0 = null;
-		List< RandomAccessibleInterval< FloatType > > result1 = null;
+		List< RandomAccessibleInterval< FloatType > > result0 = new ArrayList<>();
+		List< RandomAccessibleInterval< FloatType > > result1 = new ArrayList<>();
+
+		runBatches( rotated0, rotated1, result0, result1 );
+
+		if ( result0.size() == 4 && result1.size() == 4 ) {
+
+			//prediction for ZY rotation
+			RandomAccessibleInterval< FloatType > res0_pred =
+					Views.stack( result0.get( 0 ), result0.get( 1 ) );
+
+			//prediction for ZX rotation
+			RandomAccessibleInterval< FloatType > res1_pred =
+					Views.stack( result1.get( 0 ), result1.get( 1 ) );
+
+			//control for ZY rotation
+			RandomAccessibleInterval< FloatType > res0_control =
+					Views.stack( result0.get( 2 ), result0.get( 3 ) );
+
+			//control for ZX rotation
+			RandomAccessibleInterval< FloatType > res1_control =
+					Views.stack( result1.get( 2 ), result1.get( 3 ) );
+
+			// rotate output stacks back
+
+			//TODO the rotation dimensions are not dynamic yet, we should use variables
+
+			progressWindow.addLog( "Rotate output stacks back to original orientation.." );
+
+			printDim( "res0_pred", res0_pred );
+			printDim( "res1_pred", res1_pred );
+
+			res0_pred = Views.permute( res0_pred, 0, 2 );
+			res0_control = Views.permute( res0_control, 0, 2 );
+
+			res1_pred = Views.permute( res1_pred, 1, 2 );
+			res1_pred = Views.permute( res1_pred, 0, 2 );
+			res1_control = Views.permute( res1_control, 1, 2 );
+			res1_control = Views.permute( res1_control, 0, 2 );
+
+			printDim( "res0_pred rotated back", res0_pred );
+			printDim( "res1_pred rotated back", res1_pred );
+
+			progressWindow.addLog( "Merge output stacks.." );
+
+			// Calculate the geometric mean of the two predictions
+			RandomAccessibleInterval< FloatType > prediction =
+					ArrayImgs.floats( Intervals.dimensionsAsLongArray( res0_pred ) );
+			pointwiseGeometricMean(
+					Views.iterable( res0_pred ),
+					res1_pred,
+					prediction );
+
+			printDim( "prediction", prediction );
+
+			// Calculate the geometric mean of the two control outputs
+			RandomAccessibleInterval< FloatType > control =
+					ArrayImgs.floats( Intervals.dimensionsAsLongArray( res0_pred ) );
+			pointwiseGeometricMean(
+					Views.iterable( res0_control ),
+					res1_control,
+					control );
+
+			progressWindow.addLog( "Displaying result.." );
+			displayAsDataset( "result", Views.permute( prediction, 2, 3 ) );
+			displayAsDataset( "control", Views.permute( control, 2, 3 ) );
+			displayAsDataset(
+					"result ZY",
+					Views.permute( Views.permute( prediction, 0, 2 ), 2, 3 ) );
+			displayAsDataset(
+					"result ZX",
+					Views.permute(
+							Views.permute( Views.permute( prediction, 0, 2 ), 1, 2 ),
+							2,
+							3 ) );
+			progressWindow.addLog( "All done!" );
+			progressWindow.setCurrentStepDone();
+		} else {
+			progressWindow.setCurrentStepFail();
+		}
+	}
+
+	private void runBatches(
+			RandomAccessibleInterval< FloatType > rotated0,
+			RandomAccessibleInterval< FloatType > rotated1,
+			List< RandomAccessibleInterval< FloatType > > result0,
+			List< RandomAccessibleInterval< FloatType > > result1 ) {
+
+		result0.clear();
+		result1.clear();
+
 		try {
-			// ============================================================================================
-			// TODO tiled prediction is here not applicable.
-			// We need to tile in the current Z dimension without overlap. The Z
-			// dimension will be mapped to the TensorFlow batch dimension and
-			// the model will process multiple 2D images with 2 channels which
-			// correspond to the slices of the 3D image.
 
-			// TODO the progess window will show 100% after the first part
-//			bridge.permuteInputAxes( dimX, dimZ );
-			result0 = pool.submit(
-					new BatchedTiledPrediction( rotated0, bridge, model, progressWindow, nTiles, 4, 0 ) ).get();
+			//TODO check for OOM
+			// in case of memory issue, do something like this:
+
+			//nTiles *= 2;
+			//progressWindow.addRounds(2);
+			//progressWindow.setNextRound();
+			//runBatches(rotated0, rotated1, result0, result1);
+
+			result0.addAll( pool.submit(
+					new BatchedTiledPrediction( rotated0, bridge, model, progressWindow, nTiles, 4, overlap ) ).get() );
+
 			progressWindow.setNextRound();
-//			DatasetTensorBridge bridge1 = bridge.clone();
-//			bridge1.permuteInputAxes( dimY, dimZ );
-			result1 = pool.submit(
-					new BatchedTiledPrediction( rotated1, bridge, model, progressWindow, nTiles, 4, 0 ) ).get();
-			// ============================================================================================
+
+			result1.addAll( pool.submit(
+					new BatchedTiledPrediction( rotated1, bridge, model, progressWindow, nTiles, 4, overlap ) ).get() );
+
+		} catch ( RejectedExecutionException | InterruptedException exc ) {
+			return;
 		} catch ( ExecutionException exc ) {
-			progressWindow.setCurrentStepFail();
 			exc.printStackTrace();
-		} catch ( InterruptedException exc ) {
-			progressWindow.addError( "Process canceled." );
 			progressWindow.setCurrentStepFail();
 		}
 
-		if ( result0 != null && result1 != null ) {
-			if ( result0.size() == 4 && result1.size() == 4 ) {
-
-				// TODO the result doesn't get split by the channels because the
-				// channels are not in the last dimension
-				// Also, we don't want to split by each channel but split the
-				// output image with 4 channel into 2 image with 2 channels
-				// each. Because the 4 channels are: pred_ch0, pred_ch1,
-				// control_ch0, control_ch1.
-				// If this is done somehow... the following code should work
-
-//				----------------------------------- I tried to use Ops
-//				uiService.show(result0.get(0));
-//				IterableInterval< FloatType > product = op.math().multiply(Views.flatIterable(result0.get(0)), result1.get(0));
-//				Iterable<FloatType> mean = op.map(product, new UnaryRealTypeMath.Sqrt<FloatType, FloatType>());
-//				RandomAccessibleInterval< FloatType > output = ArrayImgs.floats(Intervals.dimensionsAsLongArray(result0.get(0)));
-//				op.map(output, result0.get(0), Views.flatIterable(result1.get(0)), new AbstractBinaryComputerOp<FloatType, FloatType, FloatType>() {
-//					...
-//				});
-
-				printDim( "result0.get( 0 )", result0.get( 0 ) );
-
-				RandomAccessibleInterval< FloatType > res0_pred =
-						Views.stack( result0.get( 0 ), result0.get( 1 ) );
-				RandomAccessibleInterval< FloatType > res1_pred =
-						Views.stack( result1.get( 0 ), result1.get( 1 ) );
-				RandomAccessibleInterval< FloatType > res0_control =
-						Views.stack( result0.get( 2 ), result0.get( 3 ) );
-				RandomAccessibleInterval< FloatType > res1_control =
-						Views.stack( result1.get( 2 ), result1.get( 3 ) );
-
-				printDim( "res0_pred", res0_pred );
-				printDim( "res1_pred", res1_pred );
-//
-				res0_pred = Views.permute( res0_pred, 0, 2 );
-				res0_control = Views.permute( res0_control, 0, 2 );
-
-				res1_pred = Views.permute( res1_pred, 1, 2 );
-				res1_pred = Views.permute( res1_pred, 0, 2 );
-				res1_control = Views.permute( res1_control, 1, 2 );
-				res1_control = Views.permute( res1_control, 0, 2 );
-
-				printDim( "res0_pred rotated back", res0_pred );
-				printDim( "res1_pred rotated back", res1_pred );
-
-//				res1_control = Views.permute( res1_control, 1, 2 );
-//				bridge.permuteInputAxes( dimX, dimZ );
-
-				// Calculate the geometric mean of the two predictions
-				RandomAccessibleInterval< FloatType > prediction =
-						ArrayImgs.floats( Intervals.dimensionsAsLongArray( res0_pred ) );
-				pointwiseGeometricMean(
-						Views.iterable( res0_pred ),
-						res1_pred,
-						prediction );
-
-				printDim( "prediction", prediction );
-
-				// Calculate the geometric mean of the two control outputs
-				RandomAccessibleInterval< FloatType > control =
-						ArrayImgs.floats( Intervals.dimensionsAsLongArray( res0_pred ) );
-				pointwiseGeometricMean(
-						Views.iterable( res0_control ),
-						res1_control,
-						control );
-
-				progressWindow.addLog( "Displaying result image.." );
-				displayAsDataset( "result", Views.permute( prediction, 2, 3 ) );
-				displayAsDataset( "control", Views.permute( control, 2, 3 ) );
-				displayAsDataset(
-						"result ZY",
-						Views.permute( Views.permute( prediction, 0, 2 ), 2, 3 ) );
-				displayAsDataset(
-						"result ZX",
-						Views.permute(
-								Views.permute( Views.permute( prediction, 0, 2 ), 1, 2 ),
-								2,
-								3 ) );
-				progressWindow.addLog( "All done!" );
-				progressWindow.setCurrentStepDone();
-			} else {
-				progressWindow.addError( "TiledPrediction returned no result data." );
-				progressWindow.setCurrentStepFail();
-			}
-		}
 	}
 
 	private static < T extends RealType< T >, U extends RealType< U >, V extends RealType< V > >
@@ -311,17 +297,4 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		}
 	}
 
-	private static void printDim( String title, RandomAccessibleInterval< FloatType > img ) {
-		long[] dims = new long[ img.numDimensions() ];
-		img.dimensions( dims );
-		System.out.println( title + ": " + Arrays.toString( dims ) );
-	}
-
-	private void displayAsDataset( String title, RandomAccessibleInterval< FloatType > img ) {
-		Dataset dataset = datasetService.create( img );
-		for ( int i = 0; i < input.numDimensions(); i++ ) {
-			dataset.setAxis( input.axis( i ), i );
-		}
-		uiService.show( title, dataset );
-	}
 }

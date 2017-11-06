@@ -1,11 +1,3 @@
-/*
- * To the extent possible under law, the ImageJ developers have waived
- * all copyright and related or neighboring rights to this tutorial code.
- *
- * See the CC0 1.0 Universal license for details:
- * http://creativecommons.org/publicdomain/zero/1.0/
- */
-
 package mpicbg.csbd.commands;
 
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -247,7 +239,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 	@Override
 	public void run() {
 
-		progressWindow = CSBDeepProgress.create( useTensorFlowGPU, false );
+		progressWindow = CSBDeepProgress.create( useTensorFlowGPU );
 
 		progressWindow.getCancelBtn().addActionListener( this );
 
@@ -291,6 +283,21 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 		RandomAccessibleInterval< FloatType > normalizedInput = normalizeImage(
 				( RandomAccessibleInterval ) input.getImgPlus() );
 
+		executeModel( normalizedInput );
+
+	}
+
+	private void executeModel( RandomAccessibleInterval< FloatType > normalizedInput ) {
+
+		//TODO check for OOM
+		// in case of memory issue, do something like this 
+
+		//nTiles *= 2;
+		//progressWindow.addRounds(1);
+		//progressWindow.setNextRound();
+		//executeModel(modelInput);
+		//return;
+
 		List< RandomAccessibleInterval< FloatType > > result = null;
 		try {
 			result = pool.submit(
@@ -302,7 +309,6 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 			progressWindow.addError( "Process canceled." );
 			progressWindow.setCurrentStepFail();
 		}
-
 		if ( result != null ) {
 			if ( result.size() > 0 ) {
 				progressWindow.addLog( "Displaying result image.." );
@@ -312,7 +318,6 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 				progressWindow.addLog( "All done!" );
 				progressWindow.setCurrentStepDone();
 			} else {
-				progressWindow.addError( "TiledPrediction returned no result data." );
 				progressWindow.setCurrentStepFail();
 			}
 		}
@@ -354,25 +359,6 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 			ij.command().run( AnyNetwork.class, true );
 		}
 
-//		// Tests
-//		final ImgFactory< UnsignedByteType > factory = new ArrayImgFactory<>();
-//		final Img< UnsignedByteType > img = IO.openImgs( "/Users/bw/Pictures/Lenna.png", factory, new UnsignedByteType() ).get( 0 ).getImg();
-//		
-//		ImageJFunctions.show(img);
-//		
-//		// Create a tiled view on it
-//		TiledView<UnsignedByteType> tiledView = TiledView.createFromBlocksPerDim(img, new long[]{ 3, 3, 1 });
-//		
-//		// Take a middle part
-//		TiledViewRandomAccess<UnsignedByteType> randomAccess = tiledView.randomAccess();
-//		randomAccess.setPosition(1,0);
-//		randomAccess.setPosition(1,1);
-//		
-//		RandomAccessibleInterval<UnsignedByteType> part = randomAccess.get();
-//		RandomAccessibleInterval<UnsignedByteType> expanded = Views.expand(part, new OutOfBoundsMirrorFactory<>(Boundary.DOUBLE), new long[]{ 20, 20, 0 });
-//		//RandomAccessibleInterval<UnsignedByteType> expanded = Views.expandBorder(part, new long[]{ 20, 20, 0 });
-//		
-//		ImageJFunctions.show(expanded);
 	}
 
 	public void showError( final String errorMsg ) {
@@ -385,19 +371,14 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 
 	@Override
 	public boolean isCanceled() {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
-	public void cancel( final String reason ) {
-		// TODO Auto-generated method stub
-
-	}
+	public void cancel( final String reason ) {}
 
 	@Override
 	public String getCancelReason() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 

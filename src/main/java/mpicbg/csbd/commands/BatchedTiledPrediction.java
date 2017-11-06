@@ -33,7 +33,6 @@ public class BatchedTiledPrediction extends TiledPrediction {
 			int blockMultiple,
 			int overlap ) {
 		super( input, bridge, model, progressWindow, nTiles, blockMultiple, overlap );
-		// TODO Auto-generated constructor stub
 	}
 
 	@Override
@@ -44,7 +43,7 @@ public class BatchedTiledPrediction extends TiledPrediction {
 			batchDim = bridge.getDatasetDimIndexByTFIndex( 0 );
 			channelDim = bridge.getDatasetDimIndexByTFIndex(
 					bridge.getInputTensorInfo().getTensorShape().getDimCount() - 1 );
-			TiledView< FloatType > tiledView = preprocess( nTiles, blockMultiple, overlap );
+			TiledView< FloatType > tiledView = preprocess();
 			System.out.println( "batchDim  : " + batchDim );
 			System.out.println( "channelDim: " + channelDim );
 			System.out.println( "largestDim: " + largestDim );
@@ -81,10 +80,7 @@ public class BatchedTiledPrediction extends TiledPrediction {
 	}
 
 	@Override
-	protected TiledView< FloatType > preprocess(
-			final int nTiles,
-			final int blockMultiple,
-			final int overlap ) {
+	protected TiledView< FloatType > preprocess() {
 
 		if ( input != null ) {
 
@@ -108,8 +104,6 @@ public class BatchedTiledPrediction extends TiledPrediction {
 			progressWindow.addLog( "Divide image into " + nTiles + " tile(s).." );
 
 			padding = new long[ input.numDimensions() ];
-
-			this.nTiles = nTiles;
 
 			// Calculate the blocksize to use
 			double blockwidthIdeal = largestSize / ( double ) nTiles;
@@ -144,7 +138,7 @@ public class BatchedTiledPrediction extends TiledPrediction {
 			long[] tileSize = Intervals.dimensionsAsLongArray( expandedInput );
 			tileSize[ largestDim ] = blockwidth;
 
-			// Put the padding per dimension in a array
+			// Put the padding per dimension in an array
 
 			padding[ largestDim ] = overlap;
 

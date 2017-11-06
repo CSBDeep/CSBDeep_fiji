@@ -1,11 +1,3 @@
-/*
- * To the extent possible under law, the ImageJ developers have waived
- * all copyright and related or neighboring rights to this tutorial code.
- *
- * See the CC0 1.0 Universal license for details:
- * http://creativecommons.org/publicdomain/zero/1.0/
- */
-
 package mpicbg.csbd.commands;
 
 import com.google.protobuf.InvalidProtocolBufferException;
@@ -17,6 +9,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URISyntaxException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -231,7 +224,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	}
 
 	protected void initGui() {
-		progressWindow = CSBDeepProgress.create( useTensorFlowGPU, false );
+		progressWindow = CSBDeepProgress.create( useTensorFlowGPU );
 		progressWindow.getCancelBtn().addActionListener( this );
 
 	}
@@ -274,6 +267,15 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	protected void executeModel( RandomAccessibleInterval< FloatType > modelInput ) {
 
+		//TODO check for OOM
+		// in case of memory issue, do something like this:
+
+		//nTiles *= 2;
+		//progressWindow.addRounds(1);
+		//progressWindow.setNextRound();
+		//executeModel(modelInput);
+		//return;
+
 		List< RandomAccessibleInterval< FloatType > > result = null;
 		try {
 			TiledPrediction prediction =
@@ -311,32 +313,45 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	@Override
 	public boolean isCanceled() {
-		// TODO Auto-generated method stub
 		return false;
 	}
 
 	@Override
 	public void cancel( String reason ) {
-		// TODO Auto-generated method stub
 
 	}
 
 	@Override
 	public String getCancelReason() {
-		// TODO Auto-generated method stub
 		return null;
 	}
 
 	@Override
 	public void actionPerformed( ActionEvent e ) {
 		if ( e.getSource().equals( progressWindow.getCancelBtn() ) ) {
-			for ( TiledPrediction prediction : predictions ) {
-				prediction.cancel();
-			}
+
+			//TODO this is not yet fully working. The tile that is currently computed does not stop.
 			pool.shutdownNow();
 			progressWindow.addError( "Process canceled." );
 			progressWindow.setCurrentStepFail();
 		}
+	}
+
+	protected static void printDim( String title, RandomAccessibleInterval< FloatType > img ) {
+		long[] dims = new long[ img.numDimensions() ];
+		img.dimensions( dims );
+		System.out.println( title + ": " + Arrays.toString( dims ) );
+	}
+
+	protected void displayAsDataset( String title, RandomAccessibleInterval< FloatType > img ) {
+
+		//TODO convert back to original format to be able to save and load it (float 32 bit does not load in Fiji)
+
+		Dataset dataset = datasetService.create( img );
+		for ( int i = 0; i < input.numDimensions(); i++ ) {
+			dataset.setAxis( input.axis( i ), i );
+		}
+		uiService.show( title, dataset );
 	}
 
 }

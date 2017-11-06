@@ -66,9 +66,6 @@ public class CSBDeepProgress extends JPanel
 	JLabel noTensorFlow =
 			new JLabel( "<html>Couldn't load tensorflow from library<br />path and will therefore use CPU<br />instead of GPU version.<br />This will affect performance.</html>", SwingConstants.RIGHT );
 
-	JLabel imageDimMismatch =
-			new JLabel( "<html>The input image was cropped to fit<br />the model dimension requirements.</html>", SwingConstants.RIGHT );
-
 	private SimpleAttributeSet red = new SimpleAttributeSet();
 
 	public JButton getCancelBtn() {
@@ -79,7 +76,7 @@ public class CSBDeepProgress extends JPanel
 		return okButton;
 	}
 
-	public CSBDeepProgress( boolean usesTF, boolean croppedInput ) {
+	public CSBDeepProgress( boolean usesTF ) {
 
 		super( new BorderLayout() );
 
@@ -126,18 +123,10 @@ public class CSBDeepProgress extends JPanel
 			note1.setBorder( warningborder );
 			noTensorFlow.setBorder( new EmptyBorder( 2, 5, 5, 5 ) );
 			note1.add( noTensorFlow );
+			note1.setMinimumSize( new Dimension( 280, 100 ) );
 			note1.setMaximumSize(
 					new Dimension( 100000, ( int ) note1.getPreferredSize().getHeight() ) );
 			notePanel.add( note1 );
-		}
-		if ( croppedInput ) {
-			JPanel note2 = new JPanel();
-			note2.setBorder( warningborder );
-			imageDimMismatch.setBorder( new EmptyBorder( 2, 5, 5, 5 ) );
-			note2.add( imageDimMismatch );
-			note2.setMaximumSize(
-					new Dimension( 100000, ( int ) note2.getPreferredSize().getHeight() ) );
-			notePanel.add( note2 );
 		}
 		notePanel.add( Box.createVerticalGlue() );
 
@@ -294,13 +283,13 @@ public class CSBDeepProgress extends JPanel
 
 	}
 
-	public static CSBDeepProgress create( boolean usesTF, boolean croppedInput ) {
+	public static CSBDeepProgress create( boolean usesTF ) {
 		//Create and set up the window.
 		JFrame frame = new JFrame( "CSBDeep progress" );
 //		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
 
 		//Create and set up the content pane.
-		CSBDeepProgress newContentPane = new CSBDeepProgress( usesTF, croppedInput );
+		CSBDeepProgress newContentPane = new CSBDeepProgress( usesTF );
 		newContentPane.getOkBtn().addActionListener( e -> frame.dispose() );
 		newContentPane.setOpaque( true ); //content panes must be opaque
 		frame.setContentPane( newContentPane );
@@ -330,18 +319,22 @@ public class CSBDeepProgress extends JPanel
 		setStepStatus( 2, STATUS_IDLE );
 		setStepStatus( 3, STATUS_IDLE );
 		currentStep = 1;
-		stepTitle[ 1 ].setText( "Preprocessing (" + currentRound + "/" + numRounds + ")" );
-		stepTitle[ 2 ].setText( "Run model (" + currentRound + "/" + numRounds + ")" );
-		stepTitle[ 3 ].setText( "Postprocessing (" + currentRound + "/" + numRounds + ")" );
+		stepTitle[ 1 ].setText( "(" + currentRound + "/" + numRounds + ") Preprocessing" );
+		stepTitle[ 2 ].setText( "(" + currentRound + "/" + numRounds + ") Run model" );
+		stepTitle[ 3 ].setText( "(" + currentRound + "/" + numRounds + ") Postprocessing" );
 	}
 
 	public void setNumRounds( int numRounds ) {
 		this.numRounds = numRounds;
 		if ( numRounds > 1 ) {
-			stepTitle[ 1 ].setText( "Preprocessing (1/" + numRounds + ")" );
-			stepTitle[ 2 ].setText( "Run model (1/" + numRounds + ")" );
-			stepTitle[ 3 ].setText( "Postprocessing (1/" + numRounds + ")" );
+			stepTitle[ 1 ].setText( "(1/" + numRounds + ") Preprocessing" );
+			stepTitle[ 2 ].setText( "(1/" + numRounds + ") Run model " );
+			stepTitle[ 3 ].setText( "(1/" + numRounds + ") Postprocessing" );
 		}
+	}
+
+	public void addRounds( int rounds ) {
+		setNumRounds( numRounds + rounds );
 	}
 
 }

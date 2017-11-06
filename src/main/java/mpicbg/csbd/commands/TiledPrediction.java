@@ -73,10 +73,7 @@ public class TiledPrediction
 
 	}
 
-	protected TiledView< FloatType > preprocess(
-			final int nTiles,
-			final int blockMultiple,
-			final int overlap ) {
+	protected TiledView< FloatType > preprocess() {
 
 		if ( input != null ) {
 
@@ -101,7 +98,6 @@ public class TiledPrediction
 
 			padding = new long[ input.numDimensions() ];
 
-			this.nTiles = nTiles;
 			progressWindow.setProgressBarMax( nTiles );
 
 			// Calculate the blocksize to use
@@ -277,7 +273,7 @@ public class TiledPrediction
 	public List< RandomAccessibleInterval< FloatType > > call() {
 		try {
 
-			TiledView< FloatType > tiledView = preprocess( nTiles, blockMultiple, overlap );
+			TiledView< FloatType > tiledView = preprocess();
 
 			progressWindow.setProgressBarValue( 0 );
 
