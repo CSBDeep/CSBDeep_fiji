@@ -1,7 +1,5 @@
 package mpicbg.csbd.commands;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -17,15 +15,6 @@ import java.util.concurrent.Executors;
 
 import javax.swing.JOptionPane;
 
-import net.imagej.Dataset;
-import net.imagej.DatasetService;
-import net.imagej.axis.AxisType;
-import net.imagej.tensorflow.TensorFlowService;
-import net.imglib2.IterableInterval;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
-
 import org.scijava.Cancelable;
 import org.scijava.Initializable;
 import org.scijava.ItemIO;
@@ -40,9 +29,23 @@ import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import mpicbg.csbd.normalize.PercentileNormalizer;
 import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 import mpicbg.csbd.ui.CSBDeepProgress;
+import net.imagej.Dataset;
+import net.imagej.DatasetService;
+import net.imagej.ImgPlus;
+import net.imagej.axis.AxisType;
+import net.imagej.tensorflow.TensorFlowService;
+import net.imglib2.IterableInterval;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.img.ImgView;
+import net.imglib2.img.array.ArrayImgFactory;
+import net.imglib2.type.NativeType;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.FloatType;
 
 public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
 		implements
@@ -73,6 +76,12 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	@Parameter( label = "Overlap between tiles", min = "0", stepSize = "16" )
 	protected int overlap = 32;
+
+	@Parameter(type = ItemIO.OUTPUT)
+	private Dataset resultDataset;
+
+	@Parameter(type = ItemIO.OUTPUT)
+	private Dataset controlDataset;
 
 	protected String modelFileUrl;
 	protected String modelName;
@@ -253,14 +262,16 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		prepareNormalization( ( IterableInterval ) input.getImgPlus() );
 
 		progressWindow.addLog(
-				"Displaying normalized test image.." );
-		testNormalization( input, uiService );
-
-		progressWindow.addLog(
 				"Normalize (" + percentileBottom + " - " + percentileTop + " -> " + min + " - " + max + "] .. " );
 
 		RandomAccessibleInterval< FloatType > normalizedInput = normalizeImage(
 				( RandomAccessibleInterval ) input.getImgPlus() );
+
+		progressWindow.addLog(
+				"Displaying normalized image.." );
+
+		displayAsDataset("normalized", normalizedInput);
+
 		return normalizedInput;
 
 	}
@@ -293,9 +304,9 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		if ( result != null ) {
 			if ( result.size() > 0 ) {
 				progressWindow.addLog( "Displaying result image.." );
-				uiService.show( "result", result.get( 0 ) );
+				resultDataset = wrapIntoDataset( "result", result.get( 0 ) );
 				progressWindow.addLog( "Displaying control image.." );
-				uiService.show( "control", result.get( 1 ) );
+				controlDataset = wrapIntoDataset( "control", result.get( 1 ) );
 				progressWindow.addLog( "All done!" );
 				progressWindow.setCurrentStepDone();
 			}
@@ -343,15 +354,19 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		System.out.println( title + ": " + Arrays.toString( dims ) );
 	}
 
-	protected void displayAsDataset( String title, RandomAccessibleInterval< FloatType > img ) {
+	protected < U extends RealType<U> & NativeType<U>> void displayAsDataset( String title, RandomAccessibleInterval< U > img ) {
+		uiService.show( title, wrapIntoDataset(title, img) ); // TODO this is horribly slow if Fiji is not started from eclipse!
+	}
+
+	protected < U extends RealType<U> & NativeType<U>> Dataset wrapIntoDataset( String name, RandomAccessibleInterval< U > img ) {
 
 		//TODO convert back to original format to be able to save and load it (float 32 bit does not load in Fiji)
 
-		Dataset dataset = datasetService.create( img );
+		Dataset dataset = datasetService.create( new ImgPlus<>(ImgView.wrap(img, new ArrayImgFactory<>()) ) );
+		dataset.setName(name);
 		for ( int i = 0; i < input.numDimensions(); i++ ) {
 			dataset.setAxis( input.axis( bridge.getOutputDimByInputDim( i ) ), i );
 		}
-		uiService.show( title, dataset );
+		return dataset;
 	}
-
 }
