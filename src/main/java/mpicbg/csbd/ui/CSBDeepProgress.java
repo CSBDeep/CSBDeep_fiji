@@ -55,7 +55,7 @@ public class CSBDeepProgress extends JPanel
 	JLabel[] stepTitle = { new JLabel( "Load model" ),
 						   new JLabel( "Preprocessing" ),
 						   new JLabel( "Run model" ),
-						   new JLabel( "Postprocessing" ) };
+						   new JLabel( "Postprocessing         " ) };
 	JLabel[] stepStatus = new JLabel[ stepTitle.length ];
 	boolean[] stepDone = new boolean[ stepTitle.length ];
 	int currentStep;
