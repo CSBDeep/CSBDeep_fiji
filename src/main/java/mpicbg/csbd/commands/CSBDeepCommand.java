@@ -78,10 +78,10 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected int overlap = 32;
 
 	@Parameter(type = ItemIO.OUTPUT)
-	private Dataset resultDataset;
+	protected Dataset resultDataset;
 
 	@Parameter(type = ItemIO.OUTPUT)
-	private Dataset controlDataset;
+	protected Dataset controlDataset;
 
 	protected String modelFileUrl;
 	protected String modelName;
@@ -267,11 +267,6 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		RandomAccessibleInterval< FloatType > normalizedInput = normalizeImage(
 				( RandomAccessibleInterval ) input.getImgPlus() );
 
-		progressWindow.addLog(
-				"Displaying normalized image.." );
-
-		displayAsDataset("normalized", normalizedInput);
-
 		return normalizedInput;
 
 	}
@@ -354,17 +349,13 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		System.out.println( title + ": " + Arrays.toString( dims ) );
 	}
 
-	protected < U extends RealType<U> & NativeType<U>> void displayAsDataset( String title, RandomAccessibleInterval< U > img ) {
-		uiService.show( title, wrapIntoDataset(title, img) ); // TODO this is horribly slow if Fiji is not started from eclipse!
-	}
-
 	protected < U extends RealType<U> & NativeType<U>> Dataset wrapIntoDataset( String name, RandomAccessibleInterval< U > img ) {
 
 		//TODO convert back to original format to be able to save and load it (float 32 bit does not load in Fiji)
 
 		Dataset dataset = datasetService.create( new ImgPlus<>(ImgView.wrap(img, new ArrayImgFactory<>()) ) );
 		dataset.setName(name);
-		for ( int i = 0; i < input.numDimensions(); i++ ) {
+		for ( int i = 0; i < dataset.numDimensions(); i++ ) {
 			dataset.setAxis( input.axis( bridge.getOutputDimByInputDim( i ) ), i );
 		}
 		return dataset;

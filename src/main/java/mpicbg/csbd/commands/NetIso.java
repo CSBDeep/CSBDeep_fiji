@@ -116,8 +116,6 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 				n - 1,
 				dimChannel );
 
-		displayAsDataset( "Normalized image", normalizedInput );
-
 		progressWindow.addLog( "Upsampling.." );
 
 		// ========= UPSAMPLING
@@ -144,8 +142,6 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 				Arrays.stream( targetMin ).mapToLong( d -> ( long ) Math.ceil( d ) ).toArray(),
 				Arrays.stream( targetMax ).mapToLong( d -> ( long ) Math.floor( d ) ).toArray() );
 
-		displayAsDataset( "upsampled", upsampled );
-
 		// ========== ROTATION
 
 		progressWindow.addLog( "Rotate around Y.." );
@@ -156,9 +152,6 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 		// Create the second rotated image
 		RandomAccessibleInterval< FloatType > rotated1 = Views.permute( rotated0, dimY, dimZ );
-
-		displayAsDataset( "Input ZY", rotated0 );
-		displayAsDataset( "Input ZX", rotated1 );
 
 		List< RandomAccessibleInterval< FloatType > > result0 = new ArrayList<>();
 		List< RandomAccessibleInterval< FloatType > > result1 = new ArrayList<>();
@@ -212,8 +205,8 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 					Views.iterable( res0_pred ),
 					res1_pred,
 					prediction );
-
 			printDim( "prediction", prediction );
+			resultDataset = wrapIntoDataset("result", Views.permute( prediction, 2, 3 ));
 
 			// Calculate the geometric mean of the two control outputs
 			RandomAccessibleInterval< FloatType > control =
@@ -222,19 +215,8 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 					Views.iterable( res0_control ),
 					res1_control,
 					control );
+			controlDataset = wrapIntoDataset("control", Views.permute( control, 2, 3 ));
 
-			progressWindow.addLog( "Displaying result.." );
-			displayAsDataset( "result", Views.permute( prediction, 2, 3 ) );
-			displayAsDataset( "control", Views.permute( control, 2, 3 ) );
-			displayAsDataset(
-					"result ZY",
-					Views.permute( Views.permute( prediction, 0, 2 ), 2, 3 ) );
-			displayAsDataset(
-					"result ZX",
-					Views.permute(
-							Views.permute( Views.permute( prediction, 0, 2 ), 1, 2 ),
-							2,
-							3 ) );
 			progressWindow.addLog( "All done!" );
 			progressWindow.setCurrentStepDone();
 		} else {

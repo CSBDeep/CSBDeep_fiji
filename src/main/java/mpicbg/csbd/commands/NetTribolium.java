@@ -53,7 +53,11 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 	@Override
 	public void run() {
 
-		final AxisType[] mapping = { Axes.TIME, Axes.CHANNEL, Axes.Y, Axes.X, Axes.Z };
+		AxisType[] mapping = { Axes.TIME, Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
+		if ( input.dimension( Axes.Z ) < input.dimension( Axes.CHANNEL ) ) {
+			mapping[ 1 ] = Axes.CHANNEL;
+			mapping[ 4 ] = Axes.Z;
+		}
 		super.runWithMapping( mapping );
 
 	}
