@@ -20,12 +20,14 @@ public class DatasetTensorBridge {
 	private final Dataset dataset;
 	private TensorInfo inputTensor, outputTensor;
 
-	AxisType[] axes = Axes.knownTypes();
+//	AxisType[] axes = Axes.knownTypes();
+	AxisType[] axes = { Axes.X, Axes.Y, Axes.Z, Axes.TIME, Axes.CHANNEL };
 	private Map< AxisType, Integer > axisDataset;
 	private Map< AxisType, Integer > axisTF;
 	private Map< AxisType, Long > axisSize;
 
 	private boolean mappingInitialized = false;
+	private boolean reducedZ = false;
 
 	public DatasetTensorBridge( final Dataset image ) {
 
@@ -124,6 +126,13 @@ public class DatasetTensorBridge {
 		if ( axisDataset.containsValue(
 				datasetDim ) ) { return getKeyByValue( axisDataset, datasetDim ); }
 		return null;
+	}
+
+	public int getOutputDimByInputDim( int datasetDim ) {
+		if ( reducedZ && axisDataset.containsKey( Axes.Z ) ) {
+			if ( datasetDim >= axisDataset.get( Axes.Z ) ) { return datasetDim - 1; }
+		}
+		return datasetDim;
 	}
 
 	public boolean isMappingInitialized() {
@@ -239,13 +248,12 @@ public class DatasetTensorBridge {
 	}
 
 	public boolean removeZFromMapping() {
-		boolean shift = false;
 		printMapping();
 		if ( axisTF.containsKey( Axes.Z ) ) {
 			int tfindex = axisTF.get( Axes.Z );
 			if ( tfindex >= 0 ) {
 				axisTF.put( Axes.Z, -1 );
-				shift = true;
+				reducedZ = true;
 				for ( int i = tfindex + 1; i < numDimensions(); i++ ) {
 					if ( axisTF.containsValue( i ) ) {
 						axisTF.put( getKeyByValue( axisTF, i ), i - 1 );
@@ -254,7 +262,7 @@ public class DatasetTensorBridge {
 			}
 		}
 		printMapping();
-		return shift;
+		return reducedZ;
 	}
 
 	public static < T, E > Set< T > getKeysByValue( Map< T, E > map, E value ) {

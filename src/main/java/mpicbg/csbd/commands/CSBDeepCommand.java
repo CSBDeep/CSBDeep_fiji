@@ -349,7 +349,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 		Dataset dataset = datasetService.create( img );
 		for ( int i = 0; i < input.numDimensions(); i++ ) {
-			dataset.setAxis( input.axis( i ), i );
+			dataset.setAxis( input.axis( bridge.getOutputDimByInputDim( i ) ), i );
 		}
 		uiService.show( title, dataset );
 	}
