@@ -43,6 +43,9 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 	@Parameter( label = "Scale Z", min = "1", max = "15" )
 	protected float scale = 10.2f;
 
+	@Parameter( label = "Batch size", min = "1")
+	protected int batchSize = 10;
+
 	@Override
 	public void initialize() {
 
@@ -244,12 +247,12 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 			//runBatches(rotated0, rotated1, result0, result1);
 
 			result0.addAll( pool.submit(
-					new BatchedTiledPrediction( rotated0, bridge, model, progressWindow, nTiles, 4, overlap ) ).get() );
+					new BatchedTiledPrediction( rotated0, bridge, model, progressWindow, nTiles, 4, overlap, batchSize ) ).get() );
 
 			progressWindow.setNextRound();
 
 			result1.addAll( pool.submit(
-					new BatchedTiledPrediction( rotated1, bridge, model, progressWindow, nTiles, 4, overlap ) ).get() );
+					new BatchedTiledPrediction( rotated1, bridge, model, progressWindow, nTiles, 4, overlap, batchSize ) ).get() );
 
 		} catch ( RejectedExecutionException | InterruptedException exc ) {
 			return;

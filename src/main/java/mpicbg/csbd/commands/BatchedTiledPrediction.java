@@ -19,7 +19,7 @@ import mpicbg.csbd.ui.CSBDeepProgress;
 public class BatchedTiledPrediction extends TiledPrediction {
 
 	protected int nBatches;
-	protected int batchSize = 10;
+	protected int batchSize;
 	protected int batchDim;
 	protected int channelDim;
 	protected long batchDimSize;
@@ -31,8 +31,10 @@ public class BatchedTiledPrediction extends TiledPrediction {
 			CSBDeepProgress progressWindow,
 			int nTiles,
 			int blockMultiple,
-			int overlap ) {
+			int overlap,
+			int batchSize) {
 		super( input, bridge, model, progressWindow, nTiles, blockMultiple, overlap );
+		this.batchSize = batchSize;
 	}
 
 	@Override
@@ -51,6 +53,8 @@ public class BatchedTiledPrediction extends TiledPrediction {
 			batchDimSize = tileSize[ batchDim ];
 			System.out.println( "batchDimSize  : " + batchDimSize );
 			nBatches = ( int ) Math.ceil( ( float ) batchDimSize / ( float ) batchSize );
+			// If a smaller batch size is sufficient for the same amount of batches, we can use it
+			batchSize = ( int ) Math.ceil( (float) batchDimSize / (float) nBatches );
 
 			progressWindow.setProgressBarMax( nTiles * nBatches );
 
