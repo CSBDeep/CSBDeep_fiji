@@ -3,6 +3,7 @@ package mpicbg.csbd.commands;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
@@ -38,34 +39,33 @@ public class BatchedTiledPrediction extends TiledPrediction {
 	}
 
 	@Override
-	public List< RandomAccessibleInterval< FloatType > > call() {
-		try {
+	public List< RandomAccessibleInterval< FloatType > > call() throws ExecutionException {
 
-			bridge.printMapping();
-			batchDim = bridge.getDatasetDimIndexByTFIndex( 0 );
-			channelDim = bridge.getDatasetDimIndexByTFIndex(
-					bridge.getInputTensorInfo().getTensorShape().getDimCount() - 1 );
-			TiledView< FloatType > tiledView = preprocess();
-			System.out.println( "batchDim  : " + batchDim );
-			System.out.println( "channelDim: " + channelDim );
-			System.out.println( "largestDim: " + largestDim );
-			long[] tileSize = tiledView.getBlockSize();
-			batchDimSize = tileSize[ batchDim ];
-			System.out.println( "batchDimSize  : " + batchDimSize );
-			nBatches = ( int ) Math.ceil( ( float ) batchDimSize / ( float ) batchSize );
-			// If a smaller batch size is sufficient for the same amount of batches, we can use it
-			batchSize = ( int ) Math.ceil( (float) batchDimSize / (float) nBatches );
+		bridge.printMapping();
+		batchDim = bridge.getDatasetDimIndexByTFIndex( 0 );
+		channelDim = bridge.getDatasetDimIndexByTFIndex(
+				bridge.getInputTensorInfo().getTensorShape().getDimCount() - 1 );
+		TiledView< FloatType > tiledView = preprocess();
+		System.out.println( "batchDim  : " + batchDim );
+		System.out.println( "channelDim: " + channelDim );
+		System.out.println( "largestDim: " + largestDim );
+		long[] tileSize = tiledView.getBlockSize();
+		batchDimSize = tileSize[ batchDim ];
+		System.out.println( "batchDimSize  : " + batchDimSize );
+		nBatches = ( int ) Math.ceil( ( float ) batchDimSize / ( float ) batchSize );
+		// If a smaller batch size is sufficient for the same amount of batches, we can use it
+		batchSize = ( int ) Math.ceil( (float) batchDimSize / (float) nBatches );
 
-			progressWindow.setProgressBarMax( nTiles * nBatches );
+		progressWindow.setProgressBarMax( nTiles * nBatches );
 
-			long expandedBatchDimSize = nBatches * batchSize;
-			tileSize[ batchDim ] = batchSize;
-			RandomAccessibleInterval< FloatType > expandedInput2 =
-					expandDimToSize( expandedInput, batchDim, expandedBatchDimSize );
-			TiledView< FloatType > tiledView2 =
-					new TiledView<>( expandedInput2, tileSize, padding );
+		long expandedBatchDimSize = nBatches * batchSize;
+		tileSize[ batchDim ] = batchSize;
+		RandomAccessibleInterval< FloatType > expandedInput2 =
+				expandDimToSize( expandedInput, batchDim, expandedBatchDimSize );
+		TiledView< FloatType > tiledView2 =
+				new TiledView<>( expandedInput2, tileSize, padding );
 
-			List< RandomAccessibleInterval< FloatType > > results = runModel( tiledView2 );
+		List< RandomAccessibleInterval< FloatType > > results = runModel( tiledView2 );
 
 //			final ImageJ ij = new ImageJ();
 //			int i = 0;
@@ -74,13 +74,7 @@ public class BatchedTiledPrediction extends TiledPrediction {
 //				i++;
 //			}
 
-			return postprocess( results );
-
-		} catch ( Error | Exception e ) {
-			e.printStackTrace();
-			progressWindow.setCurrentStepFail();
-		}
-		return null;
+		return postprocess( results );
 	}
 
 	@Override

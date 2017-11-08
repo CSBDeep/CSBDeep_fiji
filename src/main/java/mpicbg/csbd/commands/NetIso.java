@@ -238,14 +238,6 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 		try {
 
-			//TODO check for OOM
-			// in case of memory issue, do something like this:
-
-			//nTiles *= 2;
-			//progressWindow.addRounds(2);
-			//progressWindow.setNextRound();
-			//runBatches(rotated0, rotated1, result0, result1);
-
 			result0.addAll( pool.submit(
 					new BatchedTiledPrediction( rotated0, bridge, model, progressWindow, nTiles, 4, overlap, batchSize ) ).get() );
 
@@ -258,7 +250,20 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 			return;
 		} catch ( ExecutionException exc ) {
 			exc.printStackTrace();
-			progressWindow.setCurrentStepFail();
+
+			// We expect it to be an out of memory exception and
+			// try it again with a smaller batch size.
+			batchSize /= 2;
+			// Check if the batch size is at 1 already
+			if (batchSize < 1) {
+				progressWindow.setCurrentStepFail();
+				return;
+			}
+			progressWindow.addError("Out of memory exception occurred. Trying with batch size: " + batchSize);
+			progressWindow.addRounds(1);
+			progressWindow.setNextRound();
+			runBatches(rotated0, rotated1, result0, result1);
+			return;
 		}
 
 	}

@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.stream.LongStream;
 
 import javax.swing.JOptionPane;
 
@@ -46,6 +47,7 @@ import net.imglib2.img.array.ArrayImgFactory;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Intervals;
 
 public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
 		implements
@@ -87,6 +89,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected String modelName;
 	protected String inputNodeName = "input";
 	protected String outputNodeName = "output";
+	protected int blockMultiple = 32;
 
 	protected SignatureDef sig;
 
@@ -273,24 +276,30 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	protected void executeModel( RandomAccessibleInterval< FloatType > modelInput ) {
 
-		//TODO check for OOM
-		// in case of memory issue, do something like this:
-
-		//nTiles *= 2;
-		//progressWindow.addRounds(1);
-		//progressWindow.setNextRound();
-		//executeModel(modelInput);
-		//return;
-
 		List< RandomAccessibleInterval< FloatType > > result = null;
 		try {
 			TiledPrediction prediction =
-					new TiledPrediction( modelInput, bridge, model, progressWindow, nTiles, 32, overlap );
+					new TiledPrediction( modelInput, bridge, model, progressWindow, nTiles, blockMultiple, overlap );
 			predictions.add( prediction );
 			result = pool.submit( prediction ).get();
 		} catch ( ExecutionException exc ) {
-			progressWindow.setCurrentStepFail();
 			exc.printStackTrace();
+
+			// We expect it to be an out of memory exception and
+			// try it again with more tiles.
+			nTiles *= 2;
+			// Check if the number of tiles is to large already
+			if (Arrays.stream(Intervals.dimensionsAsLongArray(modelInput)).max().getAsLong()
+					/ nTiles < blockMultiple) {
+				progressWindow.setCurrentStepFail();
+				return;
+			}
+			progressWindow.addError("Out of memory exception occurred. Trying with " + nTiles + " tiles...");
+			progressWindow.addRounds(1);
+			progressWindow.setNextRound();
+			executeModel(modelInput);
+			return;
+
 		} catch ( InterruptedException exc ) {
 			progressWindow.addError( "Process canceled." );
 			progressWindow.setCurrentStepFail();

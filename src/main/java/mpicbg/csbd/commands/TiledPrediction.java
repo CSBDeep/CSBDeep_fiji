@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -156,7 +157,7 @@ public class TiledPrediction
 	}
 
 	public List< RandomAccessibleInterval< FloatType > >
-			runModel( TiledView< FloatType > tiledView ) {
+			runModel( TiledView< FloatType > tiledView ) throws ExecutionException {
 
 		progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
 
@@ -197,11 +198,6 @@ public class TiledPrediction
 					pool.shutdownNow();
 					progressWindow.setCurrentStepFail();
 					return null;
-				} catch ( Exception exc ) {
-					pool.shutdownNow();
-					exc.printStackTrace();
-					progressWindow.setCurrentStepFail();
-					return null;
 				}
 			}
 		}
@@ -212,9 +208,8 @@ public class TiledPrediction
 					if ( res == null ) return null;
 					results.add( res );
 					upTileCount();
-				} catch ( Exception exc ) {
+				} catch ( InterruptedException exc ) {
 					pool.shutdownNow();
-					exc.printStackTrace();
 					progressWindow.setCurrentStepFail();
 					return null;
 				}
@@ -277,23 +272,15 @@ public class TiledPrediction
 	}
 
 	@Override
-	public List< RandomAccessibleInterval< FloatType > > call() {
-		try {
+	public List< RandomAccessibleInterval< FloatType > > call() throws ExecutionException {
+		TiledView< FloatType > tiledView = preprocess();
 
-			TiledView< FloatType > tiledView = preprocess();
+		progressWindow.setProgressBarValue( 0 );
 
-			progressWindow.setProgressBarValue( 0 );
+		progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
+		List< RandomAccessibleInterval< FloatType > > results = runModel( tiledView );
 
-			progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
-			List< RandomAccessibleInterval< FloatType > > results = runModel( tiledView );
-
-			return postprocess( results );
-
-		} catch ( Error | Exception e ) {
-			e.printStackTrace();
-			progressWindow.setCurrentStepFail();
-		}
-		return null;
+		return postprocess( results );
 	}
 
 	protected static < T extends RealType< T > > int
@@ -377,23 +364,17 @@ public class TiledPrediction
 	}
 
 	protected RandomAccessibleInterval< FloatType >
-			executeGraphWithPadding( final RandomAccessibleInterval< FloatType > tile ) {
+			executeGraphWithPadding( final RandomAccessibleInterval< FloatType > tile ) throws Exception {
 
 		Tensor inputTensor = DatasetConverter.datasetToTensor( tile, mappingIn );
 		if ( inputTensor != null ) {
 			Tensor outputTensor = null;
-			try {
-				outputTensor = TensorFlowRunner.executeGraph(
-						model,
-						inputTensor,
-						bridge.getInputTensorInfo(),
-						bridge.getOutputTensorInfo() );
-			} catch ( Exception e ) {
-				e.printStackTrace();
-				progressWindow.addError(
-						"Error while running model: \n" + e.getLocalizedMessage() );
-				progressWindow.setCurrentStepFail();
-			}
+			outputTensor = TensorFlowRunner.executeGraph(
+					model,
+					inputTensor,
+					bridge.getInputTensorInfo(),
+					bridge.getOutputTensorInfo() );
+
 			if ( outputTensor != null ) { return DatasetConverter.tensorToDataset(
 					outputTensor,
 					mappingOut ); }
