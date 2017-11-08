@@ -105,7 +105,7 @@ public class TiledPrediction
 			long blockwidth =
 					( long ) ( Math.ceil( blockwidthIdeal / blockMultiple ) * blockMultiple );
 
-			nTiles = ( int ) Math.ceil( largestSize / blockwidth );
+			nTiles = ( int ) Math.ceil( (float) largestSize / blockwidth );
 
 			System.out.println( "blockwidthIdeal: " + blockwidthIdeal );
 			System.out.println( "blockwidth: " + blockwidth );
