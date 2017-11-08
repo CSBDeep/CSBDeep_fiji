@@ -15,7 +15,7 @@ import org.scijava.plugin.Plugin;
 
 /**
  */
-@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Planaria", headless = true )
+@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>3D Denoising - Planaria", headless = true )
 public class NetPlanaria< T extends RealType< T > > extends CSBDeepCommand< T >
 		implements
 		Command {

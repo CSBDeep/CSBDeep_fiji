@@ -13,7 +13,7 @@ import org.scijava.plugin.Plugin;
 
 /**
  */
-@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Project", headless = true )
+@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Surface Projection - Flywing", headless = true )
 public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T > implements Command {
 
 	@Override

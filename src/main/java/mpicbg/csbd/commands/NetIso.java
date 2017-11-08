@@ -37,7 +37,7 @@ import net.imglib2.util.Intervals;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
 
-@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Iso", headless = true )
+@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Isotropic Reconstruction - Retina", headless = true )
 public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > implements Command {
 
 	@Parameter( label = "Scale Z", min = "1", max = "15" )
