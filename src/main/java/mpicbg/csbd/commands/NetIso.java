@@ -5,10 +5,16 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.OptionalLong;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.stream.IntStream;
 
+import org.scijava.command.Command;
+import org.scijava.plugin.Parameter;
+import org.scijava.plugin.Plugin;
+
+import mpicbg.csbd.ui.CSBDeepProgress;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
@@ -30,12 +36,6 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.IntervalView;
 import net.imglib2.view.Views;
-
-import org.scijava.command.Command;
-import org.scijava.plugin.Parameter;
-import org.scijava.plugin.Plugin;
-
-import mpicbg.csbd.ui.CSBDeepProgress;
 
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Iso", headless = true )
 public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > implements Command {
@@ -79,7 +79,16 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 	@Override
 	public void run() {
+		try {
+			validateInput(input, "4D image with dimension order X-Y-C-Z and two channels", OptionalLong.empty(),
+					OptionalLong.empty(), OptionalLong.of(2), OptionalLong.empty());
+			runModel();
+		} catch (IOException e) {
+			showError(e.getMessage());
+		}
+	}
 
+	private void runModel() {
 		if ( input == null ) { return; }
 		modelChanged();
 

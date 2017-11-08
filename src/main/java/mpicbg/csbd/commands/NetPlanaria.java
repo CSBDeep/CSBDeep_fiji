@@ -1,6 +1,8 @@
 package mpicbg.csbd.commands;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.OptionalLong;
 
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
@@ -53,12 +55,18 @@ public class NetPlanaria< T extends RealType< T > > extends CSBDeepCommand< T >
 	@Override
 	public void run() {
 
-		AxisType[] mapping = { Axes.TIME, Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
-		if ( input.dimension( Axes.Z ) < input.dimension( Axes.CHANNEL ) ) {
-			mapping[ 1 ] = Axes.CHANNEL;
-			mapping[ 4 ] = Axes.Z;
-		}
-		super.runWithMapping( mapping );
+		try {
+			validateInput(input, "3D grayscale image with dimension order X-Y-Z", OptionalLong.empty(),
+					OptionalLong.empty(), OptionalLong.empty());
 
+			AxisType[] mapping = { Axes.TIME, Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
+			if ( input.dimension( Axes.Z ) < input.dimension( Axes.CHANNEL ) ) {
+				mapping[ 1 ] = Axes.CHANNEL;
+				mapping[ 4 ] = Axes.Z;
+			}
+			super.runWithMapping( mapping );
+		} catch (IOException e) {
+			showError(e.getMessage());
+		}
 	}
 }

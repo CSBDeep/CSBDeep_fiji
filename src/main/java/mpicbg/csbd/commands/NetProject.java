@@ -1,6 +1,8 @@
 package mpicbg.csbd.commands;
 
 import java.io.File;
+import java.io.IOException;
+import java.util.OptionalLong;
 
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
@@ -49,6 +51,12 @@ public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T > i
 
 	@Override
 	public void run() {
-		super.run();
+		try {
+			validateInput(input, "3D grayscale image with dimension order X-Y-Z", OptionalLong.empty(),
+					OptionalLong.empty(), OptionalLong.empty());
+			super.run();
+		} catch (IOException e) {
+			showError(e.getMessage());
+		}
 	}
 }

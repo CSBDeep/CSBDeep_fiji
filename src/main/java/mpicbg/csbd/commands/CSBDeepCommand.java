@@ -9,10 +9,10 @@ import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.OptionalLong;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
-import java.util.stream.LongStream;
 
 import javax.swing.JOptionPane;
 
@@ -368,5 +368,19 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 			dataset.setAxis( input.axis( bridge.getOutputDimByInputDim( i ) ), i );
 		}
 		return dataset;
+	}
+
+	protected static void validateInput(final Dataset dataset, final String formatDesc,
+			final OptionalLong... expectedDims) throws IOException {
+		if (dataset.numDimensions() != expectedDims.length) {
+			throw new IOException(
+					"Can not process " + dataset.numDimensions() + "D images.\nExpected format: " + formatDesc);
+		}
+		for (int i = 0; i < expectedDims.length; i++) {
+			if (expectedDims[i].isPresent() && expectedDims[i].getAsLong() != dataset.dimension(i)) {
+				throw new IOException("Can not process image. Dimension " + i + " musst be of size "
+						+ expectedDims[i].getAsLong() + ".\nExpected format: " + formatDesc);
+			}
+		}
 	}
 }
