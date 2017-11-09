@@ -170,40 +170,21 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 		runBatches( rotated0, rotated1, result0, result1 );
 
-		if ( result0.size() == 4 && result1.size() == 4 ) {
-
+		resultDatasets = new ArrayList<>();
+		for (int i = 0; i+1 < result0.size() && i+1 < result1.size(); i += 2 ) {
 			//prediction for ZY rotation
 			RandomAccessibleInterval< FloatType > res0_pred =
-					Views.stack( result0.get( 0 ), result0.get( 1 ) );
+					Views.stack( result0.get( i ), result0.get( i+1 ) );
 
 			//prediction for ZX rotation
 			RandomAccessibleInterval< FloatType > res1_pred =
-					Views.stack( result1.get( 0 ), result1.get( 1 ) );
-
-			//control for ZY rotation
-			RandomAccessibleInterval< FloatType > res0_control =
-					Views.stack( result0.get( 2 ), result0.get( 3 ) );
-
-			//control for ZX rotation
-			RandomAccessibleInterval< FloatType > res1_control =
-					Views.stack( result1.get( 2 ), result1.get( 3 ) );
+					Views.stack( result1.get( i ), result1.get( i+1 ) );
 
 			// rotate output stacks back
-
 			//TODO the rotation dimensions are not dynamic yet, we should use variables
-
-			progressWindow.addLog( "Rotate output stacks back to original orientation.." );
-
-			printDim( "res0_pred", res0_pred );
-			printDim( "res1_pred", res1_pred );
-
 			res0_pred = Views.permute( res0_pred, 0, 2 );
-			res0_control = Views.permute( res0_control, 0, 2 );
-
 			res1_pred = Views.permute( res1_pred, 1, 2 );
 			res1_pred = Views.permute( res1_pred, 0, 2 );
-			res1_control = Views.permute( res1_control, 1, 2 );
-			res1_control = Views.permute( res1_control, 0, 2 );
 
 			printDim( "res0_pred rotated back", res0_pred );
 			printDim( "res1_pred rotated back", res1_pred );
@@ -218,17 +199,11 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 					res1_pred,
 					prediction );
 			printDim( "prediction", prediction );
-			resultDataset = wrapIntoDataset("result", Views.permute( prediction, 2, 3 ));
 
-			// Calculate the geometric mean of the two control outputs
-			RandomAccessibleInterval< FloatType > control =
-					ArrayImgs.floats( Intervals.dimensionsAsLongArray( res0_pred ) );
-			pointwiseGeometricMean(
-					Views.iterable( res0_control ),
-					res1_control,
-					control );
-			controlDataset = wrapIntoDataset("control", Views.permute( control, 2, 3 ));
-
+			String name = OUTPUT_NAMES.length > i/2 ? OUTPUT_NAMES[i/2] : GENERIC_OUTPUT_NAME + i/2;
+			resultDatasets.add(wrapIntoDataset(name, Views.permute( prediction, 2, 3 )));
+		}
+		if (!resultDatasets.isEmpty()) {
 			progressWindow.addLog( "All done!" );
 			progressWindow.setCurrentStepDone();
 		} else {

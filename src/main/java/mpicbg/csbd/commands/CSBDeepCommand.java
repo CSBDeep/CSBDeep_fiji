@@ -55,6 +55,9 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		Initializable,
 		ActionListener {
 
+	protected static String[] OUTPUT_NAMES = { "result", "control" };
+	protected static String GENERIC_OUTPUT_NAME = "output-";
+
 	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
 	protected Dataset input;
 
@@ -80,10 +83,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected int overlap = 32;
 
 	@Parameter(type = ItemIO.OUTPUT)
-	protected Dataset resultDataset;
-
-	@Parameter(type = ItemIO.OUTPUT)
-	protected Dataset controlDataset;
+	protected List<Dataset> resultDatasets;
 
 	protected String modelFileUrl;
 	protected String modelName;
@@ -305,17 +305,18 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 			progressWindow.setCurrentStepFail();
 		}
 
-		if ( result != null ) {
-			if ( result.size() > 0 ) {
-				progressWindow.addLog( "Displaying result image.." );
-				resultDataset = wrapIntoDataset( "result", result.get( 0 ) );
-				progressWindow.addLog( "Displaying control image.." );
-				controlDataset = wrapIntoDataset( "control", result.get( 1 ) );
-				progressWindow.addLog( "All done!" );
-				progressWindow.setCurrentStepDone();
-			}
+		resultDatasets = new ArrayList<>();
+		for (int i = 0; i < result.size(); i++) {
+			progressWindow.addLog( "Displaying result image " + i + ".." );
+			String name = OUTPUT_NAMES.length > i ? OUTPUT_NAMES[i] : GENERIC_OUTPUT_NAME + i;
+			resultDatasets.add(wrapIntoDataset(name, result.get(i)));
 		}
-
+		if (!resultDatasets.isEmpty()) {
+			progressWindow.addLog( "All done!" );
+			progressWindow.setCurrentStepDone();
+		} else {
+			progressWindow.setCurrentStepFail();
+		}
 	}
 
 	public void showError( final String errorMsg ) {
