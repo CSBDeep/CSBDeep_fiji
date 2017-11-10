@@ -134,7 +134,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 	public void initialize() {
 		try {
 			System.loadLibrary( "tensorflow_jni" );
-		} catch ( UnsatisfiedLinkError e ) {
+		} catch ( final UnsatisfiedLinkError e ) {
 			useTensorFlowGPU = false;
 			System.out.println(
 					"Couldn't load tensorflow from library path. Using CPU version from jar file." );
@@ -283,20 +283,20 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 		progressWindow.addLog(
 				"Normalize (" + percentileBottom + " - " + percentileTop + " -> " + min + " - " + max + "] .. " );
 
-		RandomAccessibleInterval< FloatType > normalizedInput = normalizeImage(
+		final RandomAccessibleInterval< FloatType > normalizedInput = normalizeImage(
 				( RandomAccessibleInterval ) input.getImgPlus() );
 
 		executeModel( normalizedInput );
 
 	}
 
-	private void executeModel( RandomAccessibleInterval< FloatType > normalizedInput ) {
+	private void executeModel( final RandomAccessibleInterval< FloatType > normalizedInput ) {
 
 		List< RandomAccessibleInterval< FloatType > > result = null;
 		try {
 			result = pool.submit(
 					new TiledPrediction( normalizedInput, bridge, model, progressWindow, nTiles, blockMultiple, overlap ) ).get();
-		} catch ( ExecutionException exc ) {
+		} catch ( final ExecutionException exc ) {
 			exc.printStackTrace();
 
 			// We expect it to be an out of memory exception and
@@ -313,7 +313,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 			executeModel( normalizedInput );
 			return;
 
-		} catch ( InterruptedException exc ) {
+		} catch ( final InterruptedException exc ) {
 			progressWindow.addError( "Process canceled." );
 			progressWindow.setCurrentStepFail();
 		}
@@ -389,7 +389,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 	}
 
 	@Override
-	public void actionPerformed( ActionEvent e ) {
+	public void actionPerformed( final ActionEvent e ) {
 		if ( e.getSource().equals( progressWindow.getCancelBtn() ) ) {
 			pool.shutdownNow();
 			progressWindow.setCurrentStepFail();

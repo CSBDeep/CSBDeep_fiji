@@ -57,7 +57,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 	}
 
-	public static void main( String[] args ) throws IOException {
+	public static void main( final String[] args ) throws IOException {
 		// create the ImageJ application context with all available services
 		final ImageJ ij = new ImageJ();
 
@@ -89,7 +89,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 					OptionalLong.of( 2 ),
 					OptionalLong.empty() );
 			runModel();
-		} catch ( IOException e ) {
+		} catch ( final IOException e ) {
 			showError( e.getMessage() );
 		}
 	}
@@ -98,13 +98,13 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		if ( input == null ) { return; }
 		modelChanged();
 
-		AxisType[] mapping = { Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
+		final AxisType[] mapping = { Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
 		setMapping( mapping );
 
-		int dimChannel = input.dimensionIndex( Axes.CHANNEL );
-		int dimX = input.dimensionIndex( Axes.X );
-		int dimY = input.dimensionIndex( Axes.Y );
-		int dimZ = input.dimensionIndex( Axes.Z );
+		final int dimChannel = input.dimensionIndex( Axes.CHANNEL );
+		final int dimX = input.dimensionIndex( Axes.X );
+		final int dimY = input.dimensionIndex( Axes.Y );
+		final int dimZ = input.dimensionIndex( Axes.Z );
 
 		initGui();
 
@@ -114,22 +114,22 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 		progressWindow.addLog( "Normalize input.. " );
 
-		int n = input.numDimensions();
+		final int n = input.numDimensions();
 
 		// ========= NORMALIZATION
 		// TODO maybe there is a better solution than splitting the image, normalizing each channel and combining it again.
-		IntervalView< T > channel0 =
+		final IntervalView< T > channel0 =
 				Views.hyperSlice( input.typedImg( ( T ) input.firstElement() ), dimChannel, 0 );
-		IntervalView< T > channel1 =
+		final IntervalView< T > channel1 =
 				Views.hyperSlice( input.typedImg( ( T ) input.firstElement() ), dimChannel, 1 );
 
 		prepareNormalization( channel0 );
-		Img< FloatType > normalizedChannel0 = normalizeImage( channel0 );
+		final Img< FloatType > normalizedChannel0 = normalizeImage( channel0 );
 
 		prepareNormalization( channel1 );
-		Img< FloatType > normalizedChannel1 = normalizeImage( channel1 );
+		final Img< FloatType > normalizedChannel1 = normalizeImage( channel1 );
 
-		RandomAccessibleInterval< FloatType > normalizedInput = Views.permute(
+		final RandomAccessibleInterval< FloatType > normalizedInput = Views.permute(
 				Views.stack( normalizedChannel0, normalizedChannel1 ),
 				n - 1,
 				dimChannel );
@@ -137,25 +137,25 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		progressWindow.addLog( "Upsampling.." );
 
 		// ========= UPSAMPLING
-		RealRandomAccessible< FloatType > interpolated =
+		final RealRandomAccessible< FloatType > interpolated =
 				Views.interpolate(
 						Views.extendBorder( normalizedInput ),
 						new NLinearInterpolatorFactory<>() );
 
 		// Affine transformation to scale the Z axis
-		double s = scale;
-		double[] scales = IntStream.range( 0, n ).mapToDouble( i -> i == dimZ ? s : 1 ).toArray();
-		AffineGet scaling = new Scale( scales );
+		final double s = scale;
+		final double[] scales = IntStream.range( 0, n ).mapToDouble( i -> i == dimZ ? s : 1 ).toArray();
+		final AffineGet scaling = new Scale( scales );
 
 		// Scale min and max to create an interval afterwards
-		double[] targetMin = new double[ n ];
-		double[] targetMax = new double[ n ];
+		final double[] targetMin = new double[ n ];
+		final double[] targetMax = new double[ n ];
 		scaling.apply( Intervals.minAsDoubleArray( normalizedInput ), targetMin );
 		scaling.apply( Intervals.maxAsDoubleArray( normalizedInput ), targetMax );
 
 		// Apply the transformation
-		RandomAccessible< FloatType > scaled = RealViews.affine( interpolated, scaling );
-		RandomAccessibleInterval< FloatType > upsampled = Views.interval(
+		final RandomAccessible< FloatType > scaled = RealViews.affine( interpolated, scaling );
+		final RandomAccessibleInterval< FloatType > upsampled = Views.interval(
 				scaled,
 				Arrays.stream( targetMin ).mapToLong( d -> ( long ) Math.ceil( d ) ).toArray(),
 				Arrays.stream( targetMax ).mapToLong( d -> ( long ) Math.floor( d ) ).toArray() );
@@ -165,14 +165,14 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		progressWindow.addLog( "Rotate around Y.." );
 
 		// Create the first rotated image
-		RandomAccessibleInterval< FloatType > rotated0 = Views.permute( upsampled, dimX, dimZ );
+		final RandomAccessibleInterval< FloatType > rotated0 = Views.permute( upsampled, dimX, dimZ );
 		progressWindow.addLog( "Rotate around X.." );
 
 		// Create the second rotated image
-		RandomAccessibleInterval< FloatType > rotated1 = Views.permute( rotated0, dimY, dimZ );
+		final RandomAccessibleInterval< FloatType > rotated1 = Views.permute( rotated0, dimY, dimZ );
 
-		List< RandomAccessibleInterval< FloatType > > result0 = new ArrayList<>();
-		List< RandomAccessibleInterval< FloatType > > result1 = new ArrayList<>();
+		final List< RandomAccessibleInterval< FloatType > > result0 = new ArrayList<>();
+		final List< RandomAccessibleInterval< FloatType > > result1 = new ArrayList<>();
 
 		runBatches( rotated0, rotated1, result0, result1 );
 
@@ -198,7 +198,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 			progressWindow.addLog( "Merge output stacks.." );
 
 			// Calculate the geometric mean of the two predictions
-			RandomAccessibleInterval< FloatType > prediction =
+			final RandomAccessibleInterval< FloatType > prediction =
 					ArrayImgs.floats( Intervals.dimensionsAsLongArray( res0_pred ) );
 			pointwiseGeometricMean(
 					Views.iterable( res0_pred ),
@@ -206,7 +206,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 					prediction );
 			printDim( "prediction", prediction );
 
-			String name = OUTPUT_NAMES.length > i / 2 ? OUTPUT_NAMES[ i / 2 ] : GENERIC_OUTPUT_NAME + i / 2;
+			final String name = OUTPUT_NAMES.length > i / 2 ? OUTPUT_NAMES[ i / 2 ] : GENERIC_OUTPUT_NAME + i / 2;
 			resultDatasets.add( wrapIntoDataset( name, Views.permute( prediction, 2, 3 ) ) );
 		}
 		if ( !resultDatasets.isEmpty() ) {
@@ -218,10 +218,10 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 	}
 
 	private void runBatches(
-			RandomAccessibleInterval< FloatType > rotated0,
-			RandomAccessibleInterval< FloatType > rotated1,
-			List< RandomAccessibleInterval< FloatType > > result0,
-			List< RandomAccessibleInterval< FloatType > > result1 ) {
+			final RandomAccessibleInterval< FloatType > rotated0,
+			final RandomAccessibleInterval< FloatType > rotated1,
+			final List< RandomAccessibleInterval< FloatType > > result0,
+			final List< RandomAccessibleInterval< FloatType > > result1 ) {
 
 		result0.clear();
 		result1.clear();
@@ -238,7 +238,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 		} catch ( RejectedExecutionException | InterruptedException exc ) {
 			return;
-		} catch ( ExecutionException exc ) {
+		} catch ( final ExecutionException exc ) {
 			exc.printStackTrace();
 
 			// We expect it to be an out of memory exception and
@@ -259,12 +259,12 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 	}
 
 	private static < T extends RealType< T >, U extends RealType< U >, V extends RealType< V > > void pointwiseGeometricMean(
-			IterableInterval< T > in1,
-			RandomAccessibleInterval< U > in2,
-			RandomAccessibleInterval< V > out ) {
-		Cursor< T > i1 = in1.cursor();
-		RandomAccess< U > i2 = in2.randomAccess();
-		RandomAccess< V > o = out.randomAccess();
+			final IterableInterval< T > in1,
+			final RandomAccessibleInterval< U > in2,
+			final RandomAccessibleInterval< V > out ) {
+		final Cursor< T > i1 = in1.cursor();
+		final RandomAccess< U > i2 = in2.randomAccess();
+		final RandomAccess< V > o = out.randomAccess();
 
 		while ( i1.hasNext() ) {
 			i1.fwd();

@@ -59,7 +59,7 @@ public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T > i
 					OptionalLong.empty(),
 					OptionalLong.empty() );
 			super.run();
-		} catch ( IOException e ) {
+		} catch ( final IOException e ) {
 			showError( e.getMessage() );
 		}
 	}

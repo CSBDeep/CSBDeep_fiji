@@ -26,14 +26,14 @@ public class BatchedTiledPrediction extends TiledPrediction {
 	protected long batchDimSize;
 
 	public BatchedTiledPrediction(
-			RandomAccessibleInterval< FloatType > input,
-			DatasetTensorBridge bridge,
-			SavedModelBundle model,
-			CSBDeepProgress progressWindow,
-			int nTiles,
-			int blockMultiple,
-			int overlap,
-			int batchSize ) {
+			final RandomAccessibleInterval< FloatType > input,
+			final DatasetTensorBridge bridge,
+			final SavedModelBundle model,
+			final CSBDeepProgress progressWindow,
+			final int nTiles,
+			final int blockMultiple,
+			final int overlap,
+			final int batchSize ) {
 		super( input, bridge, model, progressWindow, nTiles, blockMultiple, overlap );
 		this.batchSize = batchSize;
 	}
@@ -45,11 +45,11 @@ public class BatchedTiledPrediction extends TiledPrediction {
 		batchDim = bridge.getDatasetDimIndexByTFIndex( 0 );
 		channelDim = bridge.getDatasetDimIndexByTFIndex(
 				bridge.getInputTensorInfo().getTensorShape().getDimCount() - 1 );
-		TiledView< FloatType > tiledView = preprocess();
+		final TiledView< FloatType > tiledView = preprocess();
 		System.out.println( "batchDim  : " + batchDim );
 		System.out.println( "channelDim: " + channelDim );
 		System.out.println( "largestDim: " + largestDim );
-		long[] tileSize = tiledView.getBlockSize();
+		final long[] tileSize = tiledView.getBlockSize();
 		batchDimSize = tileSize[ batchDim ];
 		System.out.println( "batchDimSize  : " + batchDimSize );
 		nBatches = ( int ) Math.ceil( ( float ) batchDimSize / ( float ) batchSize );
@@ -58,14 +58,14 @@ public class BatchedTiledPrediction extends TiledPrediction {
 
 		progressWindow.setProgressBarMax( nTiles * nBatches );
 
-		long expandedBatchDimSize = nBatches * batchSize;
+		final long expandedBatchDimSize = nBatches * batchSize;
 		tileSize[ batchDim ] = batchSize;
-		RandomAccessibleInterval< FloatType > expandedInput2 =
+		final RandomAccessibleInterval< FloatType > expandedInput2 =
 				expandDimToSize( expandedInput, batchDim, expandedBatchDimSize );
-		TiledView< FloatType > tiledView2 =
+		final TiledView< FloatType > tiledView2 =
 				new TiledView<>( expandedInput2, tileSize, padding );
 
-		List< RandomAccessibleInterval< FloatType > > results = runModel( tiledView2 );
+		final List< RandomAccessibleInterval< FloatType > > results = runModel( tiledView2 );
 
 //			final ImageJ ij = new ImageJ();
 //			int i = 0;
@@ -82,7 +82,7 @@ public class BatchedTiledPrediction extends TiledPrediction {
 
 		if ( input != null ) {
 
-			long[] dims = new long[ input.numDimensions() ];
+			final long[] dims = new long[ input.numDimensions() ];
 			input.dimensions( dims );
 			progressWindow.addLog( "Image dimensions: " + Arrays.toString( dims ) );
 			progressWindow.addLog( "Calculate mapping between image and tensor.." );
@@ -104,8 +104,8 @@ public class BatchedTiledPrediction extends TiledPrediction {
 			padding = new long[ input.numDimensions() ];
 
 			// Calculate the blocksize to use
-			double blockwidthIdeal = largestSize / ( double ) nTiles;
-			long blockwidth =
+			final double blockwidthIdeal = largestSize / ( double ) nTiles;
+			final long blockwidth =
 					( long ) ( Math.ceil( blockwidthIdeal / blockMultiple ) * blockMultiple );
 
 			// Expand the image to fit the blocksize
@@ -133,7 +133,7 @@ public class BatchedTiledPrediction extends TiledPrediction {
 //				printDim( "After expand", im );
 
 			// Set the tile size
-			long[] tileSize = Intervals.dimensionsAsLongArray( expandedInput );
+			final long[] tileSize = Intervals.dimensionsAsLongArray( expandedInput );
 			tileSize[ largestDim ] = blockwidth;
 
 			// Put the padding per dimension in an array
@@ -143,7 +143,7 @@ public class BatchedTiledPrediction extends TiledPrediction {
 			System.out.println( "tilesize: " + Arrays.toString( tileSize ) );
 
 			// Create the tiled view
-			TiledView< FloatType > tiledView = new TiledView<>( expandedInput, tileSize, padding );
+			final TiledView< FloatType > tiledView = new TiledView<>( expandedInput, tileSize, padding );
 
 			progressWindow.setCurrentStepDone();
 
@@ -156,7 +156,7 @@ public class BatchedTiledPrediction extends TiledPrediction {
 	}
 
 	@Override
-	protected List< RandomAccessibleInterval< FloatType > > postprocess( List< RandomAccessibleInterval< FloatType > > results ) {
+	protected List< RandomAccessibleInterval< FloatType > > postprocess( final List< RandomAccessibleInterval< FloatType > > results ) {
 
 		if ( results != null && results.size() > 0 ) {
 
@@ -165,7 +165,7 @@ public class BatchedTiledPrediction extends TiledPrediction {
 			progressWindow.addLog( "Merging tiles.." );
 
 			// Arrange and combine the tiles again
-			long[] grid = new long[ results.get( 0 ).numDimensions() ];
+			final long[] grid = new long[ results.get( 0 ).numDimensions() ];
 			for ( int i = 0; i < grid.length; i++ ) {
 				if ( i == largestDim ) {
 					grid[ i ] = nTiles;
@@ -177,16 +177,16 @@ public class BatchedTiledPrediction extends TiledPrediction {
 				}
 				grid[ i ] = 1;
 			}
-			long[] res0Dimension = new long[ results.get( 0 ).numDimensions() ];
+			final long[] res0Dimension = new long[ results.get( 0 ).numDimensions() ];
 			results.get( 0 ).dimensions( res0Dimension );
 			System.out.println( "res0 dimensions: " + Arrays.toString( res0Dimension ) );
 			System.out.println( "nBatches: " + nBatches );
 			System.out.println( "nTiles: " + nTiles );
 			System.out.println( "grid: " + Arrays.toString( grid ) );
-			RandomAccessibleInterval< FloatType > result =
+			final RandomAccessibleInterval< FloatType > result =
 					new CombinedView<>( new ArrangedView<>( results, grid ) );
 
-			long[] resDimension = new long[ result.numDimensions() ];
+			final long[] resDimension = new long[ result.numDimensions() ];
 			result.dimensions( resDimension );
 			System.out.println( "result dimensions: " + Arrays.toString( resDimension ) );
 

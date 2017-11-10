@@ -33,8 +33,8 @@ public class MappingDialog {
 			final List< String > dimStringsSize = new ArrayList<>();
 			for ( int i = 0; i < bridge.numDimensions(); i++ ) {
 
-				String dimName = bridge.getDatasetDimName( i );
-				long dimSize = bridge.getDatasetDimSize( i );
+				final String dimName = bridge.getDatasetDimName( i );
+				final long dimSize = bridge.getDatasetDimSize( i );
 
 				final JTextField field = new JTextField();
 				field.setText( String.valueOf( dimSize ) );
@@ -48,9 +48,9 @@ public class MappingDialog {
 			for ( int i = 0; i < bridge.getInputTensorInfo().getTensorShape().getDimCount(); i++ ) {
 				if ( bridge.getDatasetDimIndexByTFIndex( i ) != null ) {
 
-					String dimName = bridge.getDatasetDimNameByTFIndex( i );
-					long dimSize = bridge.getDatasetDimSizeFromTFIndex( i );
-					String tfDimSize = String.valueOf(
+					final String dimName = bridge.getDatasetDimNameByTFIndex( i );
+					final long dimSize = bridge.getDatasetDimSizeFromTFIndex( i );
+					final String tfDimSize = String.valueOf(
 							bridge.getInputTensorInfo().getTensorShape().getDim(
 									tfDimCount ).getSize() );
 
@@ -113,7 +113,7 @@ public class MappingDialog {
 
 	}
 
-	public static String dimString( String dimName, long dimSize ) {
+	public static String dimString( final String dimName, final long dimSize ) {
 		return dimName + " [" + dimSize + "]";
 	}
 

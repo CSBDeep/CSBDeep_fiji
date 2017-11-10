@@ -116,7 +116,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		System.out.println( "CSBDeepCommand constructor" );
 		try {
 			System.loadLibrary( "tensorflow_jni" );
-		} catch ( UnsatisfiedLinkError e ) {
+		} catch ( final UnsatisfiedLinkError e ) {
 			useTensorFlowGPU = false;
 			System.out.println(
 					"Couldn't load tensorflow from library path. Using CPU version from jar file." );
@@ -142,7 +142,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 //		System.out.println("loadGraph");
 
-		File file = new File( modelFileUrl );
+		final File file = new File( modelFileUrl );
 		Location source;
 		if ( !file.exists() ) {
 			source = new HTTPLocation( modelFileUrl );
@@ -268,22 +268,22 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		progressWindow.addLog(
 				"Normalize (" + percentileBottom + " - " + percentileTop + " -> " + min + " - " + max + "] .. " );
 
-		RandomAccessibleInterval< FloatType > normalizedInput = normalizeImage(
+		final RandomAccessibleInterval< FloatType > normalizedInput = normalizeImage(
 				( RandomAccessibleInterval ) input.getImgPlus() );
 
 		return normalizedInput;
 
 	}
 
-	protected void executeModel( RandomAccessibleInterval< FloatType > modelInput ) {
+	protected void executeModel( final RandomAccessibleInterval< FloatType > modelInput ) {
 
 		List< RandomAccessibleInterval< FloatType > > result = null;
 		try {
-			TiledPrediction prediction =
+			final TiledPrediction prediction =
 					new TiledPrediction( modelInput, bridge, model, progressWindow, nTiles, blockMultiple, overlap );
 			predictions.add( prediction );
 			result = pool.submit( prediction ).get();
-		} catch ( ExecutionException exc ) {
+		} catch ( final ExecutionException exc ) {
 			exc.printStackTrace();
 
 			// We expect it to be an out of memory exception and
@@ -300,7 +300,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 			executeModel( modelInput );
 			return;
 
-		} catch ( InterruptedException exc ) {
+		} catch ( final InterruptedException exc ) {
 			progressWindow.addError( "Process canceled." );
 			progressWindow.setCurrentStepFail();
 		}
@@ -308,7 +308,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		resultDatasets = new ArrayList<>();
 		for ( int i = 0; i < result.size(); i++ ) {
 			progressWindow.addLog( "Displaying result image " + i + ".." );
-			String name = OUTPUT_NAMES.length > i ? OUTPUT_NAMES[ i ] : GENERIC_OUTPUT_NAME + i;
+			final String name = OUTPUT_NAMES.length > i ? OUTPUT_NAMES[ i ] : GENERIC_OUTPUT_NAME + i;
 			resultDatasets.add( wrapIntoDataset( name, result.get( i ) ) );
 		}
 		if ( !resultDatasets.isEmpty() ) {
@@ -333,7 +333,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	}
 
 	@Override
-	public void cancel( String reason ) {
+	public void cancel( final String reason ) {
 
 	}
 
@@ -343,7 +343,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	}
 
 	@Override
-	public void actionPerformed( ActionEvent e ) {
+	public void actionPerformed( final ActionEvent e ) {
 		if ( e.getSource().equals( progressWindow.getCancelBtn() ) ) {
 
 			//TODO this is not yet fully working. The tile that is currently computed does not stop.
@@ -353,17 +353,17 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		}
 	}
 
-	protected static void printDim( String title, RandomAccessibleInterval< FloatType > img ) {
-		long[] dims = new long[ img.numDimensions() ];
+	protected static void printDim( final String title, final RandomAccessibleInterval< FloatType > img ) {
+		final long[] dims = new long[ img.numDimensions() ];
 		img.dimensions( dims );
 		System.out.println( title + ": " + Arrays.toString( dims ) );
 	}
 
-	protected < U extends RealType< U > & NativeType< U > > Dataset wrapIntoDataset( String name, RandomAccessibleInterval< U > img ) {
+	protected < U extends RealType< U > & NativeType< U > > Dataset wrapIntoDataset( final String name, final RandomAccessibleInterval< U > img ) {
 
 		//TODO convert back to original format to be able to save and load it (float 32 bit does not load in Fiji)
 
-		Dataset dataset = datasetService.create( new ImgPlus<>( ImgView.wrap( img, new ArrayImgFactory<>() ) ) );
+		final Dataset dataset = datasetService.create( new ImgPlus<>( ImgView.wrap( img, new ArrayImgFactory<>() ) ) );
 		dataset.setName( name );
 		for ( int i = 0; i < dataset.numDimensions(); i++ ) {
 			dataset.setAxis( input.axis( bridge.getOutputDimByInputDim( i ) ), i );

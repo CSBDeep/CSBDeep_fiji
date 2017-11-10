@@ -23,7 +23,7 @@ public class TensorFlowRunner {
 		System.out.println(
 				"executeInceptionGraph with input shape " + Arrays.toString( image.shape() ) );
 
-		Tensor output_t = model
+		final Tensor output_t = model
 				.session()
 				.runner() //
 				.feed( opName( inputTensorInfo ), image ) //

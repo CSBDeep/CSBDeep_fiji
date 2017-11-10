@@ -41,7 +41,7 @@ public class DatasetTensorBridge {
 		axisSize = new HashMap<>();
 
 		for ( int i = 0; i < axes.length; i++ ) {
-			AxisType axis = axes[ i ];
+			final AxisType axis = axes[ i ];
 			axisDataset.put( axis, image.dimensionIndex( axis ) );
 			axisTF.put( axis, -1 );
 			axisSize.put( axis, image.dimension( axis ) );
@@ -51,8 +51,9 @@ public class DatasetTensorBridge {
 
 	}
 
+	@Override
 	public DatasetTensorBridge clone() {
-		DatasetTensorBridge _clone = new DatasetTensorBridge( dataset );
+		final DatasetTensorBridge _clone = new DatasetTensorBridge( dataset );
 		_clone.inputTensor = this.inputTensor;
 		_clone.outputTensor = this.outputTensor;
 		_clone.axisTF = ( Map< AxisType, Integer > ) ( ( HashMap ) this.axisTF ).clone();
@@ -61,10 +62,10 @@ public class DatasetTensorBridge {
 		return _clone;
 	}
 
-	private void assignUnknownDimensions( Dataset image ) {
+	private void assignUnknownDimensions( final Dataset image ) {
 
-		List< AxisType > unusedAxes = new ArrayList<>();
-		List< Integer > unknownIndices = new ArrayList<>();
+		final List< AxisType > unusedAxes = new ArrayList<>();
+		final List< Integer > unknownIndices = new ArrayList<>();
 		for ( int j = 0; j < axes.length; j++ ) {
 			boolean knownAxis = false;
 			for ( int i = 0; i < image.numDimensions(); i++ ) {
@@ -128,7 +129,7 @@ public class DatasetTensorBridge {
 		return null;
 	}
 
-	public int getOutputDimByInputDim( int datasetDim ) {
+	public int getOutputDimByInputDim( final int datasetDim ) {
 		if ( reducedZ && axisDataset.containsKey( Axes.Z ) ) {
 			if ( datasetDim >= axisDataset.get( Axes.Z ) ) { return datasetDim - 1; }
 		}
@@ -181,13 +182,13 @@ public class DatasetTensorBridge {
 		axisTF.clear();
 	}
 
-	public void setTFMappingByKnownAxesIndex( int tfIndex5D, int knownAxesIndex ) {
+	public void setTFMappingByKnownAxesIndex( final int tfIndex5D, final int knownAxesIndex ) {
 		if ( knownAxesIndex < axes.length ) {
 			axisTF.put( axes[ knownAxesIndex ], tfIndex5D );
 		}
 	}
 
-	public void setTFMapping( int index, AxisType axisType ) {
+	public void setTFMapping( final int index, final AxisType axisType ) {
 		axisTF.put( axisType, index );
 	}
 
@@ -197,7 +198,7 @@ public class DatasetTensorBridge {
 				"DatasetTensorBridge::setInputTensorShape: " + tensorInfo.getTensorShape().getDimList() + "]" );
 	}
 
-	public void setOutputTensor( TensorInfo tensorInfo ) {
+	public void setOutputTensor( final TensorInfo tensorInfo ) {
 		outputTensor = tensorInfo;
 		System.out.println(
 				"DatasetTensorBridge::setOutputTensorShape: " + tensorInfo.getTensorShape().getDimList() + "]" );
@@ -250,7 +251,7 @@ public class DatasetTensorBridge {
 	public boolean removeZFromMapping() {
 		printMapping();
 		if ( axisTF.containsKey( Axes.Z ) ) {
-			int tfindex = axisTF.get( Axes.Z );
+			final int tfindex = axisTF.get( Axes.Z );
 			if ( tfindex >= 0 ) {
 				axisTF.put( Axes.Z, -1 );
 				reducedZ = true;
@@ -265,9 +266,9 @@ public class DatasetTensorBridge {
 		return reducedZ;
 	}
 
-	public static < T, E > Set< T > getKeysByValue( Map< T, E > map, E value ) {
-		Set< T > keys = new HashSet<>();
-		for ( Entry< T, E > entry : map.entrySet() ) {
+	public static < T, E > Set< T > getKeysByValue( final Map< T, E > map, final E value ) {
+		final Set< T > keys = new HashSet<>();
+		for ( final Entry< T, E > entry : map.entrySet() ) {
 			if ( Objects.equals( value, entry.getValue() ) ) {
 				keys.add( entry.getKey() );
 			}
@@ -275,16 +276,16 @@ public class DatasetTensorBridge {
 		return keys;
 	}
 
-	public static < T, E > T getKeyByValue( Map< T, E > map, E value ) {
-		for ( Entry< T, E > entry : map.entrySet() ) {
+	public static < T, E > T getKeyByValue( final Map< T, E > map, final E value ) {
+		for ( final Entry< T, E > entry : map.entrySet() ) {
 			if ( Objects.equals( value, entry.getValue() ) ) { return entry.getKey(); }
 		}
 		return null;
 	}
 
-	public void permuteInputAxes( int dim1, int dim2 ) {
-		AxisType a1 = getKeyByValue( axisDataset, dim1 );
-		AxisType a2 = getKeyByValue( axisDataset, dim2 );
+	public void permuteInputAxes( final int dim1, final int dim2 ) {
+		final AxisType a1 = getKeyByValue( axisDataset, dim1 );
+		final AxisType a2 = getKeyByValue( axisDataset, dim2 );
 		axisDataset.put( a1, dim2 );
 		axisDataset.put( a2, dim1 );
 	}

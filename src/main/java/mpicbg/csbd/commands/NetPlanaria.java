@@ -63,13 +63,13 @@ public class NetPlanaria< T extends RealType< T > > extends CSBDeepCommand< T >
 					OptionalLong.empty(),
 					OptionalLong.empty() );
 
-			AxisType[] mapping = { Axes.TIME, Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
+			final AxisType[] mapping = { Axes.TIME, Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
 			if ( input.dimension( Axes.Z ) < input.dimension( Axes.CHANNEL ) ) {
 				mapping[ 1 ] = Axes.CHANNEL;
 				mapping[ 4 ] = Axes.Z;
 			}
 			super.runWithMapping( mapping );
-		} catch ( IOException e ) {
+		} catch ( final IOException e ) {
 			showError( e.getMessage() );
 		}
 	}

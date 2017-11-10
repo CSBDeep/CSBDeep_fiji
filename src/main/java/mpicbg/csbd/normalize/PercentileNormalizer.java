@@ -116,7 +116,7 @@ public class PercentileNormalizer< T extends RealType< T > > implements Normaliz
 	}
 
 	@Override
-	public Img< FloatType > normalizeImage( RandomAccessibleInterval< T > im ) {
+	public Img< FloatType > normalizeImage( final RandomAccessibleInterval< T > im ) {
 		final ImgFactory< FloatType > factory = new ArrayImgFactory<>();
 		final Img< FloatType > output = factory.create( im, new FloatType() );
 

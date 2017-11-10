@@ -58,7 +58,7 @@ public class TiledPrediction
 			final RandomAccessibleInterval< FloatType > input,
 			final DatasetTensorBridge bridge,
 			final SavedModelBundle model,
-			CSBDeepProgress progressWindow,
+			final CSBDeepProgress progressWindow,
 			final int nTiles,
 			final int blockMultiple,
 			final int overlap ) {
@@ -78,7 +78,7 @@ public class TiledPrediction
 
 		if ( input != null ) {
 
-			long[] dims = new long[ input.numDimensions() ];
+			final long[] dims = new long[ input.numDimensions() ];
 			input.dimensions( dims );
 			progressWindow.addLog( "Image dimensions: " + Arrays.toString( dims ) );
 			progressWindow.addLog( "Calculate mapping between image and tensor.." );
@@ -102,8 +102,8 @@ public class TiledPrediction
 			progressWindow.setProgressBarMax( nTiles );
 
 			// Calculate the blocksize to use
-			double blockwidthIdeal = largestSize / ( double ) nTiles;
-			long blockwidth =
+			final double blockwidthIdeal = largestSize / ( double ) nTiles;
+			final long blockwidth =
 					( long ) ( Math.ceil( blockwidthIdeal / blockMultiple ) * blockMultiple );
 
 			nTiles = ( int ) Math.ceil( ( float ) largestSize / blockwidth );
@@ -128,13 +128,13 @@ public class TiledPrediction
 //				}
 			}
 
-			long[] imdims = new long[ expandedInput.numDimensions() ];
+			final long[] imdims = new long[ expandedInput.numDimensions() ];
 			expandedInput.dimensions( imdims );
 			System.out.println( "imdims: " + Arrays.toString( imdims ) );
 //				printDim( "After expand", im );
 
 			// Set the tile size
-			long[] tileSize = Intervals.dimensionsAsLongArray( expandedInput );
+			final long[] tileSize = Intervals.dimensionsAsLongArray( expandedInput );
 			tileSize[ largestDim ] = blockwidth;
 
 			// Put the padding per dimension in a array
@@ -144,7 +144,7 @@ public class TiledPrediction
 			System.out.println( "tilesize: " + Arrays.toString( tileSize ) );
 
 			// Create the tiled view
-			TiledView< FloatType > tiledView = new TiledView<>( expandedInput, tileSize, padding );
+			final TiledView< FloatType > tiledView = new TiledView<>( expandedInput, tileSize, padding );
 
 			progressWindow.setCurrentStepDone();
 
@@ -156,30 +156,30 @@ public class TiledPrediction
 
 	}
 
-	public List< RandomAccessibleInterval< FloatType > > runModel( TiledView< FloatType > tiledView ) throws ExecutionException {
+	public List< RandomAccessibleInterval< FloatType > > runModel( final TiledView< FloatType > tiledView ) throws ExecutionException {
 
 		progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
 
-		boolean multithreading = false;
+		final boolean multithreading = false;
 
 		// Set padding to negative to remove it later
-		long[] negPadding = padding.clone();
+		final long[] negPadding = padding.clone();
 		negPadding[ largestDim ] = -padding[ largestDim ];
 
-		Cursor< RandomAccessibleInterval< FloatType > > cursor =
+		final Cursor< RandomAccessibleInterval< FloatType > > cursor =
 				Views.iterable( tiledView ).cursor();
 
 		// Loop over the tiles and execute the prediction
-		List< RandomAccessibleInterval< FloatType > > results = new ArrayList<>();
-		List< Future< RandomAccessibleInterval< FloatType > > > futures = new ArrayList<>();
+		final List< RandomAccessibleInterval< FloatType > > results = new ArrayList<>();
+		final List< Future< RandomAccessibleInterval< FloatType > > > futures = new ArrayList<>();
 
 		progressWindow.setProgressBarValue( 0 );
 		doneTileCount = 0;
 
 		while ( cursor.hasNext() && !cancelPressed ) {
-			RandomAccessibleInterval< FloatType > tile = cursor.next();
+			final RandomAccessibleInterval< FloatType > tile = cursor.next();
 			//uiService.show(tile);
-			Future< RandomAccessibleInterval< FloatType > > future = pool.submit(
+			final Future< RandomAccessibleInterval< FloatType > > future = pool.submit(
 					new TileRunner( tile, negPadding, progressWindow ) );
 
 			progressWindow.addLog(
@@ -189,11 +189,11 @@ public class TiledPrediction
 
 			if ( !multithreading ) {
 				try {
-					RandomAccessibleInterval< FloatType > res = future.get();
+					final RandomAccessibleInterval< FloatType > res = future.get();
 					if ( res == null ) return null;
 					results.add( res );
 					upTileCount();
-				} catch ( InterruptedException exc ) {
+				} catch ( final InterruptedException exc ) {
 					pool.shutdownNow();
 					progressWindow.setCurrentStepFail();
 					return null;
@@ -201,13 +201,13 @@ public class TiledPrediction
 			}
 		}
 		if ( multithreading ) {
-			for ( Future< RandomAccessibleInterval< FloatType > > future : futures ) {
+			for ( final Future< RandomAccessibleInterval< FloatType > > future : futures ) {
 				try {
-					RandomAccessibleInterval< FloatType > res = future.get();
+					final RandomAccessibleInterval< FloatType > res = future.get();
 					if ( res == null ) return null;
 					results.add( res );
 					upTileCount();
-				} catch ( InterruptedException exc ) {
+				} catch ( final InterruptedException exc ) {
 					pool.shutdownNow();
 					progressWindow.setCurrentStepFail();
 					return null;
@@ -224,7 +224,7 @@ public class TiledPrediction
 		progressWindow.setProgressBarValue( doneTileCount );
 	}
 
-	protected List< RandomAccessibleInterval< FloatType > > postprocess( List< RandomAccessibleInterval< FloatType > > results ) {
+	protected List< RandomAccessibleInterval< FloatType > > postprocess( final List< RandomAccessibleInterval< FloatType > > results ) {
 
 		if ( results != null && results.size() > 0 ) {
 
@@ -233,11 +233,11 @@ public class TiledPrediction
 			progressWindow.addLog( "Merging tiles.." );
 
 			// Arrange and combine the tiles again
-			long[] grid = new long[ results.get( 0 ).numDimensions() ];
+			final long[] grid = new long[ results.get( 0 ).numDimensions() ];
 			for ( int i = 0; i < grid.length; i++ ) {
 				grid[ i ] = i == largestDim ? nTiles : 1;
 			}
-			RandomAccessibleInterval< FloatType > result =
+			final RandomAccessibleInterval< FloatType > result =
 					new CombinedView<>( new ArrangedView<>( results, grid ) );
 
 			progressWindow.addLog( "Crop to original size.." );
@@ -256,7 +256,7 @@ public class TiledPrediction
 //			ij.ui().show( "_result", result );
 //			ij.ui().show( "_expandedresult", expandedresult );
 
-			int lastdim = fittedResult.numDimensions() - 1;
+			final int lastdim = fittedResult.numDimensions() - 1;
 
 			if ( fittedResult.dimension(
 					lastdim ) > 0 ) { return splitChannels( fittedResult, lastdim ); }
@@ -271,22 +271,22 @@ public class TiledPrediction
 
 	@Override
 	public List< RandomAccessibleInterval< FloatType > > call() throws ExecutionException {
-		TiledView< FloatType > tiledView = preprocess();
+		final TiledView< FloatType > tiledView = preprocess();
 
 		progressWindow.setProgressBarValue( 0 );
 
 		progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
-		List< RandomAccessibleInterval< FloatType > > results = runModel( tiledView );
+		final List< RandomAccessibleInterval< FloatType > > results = runModel( tiledView );
 
 		return postprocess( results );
 	}
 
-	protected static < T extends RealType< T > > int getLargestDim( RandomAccessibleInterval< T > input, DatasetTensorBridge bridge ) {
+	protected static < T extends RealType< T > > int getLargestDim( final RandomAccessibleInterval< T > input, final DatasetTensorBridge bridge ) {
 		// Get the largest dimension and its size
 		int largestDim = 0;
 		long largestSize = 0;
 		for ( int d = 0; d < input.numDimensions(); d++ ) {
-			long dimSize = input.dimension( d );
+			final long dimSize = input.dimension( d );
 			if ( bridge.getDimTypeByDatasetDim( d ).isXY() && dimSize > largestSize ) {
 				largestSize = dimSize;
 				largestDim = d;
@@ -295,7 +295,7 @@ public class TiledPrediction
 		return largestDim;
 	}
 
-	protected static void calculateMapping( int[] mappingIn, int[] mappingOut, DatasetTensorBridge bridge ) {
+	protected static void calculateMapping( final int[] mappingIn, final int[] mappingOut, final DatasetTensorBridge bridge ) {
 
 		for ( int i = 0; i < mappingIn.length; i++ ) {
 			mappingIn[ i ] = bridge.getTfIndexByDatasetDim( i );
@@ -306,7 +306,7 @@ public class TiledPrediction
 		//check if network reduces dimension, if yes, remote Z from mapping
 		bridge.handleDimensionReduction();
 
-		AxisType[] mappingOutDimType = new AxisType[ mappingOut.length ];
+		final AxisType[] mappingOutDimType = new AxisType[ mappingOut.length ];
 		for ( int i = 0; i < mappingOut.length; i++ ) {
 			mappingOut[ i ] =
 					bridge.getTfIndexByDatasetDim( i );
@@ -318,12 +318,12 @@ public class TiledPrediction
 	}
 
 	public < T extends RealType< T > > List< RandomAccessibleInterval< FloatType > > splitChannels(
-			RandomAccessibleInterval< FloatType > img,
-			int channelDim ) {
+			final RandomAccessibleInterval< FloatType > img,
+			final int channelDim ) {
 
 		progressWindow.addLog( "Split result channels.." );
 
-		ArrayList< RandomAccessibleInterval< FloatType > > res = new ArrayList<>();
+		final ArrayList< RandomAccessibleInterval< FloatType > > res = new ArrayList<>();
 
 		for ( int i = 0; i < img.dimension( channelDim ); i++ ) {
 			res.add( Views.zeroMin( Views.hyperSlice( img, channelDim, i ) ) );
@@ -332,8 +332,8 @@ public class TiledPrediction
 		return res;
 	}
 
-	protected static void replaceNegativesWithMissingIndices( int[] arr ) {
-		List< Integer > indices = new ArrayList<>();
+	protected static void replaceNegativesWithMissingIndices( final int[] arr ) {
+		final List< Integer > indices = new ArrayList<>();
 		for ( int i = 0; i < arr.length; i++ ) {
 			indices.add( arr[ i ] );
 		}
@@ -349,7 +349,10 @@ public class TiledPrediction
 		}
 	}
 
-	protected static RandomAccessibleInterval< FloatType > expandDimToSize( RandomAccessibleInterval< FloatType > im, int d, long size ) {
+	protected static RandomAccessibleInterval< FloatType > expandDimToSize(
+			final RandomAccessibleInterval< FloatType > im,
+			final int d,
+			final long size ) {
 		final int n = im.numDimensions();
 		final long[] min = new long[ n ];
 		final long[] max = new long[ n ];
@@ -361,7 +364,7 @@ public class TiledPrediction
 
 	protected RandomAccessibleInterval< FloatType > executeGraphWithPadding( final RandomAccessibleInterval< FloatType > tile ) throws Exception {
 
-		Tensor inputTensor = DatasetConverter.datasetToTensor( tile, mappingIn );
+		final Tensor inputTensor = DatasetConverter.datasetToTensor( tile, mappingIn );
 		if ( inputTensor != null ) {
 			Tensor outputTensor = null;
 			outputTensor = TensorFlowRunner.executeGraph(
@@ -384,9 +387,9 @@ public class TiledPrediction
 		long[] negPadding;
 
 		public TileRunner(
-				RandomAccessibleInterval< FloatType > tile,
-				long[] negPadding,
-				CSBDeepProgress progressWindow ) {
+				final RandomAccessibleInterval< FloatType > tile,
+				final long[] negPadding,
+				final CSBDeepProgress progressWindow ) {
 			this.tile = tile;
 			this.negPadding = negPadding;
 			this.progressWindow = progressWindow;
@@ -398,7 +401,7 @@ public class TiledPrediction
 					executeGraphWithPadding( tile );
 			if ( result != null ) {
 
-				long[] negPaddingPlus = new long[ result.numDimensions() ];
+				final long[] negPaddingPlus = new long[ result.numDimensions() ];
 				for ( int i = 0; i < negPadding.length; i++ ) {
 					negPaddingPlus[ i ] = negPadding[ i ];
 				}

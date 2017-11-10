@@ -9,15 +9,15 @@ import org.tensorflow.Tensor;
 
 public class DatasetConverter {
 
-	public static RandomAccessibleInterval< FloatType > tensorToDataset( Tensor tensor, int[] mapping ) {
+	public static RandomAccessibleInterval< FloatType > tensorToDataset( final Tensor tensor, final int[] mapping ) {
 
-		RandomAccessibleInterval< FloatType > outImg = Tensors.imgFloat( tensor, mapping );
+		final RandomAccessibleInterval< FloatType > outImg = Tensors.imgFloat( tensor, mapping );
 		return Views.dropSingletonDimensions( outImg );
 	}
 
 	public static Tensor datasetToTensor(
 			RandomAccessibleInterval< FloatType > image,
-			int[] mapping ) {
+			final int[] mapping ) {
 
 		// Add dimensions until it fits the input tensor
 		while ( image.numDimensions() < mapping.length ) {
