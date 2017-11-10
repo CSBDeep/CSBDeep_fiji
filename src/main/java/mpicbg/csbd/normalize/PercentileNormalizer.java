@@ -75,8 +75,7 @@ public class PercentileNormalizer< T extends RealType< T > > implements Normaliz
 		}
 	}
 
-	protected static < T extends RealType< T > > float[]
-			percentiles( final IterableInterval< T > d, final float[] percentiles ) {
+	protected static < T extends RealType< T > > float[] percentiles( final IterableInterval< T > d, final float[] percentiles ) {
 		final Cursor< T > cursor = d.cursor();
 		int items = 1;
 		int i = 0;

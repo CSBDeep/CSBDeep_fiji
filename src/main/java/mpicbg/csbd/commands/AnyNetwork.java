@@ -303,15 +303,14 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 			// try it again with more tiles.
 			nTiles *= 2;
 			// Check if the number of tiles is to large already
-			if (Arrays.stream(Intervals.dimensionsAsLongArray(normalizedInput)).max().getAsLong()
-					/ nTiles < blockMultiple) {
+			if ( Arrays.stream( Intervals.dimensionsAsLongArray( normalizedInput ) ).max().getAsLong() / nTiles < blockMultiple ) {
 				progressWindow.setCurrentStepFail();
 				return;
 			}
-			progressWindow.addError("Out of memory exception occurred. Trying with " + nTiles + " tiles...");
-			progressWindow.addRounds(1);
+			progressWindow.addError( "Out of memory exception occurred. Trying with " + nTiles + " tiles..." );
+			progressWindow.addRounds( 1 );
 			progressWindow.setNextRound();
-			executeModel(normalizedInput);
+			executeModel( normalizedInput );
 			return;
 
 		} catch ( InterruptedException exc ) {

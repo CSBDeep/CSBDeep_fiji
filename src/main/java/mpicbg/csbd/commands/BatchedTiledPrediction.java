@@ -33,7 +33,7 @@ public class BatchedTiledPrediction extends TiledPrediction {
 			int nTiles,
 			int blockMultiple,
 			int overlap,
-			int batchSize) {
+			int batchSize ) {
 		super( input, bridge, model, progressWindow, nTiles, blockMultiple, overlap );
 		this.batchSize = batchSize;
 	}
@@ -54,7 +54,7 @@ public class BatchedTiledPrediction extends TiledPrediction {
 		System.out.println( "batchDimSize  : " + batchDimSize );
 		nBatches = ( int ) Math.ceil( ( float ) batchDimSize / ( float ) batchSize );
 		// If a smaller batch size is sufficient for the same amount of batches, we can use it
-		batchSize = ( int ) Math.ceil( (float) batchDimSize / (float) nBatches );
+		batchSize = ( int ) Math.ceil( ( float ) batchDimSize / ( float ) nBatches );
 
 		progressWindow.setProgressBarMax( nTiles * nBatches );
 
@@ -156,8 +156,7 @@ public class BatchedTiledPrediction extends TiledPrediction {
 	}
 
 	@Override
-	protected List< RandomAccessibleInterval< FloatType > >
-			postprocess( List< RandomAccessibleInterval< FloatType > > results ) {
+	protected List< RandomAccessibleInterval< FloatType > > postprocess( List< RandomAccessibleInterval< FloatType > > results ) {
 
 		if ( results != null && results.size() > 0 ) {
 

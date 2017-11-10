@@ -11,13 +11,13 @@ import org.scijava.ui.UIService;
 
 public interface Normalizer< T extends RealType< T > > {
 
-	void prepareNormalization( IterableInterval<T> input );
+	void prepareNormalization( IterableInterval< T > input );
 
 	void testNormalization( Dataset input, UIService uiService );
 
 	boolean isActive();
 
 	float normalize( float val );
-	
-	Img<FloatType> normalizeImage( RandomAccessibleInterval<T> im);
+
+	Img< FloatType > normalizeImage( RandomAccessibleInterval< T > im );
 }

@@ -106,7 +106,7 @@ public class TiledPrediction
 			long blockwidth =
 					( long ) ( Math.ceil( blockwidthIdeal / blockMultiple ) * blockMultiple );
 
-			nTiles = ( int ) Math.ceil( (float) largestSize / blockwidth );
+			nTiles = ( int ) Math.ceil( ( float ) largestSize / blockwidth );
 
 			System.out.println( "blockwidthIdeal: " + blockwidthIdeal );
 			System.out.println( "blockwidth: " + blockwidth );
@@ -156,8 +156,7 @@ public class TiledPrediction
 
 	}
 
-	public List< RandomAccessibleInterval< FloatType > >
-			runModel( TiledView< FloatType > tiledView ) throws ExecutionException {
+	public List< RandomAccessibleInterval< FloatType > > runModel( TiledView< FloatType > tiledView ) throws ExecutionException {
 
 		progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
 
@@ -225,8 +224,7 @@ public class TiledPrediction
 		progressWindow.setProgressBarValue( doneTileCount );
 	}
 
-	protected List< RandomAccessibleInterval< FloatType > >
-			postprocess( List< RandomAccessibleInterval< FloatType > > results ) {
+	protected List< RandomAccessibleInterval< FloatType > > postprocess( List< RandomAccessibleInterval< FloatType > > results ) {
 
 		if ( results != null && results.size() > 0 ) {
 
@@ -283,8 +281,7 @@ public class TiledPrediction
 		return postprocess( results );
 	}
 
-	protected static < T extends RealType< T > > int
-			getLargestDim( RandomAccessibleInterval< T > input, DatasetTensorBridge bridge ) {
+	protected static < T extends RealType< T > > int getLargestDim( RandomAccessibleInterval< T > input, DatasetTensorBridge bridge ) {
 		// Get the largest dimension and its size
 		int largestDim = 0;
 		long largestSize = 0;
@@ -298,8 +295,7 @@ public class TiledPrediction
 		return largestDim;
 	}
 
-	protected static void
-			calculateMapping( int[] mappingIn, int[] mappingOut, DatasetTensorBridge bridge ) {
+	protected static void calculateMapping( int[] mappingIn, int[] mappingOut, DatasetTensorBridge bridge ) {
 
 		for ( int i = 0; i < mappingIn.length; i++ ) {
 			mappingIn[ i ] = bridge.getTfIndexByDatasetDim( i );
@@ -321,8 +317,9 @@ public class TiledPrediction
 		System.out.println( "mapping out: " + Arrays.toString( mappingOut ) );
 	}
 
-	public < T extends RealType< T > > List< RandomAccessibleInterval< FloatType > >
-			splitChannels( RandomAccessibleInterval< FloatType > img, int channelDim ) {
+	public < T extends RealType< T > > List< RandomAccessibleInterval< FloatType > > splitChannels(
+			RandomAccessibleInterval< FloatType > img,
+			int channelDim ) {
 
 		progressWindow.addLog( "Split result channels.." );
 
@@ -352,8 +349,7 @@ public class TiledPrediction
 		}
 	}
 
-	protected static RandomAccessibleInterval< FloatType >
-			expandDimToSize( RandomAccessibleInterval< FloatType > im, int d, long size ) {
+	protected static RandomAccessibleInterval< FloatType > expandDimToSize( RandomAccessibleInterval< FloatType > im, int d, long size ) {
 		final int n = im.numDimensions();
 		final long[] min = new long[ n ];
 		final long[] max = new long[ n ];
@@ -363,8 +359,7 @@ public class TiledPrediction
 		return Views.interval( Views.extendMirrorDouble( im ), new FinalInterval( min, max ) );
 	}
 
-	protected RandomAccessibleInterval< FloatType >
-			executeGraphWithPadding( final RandomAccessibleInterval< FloatType > tile ) throws Exception {
+	protected RandomAccessibleInterval< FloatType > executeGraphWithPadding( final RandomAccessibleInterval< FloatType > tile ) throws Exception {
 
 		Tensor inputTensor = DatasetConverter.datasetToTensor( tile, mappingIn );
 		if ( inputTensor != null ) {

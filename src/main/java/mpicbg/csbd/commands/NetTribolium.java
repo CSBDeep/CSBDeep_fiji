@@ -56,8 +56,12 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 	public void run() {
 
 		try {
-			validateInput(input, "3D grayscale image with dimension order X-Y-Z", OptionalLong.empty(),
-					OptionalLong.empty(), OptionalLong.empty());
+			validateInput(
+					input,
+					"3D grayscale image with dimension order X-Y-Z",
+					OptionalLong.empty(),
+					OptionalLong.empty(),
+					OptionalLong.empty() );
 
 			AxisType[] mapping = { Axes.TIME, Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
 			if ( input.dimension( Axes.Z ) < input.dimension( Axes.CHANNEL ) ) {
@@ -65,8 +69,8 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 				mapping[ 4 ] = Axes.Z;
 			}
 			super.runWithMapping( mapping );
-		} catch (IOException e) {
-			showError(e.getMessage());
+		} catch ( IOException e ) {
+			showError( e.getMessage() );
 		}
 	}
 }

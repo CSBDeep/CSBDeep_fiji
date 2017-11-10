@@ -43,7 +43,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 	@Parameter( label = "Scale Z", min = "1", max = "15" )
 	protected float scale = 10.2f;
 
-	@Parameter( label = "Batch size", min = "1")
+	@Parameter( label = "Batch size", min = "1" )
 	protected int batchSize = 10;
 
 	@Override
@@ -80,11 +80,16 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 	@Override
 	public void run() {
 		try {
-			validateInput(input, "4D image with dimension order X-Y-C-Z and two channels", OptionalLong.empty(),
-					OptionalLong.empty(), OptionalLong.of(2), OptionalLong.empty());
+			validateInput(
+					input,
+					"4D image with dimension order X-Y-C-Z and two channels",
+					OptionalLong.empty(),
+					OptionalLong.empty(),
+					OptionalLong.of( 2 ),
+					OptionalLong.empty() );
 			runModel();
-		} catch (IOException e) {
-			showError(e.getMessage());
+		} catch ( IOException e ) {
+			showError( e.getMessage() );
 		}
 	}
 
@@ -171,14 +176,14 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		runBatches( rotated0, rotated1, result0, result1 );
 
 		resultDatasets = new ArrayList<>();
-		for (int i = 0; i+1 < result0.size() && i+1 < result1.size(); i += 2 ) {
+		for ( int i = 0; i + 1 < result0.size() && i + 1 < result1.size(); i += 2 ) {
 			//prediction for ZY rotation
 			RandomAccessibleInterval< FloatType > res0_pred =
-					Views.stack( result0.get( i ), result0.get( i+1 ) );
+					Views.stack( result0.get( i ), result0.get( i + 1 ) );
 
 			//prediction for ZX rotation
 			RandomAccessibleInterval< FloatType > res1_pred =
-					Views.stack( result1.get( i ), result1.get( i+1 ) );
+					Views.stack( result1.get( i ), result1.get( i + 1 ) );
 
 			// rotate output stacks back
 			//TODO the rotation dimensions are not dynamic yet, we should use variables
@@ -200,10 +205,10 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 					prediction );
 			printDim( "prediction", prediction );
 
-			String name = OUTPUT_NAMES.length > i/2 ? OUTPUT_NAMES[i/2] : GENERIC_OUTPUT_NAME + i/2;
-			resultDatasets.add(wrapIntoDataset(name, Views.permute( prediction, 2, 3 )));
+			String name = OUTPUT_NAMES.length > i / 2 ? OUTPUT_NAMES[ i / 2 ] : GENERIC_OUTPUT_NAME + i / 2;
+			resultDatasets.add( wrapIntoDataset( name, Views.permute( prediction, 2, 3 ) ) );
 		}
-		if (!resultDatasets.isEmpty()) {
+		if ( !resultDatasets.isEmpty() ) {
 			progressWindow.addLog( "All done!" );
 			progressWindow.setCurrentStepDone();
 		} else {
@@ -239,24 +244,23 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 			// try it again with a smaller batch size.
 			batchSize /= 2;
 			// Check if the batch size is at 1 already
-			if (batchSize < 1) {
+			if ( batchSize < 1 ) {
 				progressWindow.setCurrentStepFail();
 				return;
 			}
-			progressWindow.addError("Out of memory exception occurred. Trying with batch size: " + batchSize);
-			progressWindow.addRounds(1);
+			progressWindow.addError( "Out of memory exception occurred. Trying with batch size: " + batchSize );
+			progressWindow.addRounds( 1 );
 			progressWindow.setNextRound();
-			runBatches(rotated0, rotated1, result0, result1);
+			runBatches( rotated0, rotated1, result0, result1 );
 			return;
 		}
 
 	}
 
-	private static < T extends RealType< T >, U extends RealType< U >, V extends RealType< V > >
-			void pointwiseGeometricMean(
-					IterableInterval< T > in1,
-					RandomAccessibleInterval< U > in2,
-					RandomAccessibleInterval< V > out ) {
+	private static < T extends RealType< T >, U extends RealType< U >, V extends RealType< V > > void pointwiseGeometricMean(
+			IterableInterval< T > in1,
+			RandomAccessibleInterval< U > in2,
+			RandomAccessibleInterval< V > out ) {
 		Cursor< T > i1 = in1.cursor();
 		RandomAccess< U > i2 = in2.randomAccess();
 		RandomAccess< V > o = out.randomAccess();

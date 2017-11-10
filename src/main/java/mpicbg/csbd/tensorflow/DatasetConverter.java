@@ -9,8 +9,7 @@ import org.tensorflow.Tensor;
 
 public class DatasetConverter {
 
-	public static RandomAccessibleInterval< FloatType >
-			tensorToDataset( Tensor tensor, int[] mapping ) {
+	public static RandomAccessibleInterval< FloatType > tensorToDataset( Tensor tensor, int[] mapping ) {
 
 		RandomAccessibleInterval< FloatType > outImg = Tensors.imgFloat( tensor, mapping );
 		return Views.dropSingletonDimensions( outImg );

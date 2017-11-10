@@ -82,8 +82,8 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	@Parameter( label = "Overlap between tiles", min = "0", stepSize = "16" )
 	protected int overlap = 32;
 
-	@Parameter(type = ItemIO.OUTPUT)
-	protected List<Dataset> resultDatasets;
+	@Parameter( type = ItemIO.OUTPUT )
+	protected List< Dataset > resultDatasets;
 
 	protected String modelFileUrl;
 	protected String modelName;
@@ -289,15 +289,14 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 			// try it again with more tiles.
 			nTiles *= 2;
 			// Check if the number of tiles is to large already
-			if (Arrays.stream(Intervals.dimensionsAsLongArray(modelInput)).max().getAsLong()
-					/ nTiles < blockMultiple) {
+			if ( Arrays.stream( Intervals.dimensionsAsLongArray( modelInput ) ).max().getAsLong() / nTiles < blockMultiple ) {
 				progressWindow.setCurrentStepFail();
 				return;
 			}
-			progressWindow.addError("Out of memory exception occurred. Trying with " + nTiles + " tiles...");
-			progressWindow.addRounds(1);
+			progressWindow.addError( "Out of memory exception occurred. Trying with " + nTiles + " tiles..." );
+			progressWindow.addRounds( 1 );
 			progressWindow.setNextRound();
-			executeModel(modelInput);
+			executeModel( modelInput );
 			return;
 
 		} catch ( InterruptedException exc ) {
@@ -306,12 +305,12 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		}
 
 		resultDatasets = new ArrayList<>();
-		for (int i = 0; i < result.size(); i++) {
+		for ( int i = 0; i < result.size(); i++ ) {
 			progressWindow.addLog( "Displaying result image " + i + ".." );
-			String name = OUTPUT_NAMES.length > i ? OUTPUT_NAMES[i] : GENERIC_OUTPUT_NAME + i;
-			resultDatasets.add(wrapIntoDataset(name, result.get(i)));
+			String name = OUTPUT_NAMES.length > i ? OUTPUT_NAMES[ i ] : GENERIC_OUTPUT_NAME + i;
+			resultDatasets.add( wrapIntoDataset( name, result.get( i ) ) );
 		}
-		if (!resultDatasets.isEmpty()) {
+		if ( !resultDatasets.isEmpty() ) {
 			progressWindow.addLog( "All done!" );
 			progressWindow.setCurrentStepDone();
 		} else {
@@ -359,29 +358,28 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		System.out.println( title + ": " + Arrays.toString( dims ) );
 	}
 
-	protected < U extends RealType<U> & NativeType<U>> Dataset wrapIntoDataset( String name, RandomAccessibleInterval< U > img ) {
+	protected < U extends RealType< U > & NativeType< U > > Dataset wrapIntoDataset( String name, RandomAccessibleInterval< U > img ) {
 
 		//TODO convert back to original format to be able to save and load it (float 32 bit does not load in Fiji)
 
-		Dataset dataset = datasetService.create( new ImgPlus<>(ImgView.wrap(img, new ArrayImgFactory<>()) ) );
-		dataset.setName(name);
+		Dataset dataset = datasetService.create( new ImgPlus<>( ImgView.wrap( img, new ArrayImgFactory<>() ) ) );
+		dataset.setName( name );
 		for ( int i = 0; i < dataset.numDimensions(); i++ ) {
 			dataset.setAxis( input.axis( bridge.getOutputDimByInputDim( i ) ), i );
 		}
 		return dataset;
 	}
 
-	protected static void validateInput(final Dataset dataset, final String formatDesc,
-			final OptionalLong... expectedDims) throws IOException {
-		if (dataset.numDimensions() != expectedDims.length) {
-			throw new IOException(
-					"Can not process " + dataset.numDimensions() + "D images.\nExpected format: " + formatDesc);
-		}
-		for (int i = 0; i < expectedDims.length; i++) {
-			if (expectedDims[i].isPresent() && expectedDims[i].getAsLong() != dataset.dimension(i)) {
-				throw new IOException("Can not process image. Dimension " + i + " musst be of size "
-						+ expectedDims[i].getAsLong() + ".\nExpected format: " + formatDesc);
-			}
+	protected static void validateInput(
+			final Dataset dataset,
+			final String formatDesc,
+			final OptionalLong... expectedDims ) throws IOException {
+		if ( dataset.numDimensions() != expectedDims.length ) { throw new IOException( "Can not process " + dataset
+				.numDimensions() + "D images.\nExpected format: " + formatDesc ); }
+		for ( int i = 0; i < expectedDims.length; i++ ) {
+			if ( expectedDims[ i ].isPresent() && expectedDims[ i ].getAsLong() != dataset
+					.dimension( i ) ) { throw new IOException( "Can not process image. Dimension " + i + " musst be of size " + expectedDims[ i ]
+							.getAsLong() + ".\nExpected format: " + formatDesc ); }
 		}
 	}
 }
