@@ -27,7 +27,6 @@
 		<url>http://www.csbdresden.de/</url>
 	</organization>
 	<licenses>
-		<!-- TODO decide license -->
 		<license>
 			<name>Simplified BSD License</name>
 			<distribution>repo</distribution>
@@ -106,9 +105,12 @@
 
 	<properties>
 		<package-name>mpicbg.csbd</package-name>
-		<main-class>mpicbg.csbd.commands.AnyNetwork</main-class>
-		<license.licenseName>bsd_2</license.licenseName> <!-- TODO Put in license here -->
-		<license.copyrightOwners>My Company, Inc.</license.copyrightOwners> <!-- TODO Put in copyright owner here -->
+
+		<!-- LICENSE -->
+		<license.licenseName>bsd_2</license.licenseName>
+		<license.copyrightOwners>Deborah Schmidt, Florian Jug, Benjamin Wilhelm</license.copyrightOwners>
+
+		<!-- VERSIONS -->
 		<tensorflow.version>1.3.0</tensorflow.version>
 		<imagej-tensorflow.version>0.2.0</imagej-tensorflow.version>
 	</properties>
