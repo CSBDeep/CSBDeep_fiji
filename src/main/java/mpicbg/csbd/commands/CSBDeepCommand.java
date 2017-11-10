@@ -1,5 +1,7 @@
 package mpicbg.csbd.commands;
 
+import com.google.protobuf.InvalidProtocolBufferException;
+
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
@@ -16,6 +18,20 @@ import java.util.concurrent.Executors;
 
 import javax.swing.JOptionPane;
 
+import net.imagej.Dataset;
+import net.imagej.DatasetService;
+import net.imagej.ImgPlus;
+import net.imagej.axis.AxisType;
+import net.imagej.tensorflow.TensorFlowService;
+import net.imglib2.IterableInterval;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.img.ImgView;
+import net.imglib2.img.array.ArrayImgFactory;
+import net.imglib2.type.NativeType;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Intervals;
+
 import org.scijava.Cancelable;
 import org.scijava.Initializable;
 import org.scijava.ItemIO;
@@ -30,24 +46,9 @@ import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 import mpicbg.csbd.normalize.PercentileNormalizer;
 import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 import mpicbg.csbd.ui.CSBDeepProgress;
-import net.imagej.Dataset;
-import net.imagej.DatasetService;
-import net.imagej.ImgPlus;
-import net.imagej.axis.AxisType;
-import net.imagej.tensorflow.TensorFlowService;
-import net.imglib2.IterableInterval;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.img.ImgView;
-import net.imglib2.img.array.ArrayImgFactory;
-import net.imglib2.type.NativeType;
-import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.util.Intervals;
 
 public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
 		implements
