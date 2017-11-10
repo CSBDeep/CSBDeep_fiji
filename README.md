@@ -19,6 +19,12 @@ The first image popping up is the normalized image (for debugging).
 
 If all goes well, another image will be displayed representing the result of the model execution.
 
+## Develop
+
+### Code Style
+
+If you use eclipse you can import our code formatter `doc/eclipse-code-formatter.xml`, code cleanup (`doc/eclipse-code-clean-up.xml`) and import order (`eclipse-import-order.importorder`) settings.
+
 ## GPU support
 TODO -> https://github.com/frauzufall/CSBDeep/issues/1
 
