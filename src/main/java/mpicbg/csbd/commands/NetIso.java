@@ -26,6 +26,8 @@ import net.imglib2.interpolation.randomaccess.NLinearInterpolatorFactory;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.realtransform.Scale;
+import net.imglib2.type.Type;
+import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
@@ -101,6 +103,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		final AxisType[] mapping = { Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
 		setMapping( mapping );
 
+		final int n = input.numDimensions();
 		final int dimChannel = input.dimensionIndex( Axes.CHANNEL );
 		final int dimX = input.dimensionIndex( Axes.X );
 		final int dimY = input.dimensionIndex( Axes.Y );
@@ -112,69 +115,36 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		progressWindow.setNumRounds( 2 );
 		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
 
+		// Normalize the input
 		progressWindow.addLog( "Normalize input.. " );
+		final RandomAccessibleInterval< FloatType > normalizedInput = normalize( input.typedImg( ( T ) input.firstElement() ), dimChannel );
 
-		final int n = input.numDimensions();
-
-		// ========= NORMALIZATION
-		// TODO maybe there is a better solution than splitting the image, normalizing each channel and combining it again.
-		final IntervalView< T > channel0 =
-				Views.hyperSlice( input.typedImg( ( T ) input.firstElement() ), dimChannel, 0 );
-		final IntervalView< T > channel1 =
-				Views.hyperSlice( input.typedImg( ( T ) input.firstElement() ), dimChannel, 1 );
-
-		prepareNormalization( channel0 );
-		final Img< FloatType > normalizedChannel0 = normalizeImage( channel0 );
-
-		prepareNormalization( channel1 );
-		final Img< FloatType > normalizedChannel1 = normalizeImage( channel1 );
-
-		final RandomAccessibleInterval< FloatType > normalizedInput = Views.permute(
-				Views.stack( normalizedChannel0, normalizedChannel1 ),
-				n - 1,
-				dimChannel );
-
+		// Upsampling
 		progressWindow.addLog( "Upsampling.." );
-
-		// ========= UPSAMPLING
-		final RealRandomAccessible< FloatType > interpolated =
-				Views.interpolate(
-						Views.extendBorder( normalizedInput ),
-						new NLinearInterpolatorFactory<>() );
-
-		// Affine transformation to scale the Z axis
-		final double s = scale;
-		final double[] scales = IntStream.range( 0, n ).mapToDouble( i -> i == dimZ ? s : 1 ).toArray();
-		final AffineGet scaling = new Scale( scales );
-
-		// Scale min and max to create an interval afterwards
-		final double[] targetMin = new double[ n ];
-		final double[] targetMax = new double[ n ];
-		scaling.apply( Intervals.minAsDoubleArray( normalizedInput ), targetMin );
-		scaling.apply( Intervals.maxAsDoubleArray( normalizedInput ), targetMax );
-
-		// Apply the transformation
-		final RandomAccessible< FloatType > scaled = RealViews.affine( interpolated, scaling );
-		final RandomAccessibleInterval< FloatType > upsampled = Views.interval(
-				scaled,
-				Arrays.stream( targetMin ).mapToLong( d -> ( long ) Math.ceil( d ) ).toArray(),
-				Arrays.stream( targetMax ).mapToLong( d -> ( long ) Math.floor( d ) ).toArray() );
+		final RandomAccessibleInterval< FloatType > upsampled = upsample( normalizedInput, dimZ, scale );
 
 		// ========== ROTATION
 
-		progressWindow.addLog( "Rotate around Y.." );
-
 		// Create the first rotated image
+		progressWindow.addLog( "Rotate around Y.." );
 		final RandomAccessibleInterval< FloatType > rotated0 = Views.permute( upsampled, dimX, dimZ );
-		progressWindow.addLog( "Rotate around X.." );
 
 		// Create the second rotated image
+		progressWindow.addLog( "Rotate around X.." );
 		final RandomAccessibleInterval< FloatType > rotated1 = Views.permute( rotated0, dimY, dimZ );
 
+		// Copy the transformed images to apply the transformations
+		progressWindow.addLog( "Apply transformations.." );
+		final RandomAccessibleInterval< FloatType > rotated0_applied = ArrayImgs.floats( Intervals.dimensionsAsLongArray( rotated0 ) );
+		final RandomAccessibleInterval< FloatType > rotated1_applied = ArrayImgs.floats( Intervals.dimensionsAsLongArray( rotated1 ) );
+		copy( Views.iterable( rotated0 ), rotated0_applied );
+		copy( Views.iterable( rotated1 ), rotated1_applied );
+
+		// Outputs
 		final List< RandomAccessibleInterval< FloatType > > result0 = new ArrayList<>();
 		final List< RandomAccessibleInterval< FloatType > > result1 = new ArrayList<>();
 
-		runBatches( rotated0, rotated1, result0, result1 );
+		runBatches( rotated0_applied, rotated1_applied, result0, result1 );
 
 		resultDatasets = new ArrayList<>();
 		for ( int i = 0; i + 1 < result0.size() && i + 1 < result1.size() && i / 2 < OUTPUT_NAMES.length; i += 2 ) {
@@ -257,13 +227,96 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 	}
 
-	private static < T extends RealType< T >, U extends RealType< U >, V extends RealType< V > > void pointwiseGeometricMean(
-			final IterableInterval< T > in1,
-			final RandomAccessibleInterval< U > in2,
-			final RandomAccessibleInterval< V > out ) {
-		final Cursor< T > i1 = in1.cursor();
-		final RandomAccess< U > i2 = in2.randomAccess();
-		final RandomAccess< V > o = out.randomAccess();
+	// ====================== HELPER METHODS =================================
+
+	private RandomAccessibleInterval< FloatType > normalize( RandomAccessibleInterval< T > in, int dimChannel ) {
+		// TODO maybe there is a better solution than splitting the image, normalizing each channel and combining it again.
+		final IntervalView< T > channel0 = Views.hyperSlice( in, dimChannel, 0 );
+		final IntervalView< T > channel1 = Views.hyperSlice( in, dimChannel, 1 );
+
+		prepareNormalization( channel0 );
+		final Img< FloatType > normalizedChannel0 = normalizeImage( channel0 );
+
+		prepareNormalization( channel1 );
+		final Img< FloatType > normalizedChannel1 = normalizeImage( channel1 );
+
+		return Views.permute( Views.stack( normalizedChannel0, normalizedChannel1 ), in.numDimensions() - 1, dimChannel );
+	}
+
+	/**
+	 * Scales the given dimension by the given scale and uses linear
+	 * interpolation for the missing values.
+	 * 
+	 * NOTE: This method will return very fast because the scaling is not
+	 * applied in this method. The scaling is only applied on access of pixel
+	 * values.
+	 * 
+	 * NOTE: The resulting dimension length will not match old_dimension_length
+	 * * scale. But the min and max of the image are mapped to the scaled
+	 * positions and used to define the new interval.
+	 * 
+	 * @param normalizedInput
+	 *            Input image
+	 * @param dim
+	 *            Dimension number to scale
+	 * @param scale
+	 *            Scale of the dimension
+	 * @return The scaled image
+	 */
+	private < U extends NumericType< U > > RandomAccessibleInterval< U > upsample(
+			final RandomAccessibleInterval< U > normalizedInput,
+			final int dim,
+			final float scale ) {
+		int n = normalizedInput.numDimensions();
+
+		// Interpolate
+		final RealRandomAccessible< U > interpolated =
+				Views.interpolate(
+						Views.extendBorder( normalizedInput ),
+						new NLinearInterpolatorFactory<>() );
+
+		// Affine transformation to scale the Z axis
+		final double[] scales = IntStream.range( 0, n ).mapToDouble( i -> i == dim ? scale : 1 ).toArray();
+		final AffineGet scaling = new Scale( scales );
+
+		// Scale min and max to create an interval afterwards
+		final double[] targetMin = new double[ n ];
+		final double[] targetMax = new double[ n ];
+		scaling.apply( Intervals.minAsDoubleArray( normalizedInput ), targetMin );
+		scaling.apply( Intervals.maxAsDoubleArray( normalizedInput ), targetMax );
+
+		// Apply the transformation
+		final RandomAccessible< U > scaled = RealViews.affine( interpolated, scaling );
+		return Views.interval(
+				scaled,
+				Arrays.stream( targetMin ).mapToLong( d -> ( long ) Math.ceil( d ) ).toArray(),
+				Arrays.stream( targetMax ).mapToLong( d -> ( long ) Math.floor( d ) ).toArray() );
+	}
+
+	/**
+	 * Copies one image into another. Used to apply the transformations.
+	 * 
+	 * @param in
+	 * @param out
+	 */
+	private < U extends Type< U > > void copy( final IterableInterval< U > in, final RandomAccessible< U > out ) {
+		final Cursor< U > i = in.cursor();
+		final RandomAccess< U > o = out.randomAccess();
+
+		while ( i.hasNext() ) {
+			i.fwd();
+			o.setPosition( i );
+			o.get().set( i.get() );
+		}
+	}
+
+	private < U extends RealType< U >, V extends RealType< V >, W extends RealType< W > > void pointwiseGeometricMean(
+			final IterableInterval< U > in1,
+			final RandomAccessibleInterval< V > in2,
+			final RandomAccessibleInterval< W > out ) {
+		final Cursor< U > i1 = in1.cursor();
+		final RandomAccess< V > i2 = in2.randomAccess();
+		final RandomAccess< W > o = out.randomAccess();
 
 		while ( i1.hasNext() ) {
 			i1.fwd();
@@ -272,5 +325,4 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 			o.get().setReal( Math.sqrt( i1.get().getRealFloat() * i2.get().getRealFloat() ) );
 		}
 	}
-
 }
