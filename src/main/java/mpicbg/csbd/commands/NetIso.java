@@ -6,13 +6,13 @@
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -131,7 +131,6 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		final AxisType[] mapping = { Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
 		setMapping( mapping );
 
-		final int n = input.numDimensions();
 		final int dimChannel = input.dimensionIndex( Axes.CHANNEL );
 		final int dimX = input.dimensionIndex( Axes.X );
 		final int dimY = input.dimensionIndex( Axes.Y );
@@ -257,7 +256,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 	// ====================== HELPER METHODS =================================
 
-	private RandomAccessibleInterval< FloatType > normalize( RandomAccessibleInterval< T > in, int dimChannel ) {
+	private RandomAccessibleInterval< FloatType > normalize( final RandomAccessibleInterval< T > in, final int dimChannel ) {
 		// TODO maybe there is a better solution than splitting the image, normalizing each channel and combining it again.
 		final IntervalView< T > channel0 = Views.hyperSlice( in, dimChannel, 0 );
 		final IntervalView< T > channel1 = Views.hyperSlice( in, dimChannel, 1 );
@@ -274,15 +273,15 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 	/**
 	 * Scales the given dimension by the given scale and uses linear
 	 * interpolation for the missing values.
-	 * 
+	 *
 	 * NOTE: This method will return very fast because the scaling is not
 	 * applied in this method. The scaling is only applied on access of pixel
 	 * values.
-	 * 
+	 *
 	 * NOTE: The resulting dimension length will not match old_dimension_length
 	 * * scale. But the min and max of the image are mapped to the scaled
 	 * positions and used to define the new interval.
-	 * 
+	 *
 	 * @param normalizedInput
 	 *            Input image
 	 * @param dim
@@ -295,7 +294,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 			final RandomAccessibleInterval< U > normalizedInput,
 			final int dim,
 			final float scale ) {
-		int n = normalizedInput.numDimensions();
+		final int n = normalizedInput.numDimensions();
 
 		// Interpolate
 		final RealRandomAccessible< U > interpolated =
@@ -323,7 +322,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 	/**
 	 * Copies one image into another. Used to apply the transformations.
-	 * 
+	 *
 	 * @param in
 	 * @param out
 	 */
