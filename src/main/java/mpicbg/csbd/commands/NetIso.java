@@ -177,7 +177,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		runBatches( rotated0, rotated1, result0, result1 );
 
 		resultDatasets = new ArrayList<>();
-		for ( int i = 0; i + 1 < result0.size() && i + 1 < result1.size(); i += 2 ) {
+		for ( int i = 0; i + 1 < result0.size() && i + 1 < result1.size() && i / 2 < OUTPUT_NAMES.length; i += 2 ) {
 			//prediction for ZY rotation
 			RandomAccessibleInterval< FloatType > res0_pred =
 					Views.stack( result0.get( i ), result0.get( i + 1 ) );
@@ -206,8 +206,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 					prediction );
 			printDim( "prediction", prediction );
 
-			final String name = OUTPUT_NAMES.length > i / 2 ? OUTPUT_NAMES[ i / 2 ] : GENERIC_OUTPUT_NAME + i / 2;
-			resultDatasets.add( wrapIntoDataset( name, Views.permute( prediction, 2, 3 ) ) );
+			resultDatasets.add( wrapIntoDataset( OUTPUT_NAMES[ i / 2 ], Views.permute( prediction, 2, 3 ) ) );
 		}
 		if ( !resultDatasets.isEmpty() ) {
 			progressWindow.addLog( "All done!" );

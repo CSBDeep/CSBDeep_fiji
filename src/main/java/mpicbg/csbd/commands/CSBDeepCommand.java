@@ -57,7 +57,6 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		ActionListener {
 
 	protected static String[] OUTPUT_NAMES = { "result", "control" };
-	protected static String GENERIC_OUTPUT_NAME = "output-";
 
 	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
 	protected Dataset input;
@@ -306,10 +305,9 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		}
 
 		resultDatasets = new ArrayList<>();
-		for ( int i = 0; i < result.size(); i++ ) {
-			progressWindow.addLog( "Displaying result image " + i + ".." );
-			final String name = OUTPUT_NAMES.length > i ? OUTPUT_NAMES[ i ] : GENERIC_OUTPUT_NAME + i;
-			resultDatasets.add( wrapIntoDataset( name, result.get( i ) ) );
+		for ( int i = 0; i < result.size() && i < OUTPUT_NAMES.length; i++ ) {
+			progressWindow.addLog( "Displaying " + OUTPUT_NAMES[ i ] + " image.." );
+			resultDatasets.add( wrapIntoDataset( OUTPUT_NAMES[ i ], result.get( i ) ) );
 		}
 		if ( !resultDatasets.isEmpty() ) {
 			progressWindow.addLog( "All done!" );
