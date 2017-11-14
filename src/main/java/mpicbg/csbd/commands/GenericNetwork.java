@@ -34,6 +34,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -43,11 +44,16 @@ import java.util.concurrent.Executors;
 import javax.swing.JOptionPane;
 
 import net.imagej.Dataset;
+import net.imagej.DatasetService;
 import net.imagej.ImageJ;
+import net.imagej.ImgPlus;
 import net.imagej.ops.OpService;
 import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.img.ImgView;
+import net.imglib2.img.array.ArrayImgFactory;
+import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
@@ -84,8 +90,7 @@ public class GenericNetwork< T extends RealType< T > > extends PercentileNormali
 		Initializable,
 		ActionListener {
 
-	@Parameter( visibility = ItemVisibility.MESSAGE )
-	private final String header = "This command removes noise from your images.";
+	private static final String OUTPUT_NAME = "output_";
 
 	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
 	private Dataset input;
@@ -136,8 +141,11 @@ public class GenericNetwork< T extends RealType< T > > extends PercentileNormali
 	@Parameter
 	private PrefService prefService;
 
+	@Parameter
+	private DatasetService datasetService;
+
 	@Parameter( type = ItemIO.OUTPUT )
-	private Dataset outputImage;
+	protected List< Dataset > resultDatasets;
 
 	private SavedModelBundle model;
 	private SignatureDef sig;
@@ -345,19 +353,20 @@ public class GenericNetwork< T extends RealType< T > > extends PercentileNormali
 			progressWindow.addError( "Process canceled." );
 			progressWindow.setCurrentStepFail();
 		}
+		resultDatasets = new ArrayList<>();
 		if ( result != null ) {
-			if ( result.size() > 0 ) {
-				progressWindow.addLog( "Displaying result image.." );
-				uiService.show( "result", result.get( 0 ) );
-				progressWindow.addLog( "Displaying control image.." );
-				uiService.show( "control", result.get( 1 ) );
-				progressWindow.addLog( "All done!" );
-				progressWindow.setCurrentStepDone();
-			} else {
-				progressWindow.setCurrentStepFail();
+			// TODO Remove i < 2 when the project network isn't expanded in the channel dimension anymore
+			for ( int i = 0; i < result.size() && i < 2; i++ ) {
+				progressWindow.addLog( "Displaying result image " + i + ".." );
+				resultDatasets.add( wrapIntoDataset( OUTPUT_NAME + i, result.get( i ) ) );
 			}
 		}
-
+		if ( !resultDatasets.isEmpty() ) {
+			progressWindow.addLog( "All done!" );
+			progressWindow.setCurrentStepDone();
+		} else {
+			progressWindow.setCurrentStepFail();
+		}
 	}
 
 	private void savePreferences() {
@@ -424,4 +433,16 @@ public class GenericNetwork< T extends RealType< T > > extends PercentileNormali
 		}
 	}
 
+	/** TODO remove: copy from CSBDeepCommand */
+	protected < U extends RealType< U > & NativeType< U > > Dataset wrapIntoDataset( final String name, final RandomAccessibleInterval< U > img ) {
+
+		//TODO convert back to original format to be able to save and load it (float 32 bit does not load in Fiji)
+
+		final Dataset dataset = datasetService.create( new ImgPlus<>( ImgView.wrap( img, new ArrayImgFactory<>() ) ) );
+		dataset.setName( name );
+		for ( int i = 0; i < dataset.numDimensions(); i++ ) {
+			dataset.setAxis( input.axis( bridge.getOutputDimByInputDim( i ) ), i );
+		}
+		return dataset;
+	}
 }
