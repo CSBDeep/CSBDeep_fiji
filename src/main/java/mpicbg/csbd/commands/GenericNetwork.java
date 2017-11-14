@@ -76,8 +76,8 @@ import mpicbg.csbd.ui.MappingDialog;
 
 /**
  */
-@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Any network", headless = true )
-public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer< T >
+@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Generic network", headless = true )
+public class GenericNetwork< T extends RealType< T > > extends PercentileNormalizer< T >
 		implements
 		Command,
 		Cancelable,
@@ -98,10 +98,10 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 	protected float _percentileBottom = 0.03f;
 	@Parameter
 	protected float _percentileTop = 0.998f;
-	@Parameter
+
 	protected float _min = 0;
-	@Parameter
-	protected float _max = 100;
+	protected float _max = 1;
+
 	@Parameter( label = "Clamp normalization" )
 	protected boolean _clamp = false;
 
@@ -390,7 +390,7 @@ public class AnyNetwork< T extends RealType< T > > extends PercentileNormalizer<
 			ij.ui().show( dataset );
 
 			// invoke the plugin
-			ij.command().run( AnyNetwork.class, true );
+			ij.command().run( GenericNetwork.class, true );
 		}
 
 	}
