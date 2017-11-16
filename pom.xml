@@ -17,9 +17,7 @@
 	<version>0.1.0-SNAPSHOT</version>
 
 	<name>CSBDeep</name>
-	<description>
-		CSBDeep Fiji Plugin: Use deep neural networks for image restoration for fluorescence microscopy.
-	</description>
+	<description>CSBDeep: CNNs for image restoration of fluorescence microscopy.</description>
 	<url>csbdeep.github.io</url> <!-- TODO check url -->
 	<inceptionYear>2017</inceptionYear>
 	<organization> <!-- TODO Is the organization fine? -->
