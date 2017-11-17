@@ -92,7 +92,7 @@ public class CSBDeepProgress extends JPanel
 	int numRounds = 1;
 
 	JLabel noTensorFlow =
-			new JLabel( "<html>Couldn't load tensorflow from library<br />path and will therefore use CPU<br />instead of GPU version.<br />This will affect performance.</html>", SwingConstants.RIGHT );
+			new JLabel( "<html>Couldn't load tensorflow from library<br />path and will therefore use CPU<br />instead of GPU version.<br />This will affect performance.<br />See wiki for further details.</html>", SwingConstants.RIGHT );
 
 	private final SimpleAttributeSet red = new SimpleAttributeSet();
 

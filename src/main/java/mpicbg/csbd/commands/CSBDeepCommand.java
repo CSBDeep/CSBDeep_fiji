@@ -140,13 +140,17 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	@Override
 	public void initialize() {
-		System.out.println( "CSBDeepCommand constructor" );
+		System.out.println( "Loading tensorflow jni from library path..." );
 		try {
 			System.loadLibrary( "tensorflow_jni" );
 		} catch ( final UnsatisfiedLinkError e ) {
 			useTensorFlowGPU = false;
 			System.out.println(
-					"Couldn't load tensorflow from library path. Using CPU version from jar file." );
+					"Couldn't load tensorflow from library path:" );
+			System.out.println( e.getMessage() );
+			System.out.println( "If the problem is CUDA related. Make sure CUDA and cuDNN are in the LD_LIBRARY_PATH." );
+			System.out.println( "The current library path is: LD_LIBRARY_PATH=" + System.getenv("LD_LIBRARY_PATH"));
+			System.out.println( "Using CPU version from jar file." );
 		}
 	}
 
