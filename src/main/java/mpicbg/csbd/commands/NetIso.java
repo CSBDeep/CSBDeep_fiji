@@ -390,7 +390,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 	}
 
 	private long[] computeBlockSize( final RandomAccessibleInterval< ? > in ) {
-		final int threads = ( int ) ( Runtime.getRuntime().availableProcessors() * 1.5 );
+		final int threads = Runtime.getRuntime().availableProcessors();
 
 		final long[] blockSize = Intervals.dimensionsAsLongArray( in );
 		int tmpMax = 0;
