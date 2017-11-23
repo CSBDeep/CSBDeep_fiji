@@ -35,22 +35,25 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
+import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
-import net.imglib2.Cursor;
-import net.imglib2.IterableInterval;
-import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.interpolation.randomaccess.NLinearInterpolatorFactory;
+import net.imglib2.loops.LoopBuilder;
+import net.imglib2.loops.LoopBuilder.TriConsumer;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.realtransform.Scale;
@@ -66,6 +69,7 @@ import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
+import mpicbg.csbd.imglib2.TiledView;
 import mpicbg.csbd.ui.CSBDeepProgress;
 
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Isotropic Reconstruction - Retina", headless = true )
@@ -164,8 +168,8 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		progressWindow.addLog( "Apply transformations.." );
 		final RandomAccessibleInterval< FloatType > rotated0_applied = ArrayImgs.floats( Intervals.dimensionsAsLongArray( rotated0 ) );
 		final RandomAccessibleInterval< FloatType > rotated1_applied = ArrayImgs.floats( Intervals.dimensionsAsLongArray( rotated1 ) );
-		copy( Views.iterable( rotated0 ), rotated0_applied );
-		copy( Views.iterable( rotated1 ), rotated1_applied );
+		copy( rotated0, rotated0_applied );
+		copy( rotated1, rotated1_applied );
 
 		// Outputs
 		final List< RandomAccessibleInterval< FloatType > > result0 = new ArrayList<>();
@@ -198,7 +202,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 			final RandomAccessibleInterval< FloatType > prediction =
 					ArrayImgs.floats( Intervals.dimensionsAsLongArray( res0_pred ) );
 			pointwiseGeometricMean(
-					Views.iterable( res0_pred ),
+					res0_pred,
 					res1_pred,
 					prediction );
 			printDim( "prediction", prediction );
@@ -326,30 +330,76 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 	 * @param in
 	 * @param out
 	 */
-	private < U extends Type< U > > void copy( final IterableInterval< U > in, final RandomAccessible< U > out ) {
-		final Cursor< U > i = in.cursor();
-		final RandomAccess< U > o = out.randomAccess();
+	private < U extends Type< U > > void copy( final RandomAccessibleInterval< U > in, final RandomAccessibleInterval< U > out ) {
+		final long[] blockSize = computeBlockSize( in );
 
-		while ( i.hasNext() ) {
-			i.fwd();
-			o.setPosition( i );
-			o.get().set( i.get() );
+		final TiledView< U > tiledViewIn = new TiledView<>( in, blockSize );
+		final TiledView< U > tiledViewOut = new TiledView<>( out, blockSize );
+
+		final ExecutorService pool = Executors.newWorkStealingPool();
+		final List< Future< ? > > futures = new ArrayList< Future< ? > >();
+
+		LoopBuilder.setImages( tiledViewIn, tiledViewOut ).forEachPixel(
+				( inTile, outTile ) -> {
+					final LoopBuilder< BiConsumer< U, U > > loop = LoopBuilder.setImages( inTile, outTile );
+					futures.add( pool.submit( () -> {
+						loop.forEachPixel( ( i, o ) -> o.set( i ) );
+					} ) );
+				} );
+
+		for ( final Future< ? > f : futures ) {
+			try {
+				f.get();
+			} catch ( InterruptedException | ExecutionException e ) {
+				e.printStackTrace();
+			}
 		}
 	}
 
 	private < U extends RealType< U >, V extends RealType< V >, W extends RealType< W > > void pointwiseGeometricMean(
-			final IterableInterval< U > in1,
+			final RandomAccessibleInterval< U > in1,
 			final RandomAccessibleInterval< V > in2,
 			final RandomAccessibleInterval< W > out ) {
-		final Cursor< U > i1 = in1.cursor();
-		final RandomAccess< V > i2 = in2.randomAccess();
-		final RandomAccess< W > o = out.randomAccess();
+		final long[] blockSize = computeBlockSize( in1 );
 
-		while ( i1.hasNext() ) {
-			i1.fwd();
-			i2.setPosition( i1 );
-			o.setPosition( i1 );
-			o.get().setReal( Math.sqrt( i1.get().getRealFloat() * i2.get().getRealFloat() ) );
+		final TiledView< U > tiledViewIn1 = new TiledView<>( in1, blockSize );
+		final TiledView< V > tiledViewIn2 = new TiledView<>( in2, blockSize );
+		final TiledView< W > tiledViewOut = new TiledView<>( out, blockSize );
+
+		final ExecutorService pool = Executors.newWorkStealingPool();
+		final List< Future< ? > > futures = new ArrayList< Future< ? > >();
+
+		LoopBuilder.setImages( tiledViewIn1, tiledViewIn2, tiledViewOut ).forEachPixel(
+				( in1Tile, in2Tile, outTile ) -> {
+					final LoopBuilder< TriConsumer< U, V, W > > loop = LoopBuilder.setImages( in1Tile, in2Tile, outTile );
+					futures.add( pool.submit( () -> {
+						loop.forEachPixel(
+								( i1, i2, o ) -> {
+									o.setReal( Math.sqrt( i1.getRealFloat() * i2.getRealFloat() ) );
+								} );
+					} ) );
+				} );
+
+		for ( final Future< ? > f : futures ) {
+			try {
+				f.get();
+			} catch ( InterruptedException | ExecutionException e ) {
+				e.printStackTrace();
+			}
 		}
+	}
+
+	private long[] computeBlockSize( final RandomAccessibleInterval< ? > in ) {
+		final int threads = ( int ) ( Runtime.getRuntime().availableProcessors() * 1.5 );
+
+		final long[] blockSize = Intervals.dimensionsAsLongArray( in );
+		int tmpMax = 0;
+		for ( int i = 0; i < blockSize.length; i++ ) {
+			tmpMax = blockSize[ i ] > blockSize[ tmpMax ] ? i : tmpMax;
+		}
+		final int max = tmpMax;
+		IntStream.range( 0, blockSize.length ).forEach(
+				( i ) -> blockSize[ i ] = i == max ? ( long ) Math.ceil( blockSize[ i ] * 1.0 / threads ) : blockSize[ i ] );
+		return blockSize;
 	}
 }
