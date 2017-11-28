@@ -6,13 +6,13 @@
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -79,6 +79,11 @@ public class TiledPrediction
 	protected Integer doneTileCount;
 
 	protected boolean cancelPressed = false;
+
+	/**
+	 * If singleton dimensions in the output should be dropped. Default: true
+	 */
+	private boolean dropSingletonDims = true;
 
 	ExecutorService pool = Executors.newSingleThreadExecutor();
 
@@ -403,9 +408,19 @@ public class TiledPrediction
 
 			if ( outputTensor != null ) { return DatasetConverter.tensorToDataset(
 					outputTensor,
-					mappingOut ); }
+					mappingOut,
+					dropSingletonDims ); }
 		}
 		return null;
+	}
+
+	/**
+	 * Set if singleton dimensions of the output image should be dropped. If the
+	 * tile size in one dimension is only one this could remove an important
+	 * dimension. Default value is true.
+	 */
+	public void setDropSingletonDims( final boolean dropSingletonDims ) {
+		this.dropSingletonDims = dropSingletonDims;
 	}
 
 	class TileRunner implements Callable< RandomAccessibleInterval< FloatType > > {

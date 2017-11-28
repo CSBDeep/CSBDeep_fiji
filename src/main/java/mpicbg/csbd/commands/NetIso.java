@@ -227,14 +227,17 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		result1.clear();
 
 		try {
+			BatchedTiledPrediction batchedPrediction0 =
+					new BatchedTiledPrediction( rotated0, bridge, model, progressWindow, nTiles, 4, overlap, batchSize );
+			BatchedTiledPrediction batchedPrediction1 =
+					new BatchedTiledPrediction( rotated1, bridge, model, progressWindow, nTiles, 4, overlap, batchSize );
+			batchedPrediction0.setDropSingletonDims( false );
+			batchedPrediction1.setDropSingletonDims( false );
 
-			result0.addAll( pool.submit(
-					new BatchedTiledPrediction( rotated0, bridge, model, progressWindow, nTiles, 4, overlap, batchSize ) ).get() );
+			result0.addAll( pool.submit( batchedPrediction0 ).get() );
 
 			progressWindow.setNextRound();
-
-			result1.addAll( pool.submit(
-					new BatchedTiledPrediction( rotated1, bridge, model, progressWindow, nTiles, 4, overlap, batchSize ) ).get() );
+			result1.addAll( pool.submit( batchedPrediction1 ).get() );
 
 		} catch ( RejectedExecutionException | InterruptedException exc ) {
 			return;

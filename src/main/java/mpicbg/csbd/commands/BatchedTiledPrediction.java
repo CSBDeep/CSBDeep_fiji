@@ -245,8 +245,7 @@ public class BatchedTiledPrediction extends TiledPrediction {
 			fittedResult.dimensions( resDimension );
 			System.out.println( "fittedResult3 dimensions: " + Arrays.toString( resDimension ) );
 
-			if ( fittedResult.dimension(
-					channelDim ) > 0 ) { return splitChannels( fittedResult, channelDim ); }
+			if ( channelDim >= 0 && channelDim < fittedResult.numDimensions() ) { return splitChannels( fittedResult, channelDim ); }
 
 			progressWindow.setCurrentStepFail();
 			return null;

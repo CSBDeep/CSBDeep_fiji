@@ -37,10 +37,10 @@ import org.tensorflow.Tensor;
 
 public class DatasetConverter {
 
-	public static RandomAccessibleInterval< FloatType > tensorToDataset( final Tensor tensor, final int[] mapping ) {
+	public static RandomAccessibleInterval< FloatType > tensorToDataset( final Tensor tensor, final int[] mapping, boolean dropSingletonDims ) {
 
 		final RandomAccessibleInterval< FloatType > outImg = Tensors.imgFloat( tensor, mapping );
-		return Views.dropSingletonDimensions( outImg );
+		return dropSingletonDims ? Views.dropSingletonDimensions( outImg ) : outImg;
 	}
 
 	public static Tensor datasetToTensor(

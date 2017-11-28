@@ -130,7 +130,7 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 		runBatches( normalizedInput, result );
 
 		resultDatasets = new ArrayList<>();
-		for ( int i = 0; i + 1 < result.size() && i < OUTPUT_NAMES.length; i++ ) {
+		for ( int i = 0; i < result.size() && i < OUTPUT_NAMES.length; i++ ) {
 			progressWindow.addLog( "Displaying " + OUTPUT_NAMES[ i ] + " image.." );
 			resultDatasets.add( wrapIntoDataset( OUTPUT_NAMES[ i ], result.get( i ) ) );
 		}
@@ -150,8 +150,10 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 
 		try {
 
-			result.addAll( pool.submit(
-					new BatchedTiledPrediction( rotated, bridge, model, progressWindow, nTiles, 4, overlap, batchSize ) ).get() );
+			BatchedTiledPrediction batchedPrediction =
+					new BatchedTiledPrediction( rotated, bridge, model, progressWindow, nTiles, 4, overlap, batchSize );
+			batchedPrediction.setDropSingletonDims( false );
+			result.addAll( pool.submit( batchedPrediction ).get() );
 
 		} catch ( RejectedExecutionException | InterruptedException exc ) {
 			return;
