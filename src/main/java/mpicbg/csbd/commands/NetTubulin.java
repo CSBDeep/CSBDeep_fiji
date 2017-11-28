@@ -52,7 +52,7 @@ import mpicbg.csbd.ui.CSBDeepProgress;
 
 /**
  */
-@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>3D Denoising - Tubulin", headless = true )
+@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Deconvolution - Microtubules", headless = true )
 public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 		implements
 		Command {
