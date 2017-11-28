@@ -73,6 +73,10 @@ public class BatchedTiledPrediction extends TiledPrediction {
 		batchDim = bridge.getDatasetDimIndexByTFIndex( 0 );
 		channelDim = bridge.getDatasetDimIndexByTFIndex(
 				bridge.getInputTensorInfo().getTensorShape().getDimCount() - 1 );
+		// If there is no channel dimension in the input image, we assume that a channel dimension might be added to the end of the image
+		if ( channelDim < 0 ) {
+			channelDim = input.numDimensions();
+		}
 		final TiledView< FloatType > tiledView = preprocess();
 		System.out.println( "batchDim  : " + batchDim );
 		System.out.println( "channelDim: " + channelDim );
