@@ -43,6 +43,7 @@ import net.imagej.axis.AxisType;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.view.Views;
 
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
@@ -56,6 +57,8 @@ import mpicbg.csbd.ui.CSBDeepProgress;
 public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 		implements
 		Command {
+
+	private static final int BLOCK_MULTIPLE = 4;
 
 	@Parameter( label = "Batch size", min = "1" )
 	protected int batchSize = 10;
@@ -94,17 +97,22 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 
 	@Override
 	public void run() {
+		Exception prevException = null;
 		try {
-			// TODO also allow 2D images
-			validateInput(
-					input,
-					"3D image with dimension order X-Y-T",
-					OptionalLong.empty(),
-					OptionalLong.empty(),
-					OptionalLong.empty() );
+			try {
+				validateInput(
+						input,
+						"3D image with dimension order X-Y-T",
+						OptionalLong.empty(),
+						OptionalLong.empty(),
+						OptionalLong.empty() );
+			} catch ( final IOException e ) {
+				prevException = e;
+				validateInput( input, "2D image with dimension order X-Y", OptionalLong.empty(), OptionalLong.empty() );
+			}
 			runModel();
 		} catch ( final IOException e ) {
-			showError( e.getMessage() );
+			showError( prevException.getMessage() + "\nOR\n" + e.getMessage() );
 		}
 	}
 
@@ -127,12 +135,12 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 		// Outputs
 		final List< RandomAccessibleInterval< FloatType > > result = new ArrayList<>();
 
-		runBatches( normalizedInput, result );
+		runBatches( normalizedInput, result, normalizedInput.numDimensions() == 3 );
 
 		resultDatasets = new ArrayList<>();
 		for ( int i = 0; i < result.size() && i < OUTPUT_NAMES.length; i++ ) {
 			progressWindow.addLog( "Displaying " + OUTPUT_NAMES[ i ] + " image.." );
-			resultDatasets.add( wrapIntoDataset( OUTPUT_NAMES[ i ], result.get( i ) ) );
+			resultDatasets.add( wrapIntoDataset( OUTPUT_NAMES[ i ], Views.dropSingletonDimensions( result.get( i ) ) ) );
 		}
 		if ( !resultDatasets.isEmpty() ) {
 			progressWindow.addLog( "All done!" );
@@ -144,16 +152,21 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 
 	private void runBatches(
 			final RandomAccessibleInterval< FloatType > rotated,
-			final List< RandomAccessibleInterval< FloatType > > result ) {
+			final List< RandomAccessibleInterval< FloatType > > result,
+			final boolean useBatch ) {
 
 		result.clear();
 
 		try {
 
-			BatchedTiledPrediction batchedPrediction =
-					new BatchedTiledPrediction( rotated, bridge, model, progressWindow, nTiles, 4, overlap, batchSize );
-			batchedPrediction.setDropSingletonDims( false );
-			result.addAll( pool.submit( batchedPrediction ).get() );
+			TiledPrediction tiledPrediction;
+			if ( useBatch ) {
+				tiledPrediction = new BatchedTiledPrediction( rotated, bridge, model, progressWindow, nTiles, BLOCK_MULTIPLE, overlap, batchSize );
+			} else {
+				tiledPrediction = new TiledPrediction( rotated, bridge, model, progressWindow, nTiles, BLOCK_MULTIPLE, overlap );
+			}
+			tiledPrediction.setDropSingletonDims( false );
+			result.addAll( pool.submit( tiledPrediction ).get() );
 
 		} catch ( RejectedExecutionException | InterruptedException exc ) {
 			return;
@@ -171,7 +184,7 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 			progressWindow.addError( "Out of memory exception occurred. Trying with batch size: " + batchSize );
 			progressWindow.addRounds( 1 );
 			progressWindow.setNextRound();
-			runBatches( rotated, result );
+			runBatches( rotated, result, useBatch );
 			return;
 		}
 
