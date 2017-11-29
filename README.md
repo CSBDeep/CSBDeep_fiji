@@ -26,31 +26,11 @@ If all goes well, another image will be displayed representing the result of the
 If you use eclipse you can import our code formatter `doc/eclipse-code-formatter.xml`, code cleanup (`doc/eclipse-code-clean-up.xml`) and import order (`eclipse-import-order.importorder`) settings.
 
 ## GPU support
-TODO -> https://github.com/frauzufall/CSBDeep/issues/1
 
-For GPU support put the native library with GPU support for tensorflow ([https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-gpu-linux-x86_64-1.2.0.tar.gz](https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-gpu-linux-x86_64-1.2.0.tar.gz)) into `Fiji.app/lib/linux64/`.
+For GPU support we load the TensorFlow JNI with GPU support manually when a command is initialized. This means that the GPU version of the TensorFLow JNI must be accessible in the java library path (For example `Fiji.app/lib/linux64` in a Fiji installation).
 
-Make sure cuda and cuDNN 5.1 are in the library path (set LD_LIBRARY_PATH if necessary).
+See the according [CSBDeep Wiki page](https://github.com/mpicbg-csbd/CSBDeep/wiki/CSBDeep-in-Fiji-–-Installation#gpu-support) for a detailed installation guide.
 
 ### Muliple GPUs
 
-If you have multiple GPUs with CUDA support installed it can happen that tensorflow tries to use the wrong one. To solve this problem set the environmet variable `CUDA_VISIBLE_DEVICES` to the id of the GPU (or GPUs) you want to use. You can find out the id with the command `nvidia-smi`.
-
-Example:
-
-    $ nvidia-smi
-    Thu Sep 14 17:39:33 2017       
-    +-----------------------------------------------------------------------------+
-    | NVIDIA-SMI 375.66                 Driver Version: 375.66                    |
-    |-------------------------------+----------------------+----------------------+
-    | GPU  Name        Persistence-M| Bus-Id        Disp.A | Volatile Uncorr. ECC |
-    | Fan  Temp  Perf  Pwr:Usage/Cap|         Memory-Usage | GPU-Util  Compute M. |
-    |===============================+======================+======================|
-    |   0  TITAN Xp            Off  | 0000:03:00.0     Off |                  N/A |
-    | 23%   28C    P8     9W / 250W |      1MiB / 12189MiB |      0%      Default |
-    +-------------------------------+----------------------+----------------------+
-    |   1  NVS 310             Off  | 0000:A1:00.0     N/A |                  N/A |
-    | 30%   56C    P0    N/A /  N/A |    294MiB /   961MiB |     N/A      Default |
-    +-------------------------------+----------------------+----------------------+
-
-    $ export CUDA_VISIBLE_DEVICES=0 && ./ImageJ-linux64
+See the according [CSBDeep Wiki page](https://github.com/mpicbg-csbd/CSBDeep/wiki/CSBDeep-in-Fiji-–-Installation#multiple-gpus).
