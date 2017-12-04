@@ -206,7 +206,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 					prediction );
 			printDim( "prediction", prediction );
 
-			resultDatasets.add( wrapIntoDataset( OUTPUT_NAMES[ i / 2 ], Views.permute( prediction, 2, 3 ) ) );
+			resultDatasets.add( wrapIntoDatasetView( OUTPUT_NAMES[ i / 2 ], Views.permute( prediction, 2, 3 ) ) );
 		}
 		if ( !resultDatasets.isEmpty() ) {
 			progressWindow.addLog( "All done!" );

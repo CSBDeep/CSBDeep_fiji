@@ -50,6 +50,8 @@ import net.imagej.Dataset;
 import net.imagej.DatasetService;
 import net.imagej.ImgPlus;
 import net.imagej.axis.AxisType;
+import net.imagej.display.DatasetView;
+import net.imagej.display.DefaultDatasetView;
 import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
@@ -86,8 +88,11 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	protected static String[] OUTPUT_NAMES = { "result" };
 
-	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
+	/* extracted from the dataset view */
 	protected Dataset input;
+
+	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
+	protected DatasetView datasetView;
 
 	@Parameter
 	protected TensorFlowService tensorFlowService;
@@ -107,8 +112,8 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	@Parameter( label = "Overlap between tiles", min = "0", stepSize = "16" )
 	protected int overlap = 32;
 
-	@Parameter( type = ItemIO.OUTPUT )
-	protected List< Dataset > resultDatasets;
+	@Parameter( type = ItemIO.OUTPUT, label = "result" )
+	protected List< DatasetView > resultDatasets;
 
 	protected String modelFileUrl;
 	protected String modelName;
@@ -153,7 +158,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	/** Executed whenever the {@link #input} parameter changes. */
 	protected void processDataset() {
-
+		input = datasetView.getData();
 		if ( !processedDataset ) {
 			if ( input != null ) {
 				bridge = new DatasetTensorBridge( input );
@@ -336,7 +341,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		resultDatasets = new ArrayList<>();
 		for ( int i = 0; i < result.size() && i < OUTPUT_NAMES.length; i++ ) {
 			progressWindow.addLog( "Displaying " + OUTPUT_NAMES[ i ] + " image.." );
-			resultDatasets.add( wrapIntoDataset( OUTPUT_NAMES[ i ], result.get( i ) ) );
+			resultDatasets.add( wrapIntoDatasetView( OUTPUT_NAMES[ i ], result.get( i ) ) );
 		}
 		if ( !resultDatasets.isEmpty() ) {
 			progressWindow.addLog( "All done!" );
@@ -386,15 +391,33 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		System.out.println( title + ": " + Arrays.toString( dims ) );
 	}
 
+	protected < U extends RealType< U > & NativeType< U > > DatasetView wrapIntoDatasetView(
+			final String name,
+			final RandomAccessibleInterval< U > img ) {
+		DefaultDatasetView resDatasetView = new DefaultDatasetView();
+		Dataset d = wrapIntoDataset( name, img );
+		resDatasetView.setContext( d.getContext() );
+		resDatasetView.initialize( d );
+		resDatasetView.rebuild();
+
+		// Set LOT
+		for ( int i = 0; i < datasetView.getColorTables().size(); i++ ) {
+			resDatasetView.setColorTable( datasetView.getColorTables().get( i ), i );
+		}
+		return resDatasetView;
+	}
+
 	protected < U extends RealType< U > & NativeType< U > > Dataset wrapIntoDataset( final String name, final RandomAccessibleInterval< U > img ) {
 
 		//TODO convert back to original format to be able to save and load it (float 32 bit does not load in Fiji)
-
 		final Dataset dataset = datasetService.create( new ImgPlus<>( ImgView.wrap( img, new ArrayImgFactory<>() ) ) );
 		dataset.setName( name );
 		for ( int i = 0; i < dataset.numDimensions(); i++ ) {
 			dataset.setAxis( input.axis( bridge.getOutputDimByInputDim( i ) ), i );
 		}
+		// NB: Doesn't work somehow
+//		int compositeChannelCount = input.getCompositeChannelCount();
+//		dataset.setCompositeChannelCount( compositeChannelCount );
 		return dataset;
 	}
 

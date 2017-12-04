@@ -140,7 +140,7 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 		resultDatasets = new ArrayList<>();
 		for ( int i = 0; i < result.size() && i < OUTPUT_NAMES.length; i++ ) {
 			progressWindow.addLog( "Displaying " + OUTPUT_NAMES[ i ] + " image.." );
-			resultDatasets.add( wrapIntoDataset( OUTPUT_NAMES[ i ], Views.dropSingletonDimensions( result.get( i ) ) ) );
+			resultDatasets.add( wrapIntoDatasetView( OUTPUT_NAMES[ i ], Views.dropSingletonDimensions( result.get( i ) ) ) );
 		}
 		if ( !resultDatasets.isEmpty() ) {
 			progressWindow.addLog( "All done!" );
