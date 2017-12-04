@@ -39,21 +39,20 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.RejectedExecutionException;
-import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
+import net.imglib2.Cursor;
+import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
 import net.imglib2.img.Img;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.interpolation.randomaccess.NLinearInterpolatorFactory;
-import net.imglib2.loops.LoopBuilder;
-import net.imglib2.loops.LoopBuilder.TriConsumer;
 import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.realtransform.Scale;
@@ -342,13 +341,39 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		final ExecutorService pool = Executors.newWorkStealingPool();
 		final List< Future< ? > > futures = new ArrayList< Future< ? > >();
 
-		LoopBuilder.setImages( tiledViewIn, tiledViewOut ).forEachPixel(
-				( inTile, outTile ) -> {
-					final LoopBuilder< BiConsumer< U, U > > loop = LoopBuilder.setImages( inTile, outTile );
-					futures.add( pool.submit( () -> {
-						loop.forEachPixel( ( i, o ) -> o.set( i ) );
-					} ) );
-				} );
+		Cursor< RandomAccessibleInterval< U > > tileCurser = Views.iterable( tiledViewIn ).cursor();
+		RandomAccess< RandomAccessibleInterval< U > > tileRandomAccess = tiledViewOut.randomAccess();
+
+		while ( tileCurser.hasNext() ) {
+			// Get current tiles
+			tileCurser.fwd();
+			tileRandomAccess.setPosition( tileCurser );
+			final RandomAccessibleInterval< U > tileIn = tileCurser.get();
+			final RandomAccessibleInterval< U > tileOut = tileRandomAccess.get();
+
+			// Add loop for current tiles to pool
+			futures.add( pool.submit( () -> {
+				Cursor< U > c = Views.iterable( tileIn ).cursor();
+				RandomAccess< U > r = tileOut.randomAccess();
+				while ( c.hasNext() ) {
+					c.fwd();
+					r.setPosition( c );
+					r.get().set( c.get() );
+				}
+			} ) );
+
+		}
+
+		// NB: This code is much nicer but prints to stderr.
+		// This will be fixed after https://github.com/imglib/imglib2/pull/193 is in the release
+
+//		LoopBuilder.setImages( tiledViewIn, tiledViewOut ).forEachPixel(
+//				( inTile, outTile ) -> {
+//					final LoopBuilder< BiConsumer< U, U > > loop = LoopBuilder.setImages( inTile, outTile );
+//					futures.add( pool.submit( () -> {
+//						loop.forEachPixel( ( i, o ) -> o.set( i ) );
+//					} ) );
+//				} );
 
 		for ( final Future< ? > f : futures ) {
 			try {
@@ -372,16 +397,48 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		final ExecutorService pool = Executors.newWorkStealingPool();
 		final List< Future< ? > > futures = new ArrayList< Future< ? > >();
 
-		LoopBuilder.setImages( tiledViewIn1, tiledViewIn2, tiledViewOut ).forEachPixel(
-				( in1Tile, in2Tile, outTile ) -> {
-					final LoopBuilder< TriConsumer< U, V, W > > loop = LoopBuilder.setImages( in1Tile, in2Tile, outTile );
-					futures.add( pool.submit( () -> {
-						loop.forEachPixel(
-								( i1, i2, o ) -> {
-									o.setReal( Math.sqrt( i1.getRealFloat() * i2.getRealFloat() ) );
-								} );
-					} ) );
-				} );
+		Cursor< RandomAccessibleInterval< U > > tileCursorIn1 = Views.iterable( tiledViewIn1 ).cursor();
+		RandomAccess< RandomAccessibleInterval< V > > tileRandomAccessIn2 = tiledViewIn2.randomAccess();
+		RandomAccess< RandomAccessibleInterval< W > > tileRandomAccessOut = tiledViewOut.randomAccess();
+
+		while ( tileCursorIn1.hasNext() ) {
+			// Set positions
+			tileCursorIn1.fwd();
+			tileRandomAccessIn2.setPosition( tileCursorIn1 );
+			tileRandomAccessOut.setPosition( tileCursorIn1 );
+
+			// Get tiles
+			final RandomAccessibleInterval< U > tileIn1 = tileCursorIn1.get();
+			final RandomAccessibleInterval< V > tileIn2 = tileRandomAccessIn2.get();
+			final RandomAccessibleInterval< W > tileOut = tileRandomAccessOut.get();
+
+			// Add loop for current tile to pool
+			futures.add( pool.submit( () -> {
+				Cursor< U > i1 = Views.iterable( tileIn1 ).cursor();
+				RandomAccess< V > i2 = tileIn2.randomAccess();
+				RandomAccess< W > o = tileOut.randomAccess();
+				while ( i1.hasNext() ) {
+					i1.fwd();
+					i2.setPosition( i1 );
+					o.setPosition( i1 );
+					o.get().setReal( Math.sqrt( i1.get().getRealFloat() * i2.get().getRealFloat() ) );
+				}
+			} ) );
+		}
+
+		// NB: This code is much nicer but prints to stderr.
+		// This will be fixed after https://github.com/imglib/imglib2/pull/193 is in the release
+
+//		LoopBuilder.setImages( tiledViewIn1, tiledViewIn2, tiledViewOut ).forEachPixel(
+//				( in1Tile, in2Tile, outTile ) -> {
+//					final LoopBuilder< TriConsumer< U, V, W > > loop = LoopBuilder.setImages( in1Tile, in2Tile, outTile );
+//					futures.add( pool.submit( () -> {
+//						loop.forEachPixel(
+//								( i1, i2, o ) -> {
+//									o.setReal( Math.sqrt( i1.getRealFloat() * i2.getRealFloat() ) );
+//								} );
+//					} ) );
+//				} );
 
 		for ( final Future< ? > f : futures ) {
 			try {
