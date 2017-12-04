@@ -6,13 +6,13 @@
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -101,9 +101,6 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	@Parameter
 	protected DatasetService datasetService;
 
-	@Parameter( type = ItemIO.OUTPUT )
-	protected Dataset outputImage;
-
 	@Parameter( label = "Number of tiles", min = "1" )
 	protected int nTiles = 1;
 
@@ -149,7 +146,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 					"Couldn't load tensorflow from library path:" );
 			System.out.println( e.getMessage() );
 			System.out.println( "If the problem is CUDA related. Make sure CUDA and cuDNN are in the LD_LIBRARY_PATH." );
-			System.out.println( "The current library path is: LD_LIBRARY_PATH=" + System.getenv("LD_LIBRARY_PATH"));
+			System.out.println( "The current library path is: LD_LIBRARY_PATH=" + System.getenv( "LD_LIBRARY_PATH" ) );
 			System.out.println( "Using CPU version from jar file." );
 		}
 	}

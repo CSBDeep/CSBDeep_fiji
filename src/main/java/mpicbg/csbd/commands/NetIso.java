@@ -226,9 +226,9 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		result1.clear();
 
 		try {
-			BatchedTiledPrediction batchedPrediction0 =
+			final BatchedTiledPrediction batchedPrediction0 =
 					new BatchedTiledPrediction( rotated0, bridge, model, progressWindow, nTiles, 4, overlap, batchSize );
-			BatchedTiledPrediction batchedPrediction1 =
+			final BatchedTiledPrediction batchedPrediction1 =
 					new BatchedTiledPrediction( rotated1, bridge, model, progressWindow, nTiles, 4, overlap, batchSize );
 			batchedPrediction0.setDropSingletonDims( false );
 			batchedPrediction1.setDropSingletonDims( false );
@@ -341,8 +341,8 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		final ExecutorService pool = Executors.newWorkStealingPool();
 		final List< Future< ? > > futures = new ArrayList< Future< ? > >();
 
-		Cursor< RandomAccessibleInterval< U > > tileCurser = Views.iterable( tiledViewIn ).cursor();
-		RandomAccess< RandomAccessibleInterval< U > > tileRandomAccess = tiledViewOut.randomAccess();
+		final Cursor< RandomAccessibleInterval< U > > tileCurser = Views.iterable( tiledViewIn ).cursor();
+		final RandomAccess< RandomAccessibleInterval< U > > tileRandomAccess = tiledViewOut.randomAccess();
 
 		while ( tileCurser.hasNext() ) {
 			// Get current tiles
@@ -353,8 +353,8 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 			// Add loop for current tiles to pool
 			futures.add( pool.submit( () -> {
-				Cursor< U > c = Views.iterable( tileIn ).cursor();
-				RandomAccess< U > r = tileOut.randomAccess();
+				final Cursor< U > c = Views.iterable( tileIn ).cursor();
+				final RandomAccess< U > r = tileOut.randomAccess();
 				while ( c.hasNext() ) {
 					c.fwd();
 					r.setPosition( c );
@@ -397,9 +397,9 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		final ExecutorService pool = Executors.newWorkStealingPool();
 		final List< Future< ? > > futures = new ArrayList< Future< ? > >();
 
-		Cursor< RandomAccessibleInterval< U > > tileCursorIn1 = Views.iterable( tiledViewIn1 ).cursor();
-		RandomAccess< RandomAccessibleInterval< V > > tileRandomAccessIn2 = tiledViewIn2.randomAccess();
-		RandomAccess< RandomAccessibleInterval< W > > tileRandomAccessOut = tiledViewOut.randomAccess();
+		final Cursor< RandomAccessibleInterval< U > > tileCursorIn1 = Views.iterable( tiledViewIn1 ).cursor();
+		final RandomAccess< RandomAccessibleInterval< V > > tileRandomAccessIn2 = tiledViewIn2.randomAccess();
+		final RandomAccess< RandomAccessibleInterval< W > > tileRandomAccessOut = tiledViewOut.randomAccess();
 
 		while ( tileCursorIn1.hasNext() ) {
 			// Set positions
@@ -414,9 +414,9 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 			// Add loop for current tile to pool
 			futures.add( pool.submit( () -> {
-				Cursor< U > i1 = Views.iterable( tileIn1 ).cursor();
-				RandomAccess< V > i2 = tileIn2.randomAccess();
-				RandomAccess< W > o = tileOut.randomAccess();
+				final Cursor< U > i1 = Views.iterable( tileIn1 ).cursor();
+				final RandomAccess< V > i2 = tileIn2.randomAccess();
+				final RandomAccess< W > o = tileOut.randomAccess();
 				while ( i1.hasNext() ) {
 					i1.fwd();
 					i2.setPosition( i1 );
