@@ -84,7 +84,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		Initializable,
 		ActionListener {
 
-	protected static String[] OUTPUT_NAMES = { "result", "control" };
+	protected static String[] OUTPUT_NAMES = { "result" };
 
 	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
 	protected Dataset input;
