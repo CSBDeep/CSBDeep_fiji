@@ -107,7 +107,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected DatasetService datasetService;
 
 	@Parameter( label = "Number of tiles", min = "1" )
-	protected int nTiles = 1;
+	protected int nTiles = 8;
 
 	@Parameter( label = "Overlap between tiles", min = "0", stepSize = "16" )
 	protected int overlap = 32;
