@@ -83,14 +83,14 @@
 	</mailingLists>
 
 	<scm>
-		<connection>scm:git:git://github.com/frauzufall/CSBDeep</connection> <!-- TODO Change url when moved -->
-		<developerConnection>scm:git:git@github.com:frauzufall/CSBDeep</developerConnection>
+		<connection>scm:git:git://github.com/CSBDeep/CSBDeep_fiji</connection>
+		<developerConnection>scm:git:git@github.com:CSBDeep/CSBDeep_fiji</developerConnection>
 		<tag>HEAD</tag>
-		<url>https://github.com/frauzufall/CSBDeep</url>
+		<url>https://github.com/CSBDeep/CSBDeep_fiji</url>
 	</scm>
 	<issueManagement>
 		<system>GitHub Issues</system>
-		<url>https://github.com/imagej/frauzufall/CSBDeep/issues</url>
+		<url>https://github.com/imagej/CSBDeep/CSBDeep_fiji/issues</url>
 	</issueManagement>
 	<ciManagement>
 		<system>None</system>
