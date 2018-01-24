@@ -1,18 +1,18 @@
 /*-
  * #%L
- * CSBDeep Fiji Plugin: Use deep neural networks for image restoration for fluorescence microscopy.
+ * CSBDeep: CNNs for image restoration of fluorescence microscopy.
  * %%
- * Copyright (C) 2017 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
+ * Copyright (C) 2017 - 2018 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -79,8 +79,12 @@ public class MappingDialog {
 					final String dimName = bridge.getDatasetDimNameByTFIndex( i );
 					final long dimSize = bridge.getDatasetDimSizeFromTFIndex( i );
 					final String tfDimSize = String.valueOf(
-							bridge.getInputTensorInfo().getTensorShape().getDim(
-									tfDimCount ).getSize() );
+							bridge
+									.getInputTensorInfo()
+									.getTensorShape()
+									.getDim(
+											tfDimCount )
+									.getSize() );
 
 					final JTextField field = new JTextField();
 					field.setText( tfDimSize );
@@ -128,8 +132,10 @@ public class MappingDialog {
 				bridge.printMapping();
 				for ( int i = 0; i < drops.size(); i++ ) {
 					System.out.println(
-							"selected index for tf index " + i + ": " + drops.get(
-									i ).getSelectedIndex() );
+							"selected index for tf index " + i + ": " + drops
+									.get(
+											i )
+									.getSelectedIndex() );
 					bridge.setTFMappingByKnownAxesIndex( i, drops.get( i ).getSelectedIndex() );
 				}
 				bridge.printMapping();

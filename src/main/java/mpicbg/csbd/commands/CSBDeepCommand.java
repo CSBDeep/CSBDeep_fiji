@@ -1,8 +1,8 @@
 /*-
  * #%L
- * CSBDeep Fiji Plugin: Use deep neural networks for image restoration for fluorescence microscopy.
+ * CSBDeep: CNNs for image restoration of fluorescence microscopy.
  * %%
- * Copyright (C) 2017 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
+ * Copyright (C) 2017 - 2018 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -394,8 +394,8 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected < U extends RealType< U > & NativeType< U > > DatasetView wrapIntoDatasetView(
 			final String name,
 			final RandomAccessibleInterval< U > img ) {
-		DefaultDatasetView resDatasetView = new DefaultDatasetView();
-		Dataset d = wrapIntoDataset( name, img );
+		final DefaultDatasetView resDatasetView = new DefaultDatasetView();
+		final Dataset d = wrapIntoDataset( name, img );
 		resDatasetView.setContext( d.getContext() );
 		resDatasetView.initialize( d );
 		resDatasetView.rebuild();
