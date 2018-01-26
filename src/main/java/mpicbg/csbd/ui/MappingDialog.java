@@ -40,13 +40,13 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
-import mpicbg.csbd.tensorflow.DatasetTensorBridge;
+import mpicbg.csbd.network.ImageNode;
 
 public class MappingDialog {
 
-	public static void create( final DatasetTensorBridge bridge ) {
+	public static void create( final ImageNode inputNode ) {
 
-		if ( bridge.complete() ) {
+		if ( inputNode.isMappingInitialized() ) {
 			final List< JComboBox< String > > drops = new ArrayList<>();
 
 			final JPanel dialogPanel = new JPanel();
@@ -59,10 +59,10 @@ public class MappingDialog {
 			inputDimPanel.setBorder( BorderFactory.createTitledBorder( "Model input" ) );
 
 			final List< String > dimStringsSize = new ArrayList<>();
-			for ( int i = 0; i < bridge.numDimensions(); i++ ) {
+			for ( int i = 0; i < inputNode.numDimensions(); i++ ) {
 
-				final String dimName = bridge.getDatasetDimName( i );
-				final long dimSize = bridge.getDatasetDimSize( i );
+				final String dimName = inputNode.getDatasetDimName( i );
+				final long dimSize = inputNode.getDatasetDimSize( i );
 
 				final JTextField field = new JTextField();
 				field.setText( String.valueOf( dimSize ) );
@@ -73,14 +73,13 @@ public class MappingDialog {
 			}
 
 			int tfDimCount = 0;
-			for ( int i = 0; i < bridge.getInputTensorInfo().getTensorShape().getDimCount(); i++ ) {
-				if ( bridge.getDatasetDimIndexByTFIndex( i ) != null ) {
+			for ( int i = 0; i < inputNode.numDimensions(); i++ ) {
+				if ( inputNode.getDatasetDimIndexByTFIndex( i ) != null ) {
 
-					final String dimName = bridge.getDatasetDimNameByTFIndex( i );
-					final long dimSize = bridge.getDatasetDimSizeFromTFIndex( i );
+					final String dimName = inputNode.getDatasetDimNameByTFIndex( i );
+					final long dimSize = inputNode.getDatasetDimSizeFromTFIndex( i );
 					final String tfDimSize = String.valueOf(
-							bridge.getInputTensorInfo().getTensorShape().getDim(
-									tfDimCount ).getSize() );
+							inputNode.getNodeShape()[tfDimCount]);
 
 					final JTextField field = new JTextField();
 					field.setText( tfDimSize );
@@ -125,14 +124,14 @@ public class MappingDialog {
 					JOptionPane.OK_CANCEL_OPTION );
 
 			if ( result == JOptionPane.OK_OPTION ) {
-				bridge.printMapping();
+				inputNode.printMapping();
 				for ( int i = 0; i < drops.size(); i++ ) {
 					System.out.println(
 							"selected index for tf index " + i + ": " + drops.get(
 									i ).getSelectedIndex() );
-					bridge.setTFMappingByKnownAxesIndex( i, drops.get( i ).getSelectedIndex() );
+					inputNode.setTFMappingByKnownAxesIndex( i, drops.get( i ).getSelectedIndex() );
 				}
-				bridge.printMapping();
+				inputNode.printMapping();
 			}
 		} else {
 			System.out.println(

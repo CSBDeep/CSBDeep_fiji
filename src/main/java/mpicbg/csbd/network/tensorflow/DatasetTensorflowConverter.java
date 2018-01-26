@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package mpicbg.csbd.tensorflow;
+package mpicbg.csbd.network.tensorflow;
 
 import net.imagej.tensorflow.Tensors;
 import net.imglib2.RandomAccessibleInterval;
@@ -35,7 +35,9 @@ import net.imglib2.view.Views;
 
 import org.tensorflow.Tensor;
 
-public class DatasetConverter {
+import mpicbg.csbd.network.DatasetConverter;
+
+public class DatasetTensorflowConverter extends DatasetConverter {
 
 	public static RandomAccessibleInterval< FloatType > tensorToDataset( final Tensor tensor, final int[] mapping, boolean dropSingletonDims ) {
 
@@ -51,6 +53,7 @@ public class DatasetConverter {
 		while ( image.numDimensions() < mapping.length ) {
 			image = Views.addDimension( image, 0, 0 );
 		}
+		
 
 		// Create the tensor
 		return Tensors.tensor( image, mapping );

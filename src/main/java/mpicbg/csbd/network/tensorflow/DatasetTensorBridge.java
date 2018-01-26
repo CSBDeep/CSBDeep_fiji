@@ -26,12 +26,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package mpicbg.csbd.tensorflow;
+package mpicbg.csbd.network.tensorflow;
 
-import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Objects;
@@ -43,10 +41,11 @@ import net.imagej.axis.AxisType;
 
 import org.tensorflow.framework.TensorInfo;
 
+import mpicbg.csbd.util.DatasetHelper;
+
 public class DatasetTensorBridge {
 
 	private final Dataset dataset;
-	private TensorInfo inputTensor, outputTensor;
 
 //	AxisType[] axes = Axes.knownTypes();
 	AxisType[] axes = { Axes.X, Axes.Y, Axes.Z, Axes.TIME, Axes.CHANNEL };
@@ -60,7 +59,7 @@ public class DatasetTensorBridge {
 	public DatasetTensorBridge( final Dataset image ) {
 
 		//check if image has unknown dimensions. if yes, assign unused dimensions
-		assignUnknownDimensions( image );
+		DatasetHelper.assignUnknownDimensions( image );
 
 		dataset = image;
 
@@ -82,44 +81,10 @@ public class DatasetTensorBridge {
 	@Override
 	public DatasetTensorBridge clone() {
 		final DatasetTensorBridge _clone = new DatasetTensorBridge( dataset );
-		_clone.inputTensor = this.inputTensor;
-		_clone.outputTensor = this.outputTensor;
 		_clone.axisTF = ( Map< AxisType, Integer > ) ( ( HashMap ) this.axisTF ).clone();
 		_clone.axisDataset = ( Map< AxisType, Integer > ) ( ( HashMap ) this.axisDataset ).clone();
 		_clone.axisSize = ( Map< AxisType, Long > ) ( ( HashMap ) this.axisSize ).clone();
 		return _clone;
-	}
-
-	private void assignUnknownDimensions( final Dataset image ) {
-
-		final List< AxisType > unusedAxes = new ArrayList<>();
-		final List< Integer > unknownIndices = new ArrayList<>();
-		for ( int j = 0; j < axes.length; j++ ) {
-			boolean knownAxis = false;
-			for ( int i = 0; i < image.numDimensions(); i++ ) {
-				if ( image.axis( i ).type() == axes[ j ] ) {
-					knownAxis = true;
-					break;
-				}
-			}
-			if ( !knownAxis ) unusedAxes.add( axes[ j ] );
-		}
-
-		for ( int i = 0; i < image.numDimensions(); i++ ) {
-			boolean knownAxis = false;
-			for ( int j = 0; j < axes.length; j++ ) {
-				if ( image.axis( i ).type() == axes[ j ] ) {
-					knownAxis = true;
-					break;
-				}
-			}
-			if ( !knownAxis ) unknownIndices.add( i );
-		}
-
-		for ( int i = 0; i < unknownIndices.size() && i < unusedAxes.size(); i++ ) {
-			image.axis( unknownIndices.get( i ) ).setType( unusedAxes.get( i ) );
-		}
-
 	}
 
 	public Long getDatasetDimSizeFromTFIndex( final int tfIndex5D ) {
@@ -172,40 +137,6 @@ public class DatasetTensorBridge {
 		this.mappingInitialized = mappingInitialized;
 	}
 
-	public void setMappingDefaults() {
-		System.out.println( "setmappingdefaults" );
-		setMappingInitialized( true );
-		if ( inputTensor.getTensorShape().getDimCount() == 5 ) {
-			axisTF.put( Axes.TIME, 0 );
-			axisTF.put( Axes.Z, 1 );
-			axisTF.put( Axes.Y, 2 );
-			axisTF.put( Axes.X, 3 );
-			axisTF.put( Axes.CHANNEL, 4 );
-		} else {
-			if ( inputTensor.getTensorShape().getDimCount() == 4 ) {
-				axisTF.put( Axes.Y, 2 );
-				axisTF.put( Axes.X, 3 );
-				if ( dataset.dimension( Axes.Z ) > 1 ) {
-					axisTF.put( Axes.Z, 1 );
-					if ( dataset.dimension( Axes.CHANNEL ) > 1 ) {
-						axisTF.put( Axes.CHANNEL, 4 );
-					} else {
-						axisTF.put( Axes.TIME, 4 );
-					}
-				} else {
-					if ( dataset.dimension( Axes.CHANNEL ) > 1 ) {
-						axisTF.put( Axes.CHANNEL, 1 );
-						axisTF.put( Axes.TIME, 4 );
-					} else {
-						axisTF.put( Axes.TIME, 1 );
-						axisTF.put( Axes.CHANNEL, 4 );
-					}
-				}
-			}
-		}
-		printMapping();
-	}
-
 	public void resetMapping() {
 		axisTF.clear();
 	}
@@ -218,26 +149,6 @@ public class DatasetTensorBridge {
 
 	public void setTFMapping( final int index, final AxisType axisType ) {
 		axisTF.put( axisType, index );
-	}
-
-	public void setInputTensor( final TensorInfo tensorInfo ) {
-		inputTensor = tensorInfo;
-		System.out.println(
-				"DatasetTensorBridge::setInputTensorShape: " + tensorInfo.getTensorShape().getDimList() + "]" );
-	}
-
-	public void setOutputTensor( final TensorInfo tensorInfo ) {
-		outputTensor = tensorInfo;
-		System.out.println(
-				"DatasetTensorBridge::setOutputTensorShape: " + tensorInfo.getTensorShape().getDimList() + "]" );
-	}
-
-	public TensorInfo getInputTensorInfo() {
-		return inputTensor;
-	}
-
-	public TensorInfo getOutputTensorInfo() {
-		return outputTensor;
 	}
 
 	public int numDimensions() {
@@ -258,22 +169,12 @@ public class DatasetTensorBridge {
 		return getDatasetDimName( axes[ knownAxesIndex ] );
 	}
 
-	public boolean complete() {
-		return inputTensor != null && dataset != null;
-	}
-
 	public void printMapping() {
 		System.out.println( "--------------" );
 		System.out.println( "axisDataset:" + axisDataset.toString() );
 		System.out.println( "axisSize:" + axisSize.toString() );
 		System.out.println( "axisTF:" + axisTF.toString() );
 		System.out.println( "--------------" );
-	}
-
-	public void handleDimensionReduction() {
-		if ( inputTensor.getTensorShape().getDimCount() == outputTensor.getTensorShape().getDimCount() + 1 ) {
-			removeZFromMapping();
-		}
 	}
 
 	public boolean removeZFromMapping() {

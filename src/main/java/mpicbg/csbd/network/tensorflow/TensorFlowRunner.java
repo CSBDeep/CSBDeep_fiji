@@ -26,7 +26,7 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package mpicbg.csbd.tensorflow;
+package mpicbg.csbd.network.tensorflow;
 
 import java.util.Arrays;
 

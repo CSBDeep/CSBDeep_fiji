@@ -47,5 +47,7 @@ public interface Normalizer< T extends RealType< T > > {
 
 	float normalize( float val );
 
-	Img< FloatType > normalizeImage( RandomAccessibleInterval< T > im );
+	Img< FloatType > normalizeAfterPreparation( RandomAccessibleInterval< T > im );
+	
+	Img< FloatType > normalize( RandomAccessibleInterval< T > im );
 }

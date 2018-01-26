@@ -41,7 +41,10 @@ import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 
 import javax.swing.BorderFactory;
 import javax.swing.Box;
@@ -60,6 +63,8 @@ import javax.swing.border.TitledBorder;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
+
+import mpicbg.csbd.util.Task;
 
 public class CSBDeepProgress extends JPanel
 		implements
@@ -84,6 +89,11 @@ public class CSBDeepProgress extends JPanel
 						   new JLabel( "Preprocessing" ),
 						   new JLabel( "Run model" ),
 						   new JLabel( "Postprocessing         " ) };
+	
+	private List<Task> tasks = new ArrayList<>();
+	private Task currentTask = null;
+	private Map<Task, JLabel> taskLabels;
+	
 	JLabel[] stepStatus = new JLabel[ stepTitle.length ];
 	boolean[] stepDone = new boolean[ stepTitle.length ];
 	int currentStep;

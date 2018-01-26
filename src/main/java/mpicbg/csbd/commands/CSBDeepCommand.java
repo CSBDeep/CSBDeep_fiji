@@ -28,14 +28,10 @@
  */
 package mpicbg.csbd.commands;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -52,8 +48,6 @@ import net.imagej.ImgPlus;
 import net.imagej.axis.AxisType;
 import net.imagej.display.DatasetView;
 import net.imagej.display.DefaultDatasetView;
-import net.imagej.tensorflow.TensorFlowService;
-import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.ImgView;
 import net.imglib2.img.array.ArrayImgFactory;
@@ -65,20 +59,15 @@ import net.imglib2.util.Intervals;
 import org.scijava.Cancelable;
 import org.scijava.Initializable;
 import org.scijava.ItemIO;
-import org.scijava.io.http.HTTPLocation;
-import org.scijava.io.location.FileLocation;
-import org.scijava.io.location.Location;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
-import org.scijava.ui.UIService;
-import org.tensorflow.SavedModelBundle;
-import org.tensorflow.TensorFlowException;
-import org.tensorflow.framework.MetaGraphDef;
-import org.tensorflow.framework.SignatureDef;
 
+import mpicbg.csbd.network.Network;
+import mpicbg.csbd.network.tensorflow.TensorFlowNetwork;
 import mpicbg.csbd.normalize.PercentileNormalizer;
-import mpicbg.csbd.tensorflow.DatasetTensorBridge;
+import mpicbg.csbd.prediction.TiledPrediction;
 import mpicbg.csbd.ui.CSBDeepProgress;
+import mpicbg.csbd.util.DatasetHelper;
 
 public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
 		implements
@@ -95,13 +84,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected DatasetView datasetView;
 
 	@Parameter
-	protected TensorFlowService tensorFlowService;
-
-	@Parameter
 	protected LogService log;
-
-	@Parameter
-	protected UIService uiService;
 
 	@Parameter
 	protected DatasetService datasetService;
@@ -112,7 +95,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	@Parameter( label = "Overlap between tiles", min = "0", stepSize = "16" )
 	protected int overlap = 32;
 
-	@Parameter( type = ItemIO.OUTPUT, label = "result" )
+	@Parameter( type = ItemIO.BOTH, label = "result" )
 	protected List< DatasetView > resultDatasets;
 
 	protected String modelFileUrl;
@@ -121,170 +104,116 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected String outputNodeName = "output";
 	protected int blockMultiple = 32;
 
-	protected SignatureDef sig;
-
-	protected SavedModelBundle model;
-	protected DatasetTensorBridge bridge;
 	protected boolean processedDataset = false;
-	private boolean useTensorFlowGPU = true;
 
 	CSBDeepProgress progressWindow;
 
 	ExecutorService pool = Executors.newSingleThreadExecutor();
 	List< TiledPrediction > predictions = new ArrayList<>();
-
-	private static final String MODEL_TAG = "serve";
-	// Same as
-	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
-	// in Python. Perhaps this should be an exported constant in TensorFlow's Java
-	// API.
-	protected static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY = "serving_default";
+	
+	Network network = new TensorFlowNetwork();
 
 	@Override
 	public void initialize() {
-		System.out.println( "Loading tensorflow jni from library path..." );
-		try {
-			System.loadLibrary( "tensorflow_jni" );
-		} catch ( final UnsatisfiedLinkError e ) {
-			useTensorFlowGPU = false;
-			System.out.println(
-					"Couldn't load tensorflow from library path:" );
-			System.out.println( e.getMessage() );
-			System.out.println( "If the problem is CUDA related. Make sure CUDA and cuDNN are in the LD_LIBRARY_PATH." );
-			System.out.println( "The current library path is: LD_LIBRARY_PATH=" + System.getenv( "LD_LIBRARY_PATH" ) );
-			System.out.println( "Using CPU version from jar file." );
-		}
+		network.loadLibrary();
 	}
 
 	/** Executed whenever the {@link #input} parameter changes. */
 	protected void processDataset() {
+		
 		input = datasetView.getData();
-		if ( !processedDataset ) {
-			if ( input != null ) {
-				bridge = new DatasetTensorBridge( input );
-				processedDataset = true;
-			}
+		DatasetHelper.assignUnknownDimensions( input );
+		if(network.isInitialized()){
+			network.setInput( input );
 		}
 
 	}
-
-	/*
-	 * model can be imported via savedmodel
-	 */
-	protected boolean loadModel() throws MalformedURLException, URISyntaxException {
-
-//		System.out.println("loadGraph");
-
-		final File file = new File( modelFileUrl );
-		Location source;
-		if ( !file.exists() ) {
-			source = new HTTPLocation( modelFileUrl );
-		} else {
-			source = new FileLocation( file );
-		}
-		try {
-			model = tensorFlowService.loadModel( source, modelName, MODEL_TAG );
-		} catch ( TensorFlowException | IOException e ) {
-			e.printStackTrace();
-			return false;
-		}
-		return true;
+	
+	protected void loadNetworkFile() throws FileNotFoundException {
+		network.loadModel( modelFileUrl, modelName );
+	}
+	
+	protected void initializeNetwork() {
+		network.loadInputNode(inputNodeName, input);
+		network.loadOutputNode(outputNodeName);
+		network.initMapping();
+	}
+	
+	protected boolean noInputData() {
+		return input == null;
+	}
+	
+	protected boolean noModel() {
+		return !network.isInitialized();
 	}
 
-	protected void modelChanged() {
-
-//		System.out.println("modelChanged");
-
-		processDataset();
-
-		if ( input == null ) { return; }
+	protected void loadNetwork() {
 
 		try {
-			if ( loadModel() ) {
 
-				// Extract names from the model signature.
-				// The strings "input", "probabilities" and "patches" are meant to be
-				// in sync with the model exporter (export_saved_model()) in Python.
-				try {
-					sig = MetaGraphDef.parseFrom( model.metaGraphDef() ).getSignatureDefOrThrow(
-							DEFAULT_SERVING_SIGNATURE_DEF_KEY );
-				} catch ( final InvalidProtocolBufferException e ) {
-//					e.printStackTrace();
-				}
-				if ( sig != null && sig.isInitialized() ) {
-					if ( sig.getInputsCount() > 0 ) {
-						inputNodeName = sig.getInputsMap().keySet().iterator().next();
-						if ( bridge != null ) {
-							bridge.setInputTensor( sig.getInputsOrThrow( inputNodeName ) );
-						}
-					}
-					if ( sig.getOutputsCount() > 0 ) {
-						outputNodeName = sig.getOutputsMap().keySet().iterator().next();
-						if ( bridge != null ) {
-							bridge.setOutputTensor( sig.getOutputsOrThrow( outputNodeName ) );
-						}
-					}
-					if ( bridge != null && !bridge.isMappingInitialized() ) {
-						bridge.setMappingDefaults();
-					}
-				}
+			loadNetworkFile();
+			initializeNetwork();
 
-			}
-		} catch ( MalformedURLException | URISyntaxException exc ) {
-			exc.printStackTrace();
+		} catch ( FileNotFoundException exc1 ) {
+
+			exc1.printStackTrace();
+
 		}
+
 	}
 
 	public void run() {
 
-		if ( input == null ) { return; }
-		modelChanged();
+		if ( noInputData() )
+			return;
+
 		initGui();
-		initModel();
+		
+		loadFinalModelStep();
+		
+		processDataset();
+		
 		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
 		executeModel( normalizeInput() );
 	}
 
 	public void setMapping( final AxisType[] mapping ) {
-		if ( bridge != null ) {
-			if ( bridge.getInputTensorInfo() != null ) {
-				bridge.resetMapping();
-				for ( int i = 0; i < mapping.length; i++ ) {
-					bridge.setTFMapping( i, mapping[ i ] );
-				}
-				bridge.printMapping();
-			}
+		if ( network.getInputNode() != null ) {
+			network.getInputNode().setMapping( mapping );
 		}
 	}
 
 	public void runWithMapping( final AxisType[] mapping ) {
 
-		if ( input == null ) { return; }
-		modelChanged();
+		if ( noInputData() )
+			return;
+		
+		initGui();
+		
+		loadFinalModelStep();
+		
+		processDataset();
 
 		setMapping( mapping );
-		initGui();
-		initModel();
+		
 		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
 		executeModel( normalizeInput() );
 	}
 
 	protected void initGui() {
-		progressWindow = CSBDeepProgress.create( useTensorFlowGPU );
+		progressWindow = CSBDeepProgress.create( network.isSupportingGPU() );
 		progressWindow.getCancelBtn().addActionListener( this );
 
 	}
 
-	protected void initModel() {
+	protected void loadFinalModelStep() {
 		progressWindow.setStepStart( CSBDeepProgress.STEP_LOADMODEL );
 
 		progressWindow.addLog( "Loading model " + modelName + ".. " );
 
-		if ( input == null ) { return; }
-
-		if ( model == null ) {
-			modelChanged();
-			if ( model == null ) {
+		if ( noModel() ) {
+			loadNetwork();
+			if ( noModel() ) {
 				progressWindow.setCurrentStepFail();
 				return;
 			}
@@ -295,25 +224,21 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	}
 
 	protected RandomAccessibleInterval< FloatType > normalizeInput() {
-		progressWindow.addLog( "Preparing normalization.. " );
-		prepareNormalization( ( IterableInterval ) input.getImgPlus() );
 
 		progressWindow.addLog(
 				"Normalize (" + percentileBottom + " - " + percentileTop + " -> " + min + " - " + max + "] .. " );
 
-		final RandomAccessibleInterval< FloatType > normalizedInput = normalizeImage(
-				( RandomAccessibleInterval ) input.getImgPlus() );
-
-		return normalizedInput;
-
+		return normalize(( RandomAccessibleInterval ) input.getImgPlus() );
 	}
 
 	protected void executeModel( final RandomAccessibleInterval< FloatType > modelInput ) {
+		
+		processDataset();
 
 		List< RandomAccessibleInterval< FloatType > > result = null;
 		try {
 			final TiledPrediction prediction =
-					new TiledPrediction( modelInput, bridge, model, progressWindow, nTiles, blockMultiple, overlap );
+					new TiledPrediction( modelInput, network, progressWindow, nTiles, blockMultiple, overlap );
 			predictions.add( prediction );
 			result = pool.submit( prediction ).get();
 		} catch ( final ExecutionException exc ) {
@@ -338,20 +263,27 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 			progressWindow.setCurrentStepFail();
 		}
 
-		resultDatasets = new ArrayList<>();
-		for ( int i = 0; i < result.size() && i < OUTPUT_NAMES.length; i++ ) {
-			progressWindow.addLog( "Displaying " + OUTPUT_NAMES[ i ] + " image.." );
-			resultDatasets.add( wrapIntoDatasetView( OUTPUT_NAMES[ i ], result.get( i ) ) );
+		if(resultDatasets == null) {
+			resultDatasets = new ArrayList<>();
+		}else {
+			resultDatasets.clear();
 		}
-		if ( !resultDatasets.isEmpty() ) {
-			progressWindow.addLog( "All done!" );
-			progressWindow.setCurrentStepDone();
-		} else {
-			progressWindow.setCurrentStepFail();
+		
+		if(result != null){
+			for ( int i = 0; i < result.size() && i < OUTPUT_NAMES.length; i++ ) {
+				progressWindow.addLog( "Displaying " + OUTPUT_NAMES[ i ] + " image.." );
+				resultDatasets.add( wrapIntoDatasetView( OUTPUT_NAMES[ i ], result.get( i ) ) );
+			}
+			if ( !resultDatasets.isEmpty() ) {
+				progressWindow.addLog( "All done!" );
+				progressWindow.setCurrentStepDone();
+			} else {
+				progressWindow.setCurrentStepFail();
+			}			
 		}
 	}
 
-	public void showError( final String errorMsg ) {
+	public static void showError( final String errorMsg ) {
 		JOptionPane.showMessageDialog(
 				null,
 				errorMsg,
@@ -408,12 +340,15 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	}
 
 	protected < U extends RealType< U > & NativeType< U > > Dataset wrapIntoDataset( final String name, final RandomAccessibleInterval< U > img ) {
+		
+		long[] imgdim = new long[img.numDimensions()];
+		img.dimensions( imgdim );
 
 		//TODO convert back to original format to be able to save and load it (float 32 bit does not load in Fiji)
 		final Dataset dataset = datasetService.create( new ImgPlus<>( ImgView.wrap( img, new ArrayImgFactory<>() ) ) );
 		dataset.setName( name );
 		for ( int i = 0; i < dataset.numDimensions(); i++ ) {
-			dataset.setAxis( input.axis( bridge.getOutputDimByInputDim( i ) ), i );
+			dataset.setAxis( input.axis( network.getOutputNode().getDimType( i ) ).get(), i );
 		}
 		// NB: Doesn't work somehow
 //		int compositeChannelCount = input.getCompositeChannelCount();
@@ -421,16 +356,10 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		return dataset;
 	}
 
-	protected static void validateInput(
+	public static void validateInput(
 			final Dataset dataset,
 			final String formatDesc,
 			final OptionalLong... expectedDims ) throws IOException {
-		if ( dataset.numDimensions() != expectedDims.length ) { throw new IOException( "Can not process " + dataset
-				.numDimensions() + "D images.\nExpected format: " + formatDesc ); }
-		for ( int i = 0; i < expectedDims.length; i++ ) {
-			if ( expectedDims[ i ].isPresent() && expectedDims[ i ].getAsLong() != dataset
-					.dimension( i ) ) { throw new IOException( "Can not process image. Dimension " + i + " musst be of size " + expectedDims[ i ]
-							.getAsLong() + ".\nExpected format: " + formatDesc ); }
-		}
+		DatasetHelper.validate(dataset, formatDesc, expectedDims);
 	}
 }

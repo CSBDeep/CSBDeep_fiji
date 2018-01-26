@@ -69,6 +69,7 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
 import mpicbg.csbd.imglib2.TiledView;
+import mpicbg.csbd.prediction.BatchedTiledPrediction;
 import mpicbg.csbd.ui.CSBDeepProgress;
 
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Isotropic Reconstruction - Retina", headless = true )
@@ -128,8 +129,12 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 	}
 
 	private void runModel() {
-		if ( input == null ) { return; }
-		modelChanged();
+		if ( noInputData() )
+			return;
+
+		initGui();
+		
+		loadFinalModelStep();
 
 		final AxisType[] mapping = { Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
 		setMapping( mapping );
@@ -139,9 +144,6 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		final int dimY = input.dimensionIndex( Axes.Y );
 		final int dimZ = input.dimensionIndex( Axes.Z );
 
-		initGui();
-
-		initModel();
 		progressWindow.setNumRounds( 2 );
 		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
 
@@ -227,9 +229,9 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 		try {
 			final BatchedTiledPrediction batchedPrediction0 =
-					new BatchedTiledPrediction( rotated0, bridge, model, progressWindow, nTiles, 4, overlap, batchSize );
+					new BatchedTiledPrediction( rotated0, network, progressWindow, nTiles, 4, overlap, batchSize );
 			final BatchedTiledPrediction batchedPrediction1 =
-					new BatchedTiledPrediction( rotated1, bridge, model, progressWindow, nTiles, 4, overlap, batchSize );
+					new BatchedTiledPrediction( rotated1, network, progressWindow, nTiles, 4, overlap, batchSize );
 			batchedPrediction0.setDropSingletonDims( false );
 			batchedPrediction1.setDropSingletonDims( false );
 
@@ -268,10 +270,10 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		final IntervalView< T > channel1 = Views.hyperSlice( in, dimChannel, 1 );
 
 		prepareNormalization( channel0 );
-		final Img< FloatType > normalizedChannel0 = normalizeImage( channel0 );
+		final Img< FloatType > normalizedChannel0 = normalize( channel0 );
 
 		prepareNormalization( channel1 );
-		final Img< FloatType > normalizedChannel1 = normalizeImage( channel1 );
+		final Img< FloatType > normalizedChannel1 = normalize( channel1 );
 
 		return Views.permute( Views.stack( normalizedChannel0, normalizedChannel1 ), in.numDimensions() - 1, dimChannel );
 	}

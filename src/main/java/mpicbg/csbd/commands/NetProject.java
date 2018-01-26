@@ -43,7 +43,7 @@ import org.scijava.plugin.Plugin;
  */
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Surface Projection - Flywing", headless = true )
 public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T > implements Command {
-
+	
 	@Override
 	public void initialize() {
 
@@ -62,14 +62,17 @@ public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T > i
 		ij.launch( args );
 
 		// ask the user for a file to open
-		final File file = ij.ui().chooseFile( null, "open" );
+//		final File file = ij.ui().chooseFile( null, "open" );
+		final File file = new File("/home/random/Development/imagej/plugins/CSBDeep-data/net_project/input-1.tif");
 
 		if ( file != null && file.exists() ) {
 			// load the dataset
 			final Dataset dataset = ij.scifio().datasetIO().open( file.getAbsolutePath() );
 
 			// show the image
-			ij.ui().show( dataset );
+			if(!ij.ui().isHeadless()){
+				ij.ui().show( dataset );
+			}
 
 			// invoke the plugin
 			ij.command().run( NetProject.class, true );
@@ -79,6 +82,7 @@ public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T > i
 
 	@Override
 	public void run() {
+		processDataset();
 		try {
 			validateInput(
 					input,
@@ -91,4 +95,5 @@ public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T > i
 			showError( e.getMessage() );
 		}
 	}
+	
 }

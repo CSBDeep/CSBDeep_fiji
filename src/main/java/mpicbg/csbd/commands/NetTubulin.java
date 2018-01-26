@@ -49,6 +49,10 @@ import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
+import mpicbg.csbd.network.Network;
+import mpicbg.csbd.network.tensorflow.TensorFlowNetwork;
+import mpicbg.csbd.prediction.BatchedTiledPrediction;
+import mpicbg.csbd.prediction.TiledPrediction;
 import mpicbg.csbd.ui.CSBDeepProgress;
 
 /**
@@ -117,15 +121,17 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 	}
 
 	private void runModel() {
-		if ( input == null ) { return; }
-		modelChanged();
 
-		final AxisType[] mapping = { Axes.TIME, Axes.Y, Axes.X, Axes.CHANNEL };
-		setMapping( mapping );
+		if ( noInputData() )
+			return;
 
 		initGui();
-
-		initModel();
+		
+		loadFinalModelStep();
+		
+		final AxisType[] mapping = { Axes.TIME, Axes.Y, Axes.X, Axes.CHANNEL };
+		setMapping( mapping );
+		
 		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
 
 		// Normalize the input
@@ -161,9 +167,9 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 
 			TiledPrediction tiledPrediction;
 			if ( useBatch ) {
-				tiledPrediction = new BatchedTiledPrediction( rotated, bridge, model, progressWindow, nTiles, BLOCK_MULTIPLE, overlap, batchSize );
+				tiledPrediction = new BatchedTiledPrediction( rotated, network, progressWindow, nTiles, BLOCK_MULTIPLE, overlap, batchSize );
 			} else {
-				tiledPrediction = new TiledPrediction( rotated, bridge, model, progressWindow, nTiles, BLOCK_MULTIPLE, overlap );
+				tiledPrediction = new TiledPrediction( rotated, network, progressWindow, nTiles, BLOCK_MULTIPLE, overlap );
 			}
 			tiledPrediction.setDropSingletonDims( false );
 			result.addAll( pool.submit( tiledPrediction ).get() );
