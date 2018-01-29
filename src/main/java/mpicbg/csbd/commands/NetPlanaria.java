@@ -83,9 +83,8 @@ public class NetPlanaria< T extends RealType< T > > extends CSBDeepCommand< T >
 
 	@Override
 	public void run() {
-
+		processDataset();
 		try {
-			processDataset();
 			validateInput(
 					input,
 					"3D grayscale image with dimension order X-Y-Z",

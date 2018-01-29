@@ -34,7 +34,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.OptionalLong;
 import java.util.concurrent.ExecutionException;
-import java.util.concurrent.RejectedExecutionException;
 
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
@@ -49,8 +48,7 @@ import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
-import mpicbg.csbd.network.Network;
-import mpicbg.csbd.network.tensorflow.TensorFlowNetwork;
+import mpicbg.csbd.imglib2.TiledView;
 import mpicbg.csbd.prediction.BatchedTiledPrediction;
 import mpicbg.csbd.prediction.TiledPrediction;
 import mpicbg.csbd.ui.CSBDeepProgress;
@@ -101,6 +99,7 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 
 	@Override
 	public void run() {
+		processDataset();
 		Exception prevException = null;
 		try {
 			try {
@@ -133,6 +132,9 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 		setMapping( mapping );
 		
 		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
+		
+		network.setProgressWindow( progressWindow );
+		network.setDropSingletonDims( false );
 
 		// Normalize the input
 		progressWindow.addLog( "Normalize input.. " );
@@ -163,36 +165,49 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 
 		result.clear();
 
+		TiledPrediction tiledPrediction;
+		if ( useBatch ) {
+			tiledPrediction = new BatchedTiledPrediction( rotated, network, progressWindow, nTiles, BLOCK_MULTIPLE, overlap, batchSize );
+		} else {
+			tiledPrediction = new TiledPrediction( rotated, network, progressWindow, nTiles, BLOCK_MULTIPLE, overlap );
+		}
+		
+		TiledView< FloatType > tiledView = tiledPrediction.preprocess();
+		
+		progressWindow.setProgressBarValue( 0 );
+		
+		progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
+
+		List< RandomAccessibleInterval< FloatType > > rawresults = null;
+		
 		try {
-
-			TiledPrediction tiledPrediction;
-			if ( useBatch ) {
-				tiledPrediction = new BatchedTiledPrediction( rotated, network, progressWindow, nTiles, BLOCK_MULTIPLE, overlap, batchSize );
-			} else {
-				tiledPrediction = new TiledPrediction( rotated, network, progressWindow, nTiles, BLOCK_MULTIPLE, overlap );
-			}
-			tiledPrediction.setDropSingletonDims( false );
-			result.addAll( pool.submit( tiledPrediction ).get() );
-
-		} catch ( RejectedExecutionException | InterruptedException exc ) {
-			return;
+			rawresults = runModel( tiledView); 
 		} catch ( final ExecutionException exc ) {
 			exc.printStackTrace();
+			restartModel( rotated, result, useBatch );
+			return;
 
-			// We expect it to be an out of memory exception and
-			// try it again with a smaller batch size.
-			batchSize /= 2;
-			// Check if the batch size is at 1 already
-			if ( batchSize < 1 ) {
-				progressWindow.setCurrentStepFail();
-				return;
-			}
-			progressWindow.addError( "Out of memory exception occurred. Trying with batch size: " + batchSize );
-			progressWindow.addRounds( 1 );
-			progressWindow.setNextRound();
-			runBatches( rotated, result, useBatch );
+		} catch ( final InterruptedException exc ) {
+			cancel();
 			return;
 		}
+		
+		result.addAll( tiledPrediction.postprocess( rawresults ) );
 
+	}
+	
+	protected void restartModel( RandomAccessibleInterval< FloatType > modelInput, List< RandomAccessibleInterval< FloatType > > result, boolean useBatch ) {
+		// We expect it to be an out of memory exception and
+		// try it again with a smaller batch size.
+		batchSize /= 2;
+		// Check if the batch size is at 1 already
+		if ( batchSize < 1 ) {
+			progressWindow.setCurrentStepFail();
+			return;
+		}
+		progressWindow.addError( "Out of memory exception occurred. Trying with batch size: " + batchSize );
+		progressWindow.addRounds( 1 );
+		progressWindow.setNextRound();
+		runBatches( modelInput, result, useBatch );
 	}
 }

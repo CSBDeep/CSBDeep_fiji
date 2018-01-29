@@ -3,10 +3,10 @@ package mpicbg.csbd.network.tensorflow;
 import com.google.protobuf.InvalidProtocolBufferException;
 
 import java.io.IOException;
-import java.util.Arrays;
 
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
+import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
 import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.RandomAccessibleInterval;
@@ -22,7 +22,6 @@ import org.tensorflow.framework.TensorInfo;
 import org.tensorflow.framework.TensorShapeProto;
 
 import mpicbg.csbd.network.Network;
-import mpicbg.csbd.util.ArrayHelper;
 
 public class TensorFlowNetwork extends Network {
 	
@@ -72,7 +71,7 @@ public class TensorFlowNetwork extends Network {
 
 	@Override
 	public void loadOutputNode( String defaultName ) {
-		super.loadOutputNode( defaultName);
+		super.loadOutputNode( defaultName );
 		if ( sig != null && sig.isInitialized() && sig.getOutputsCount() > 0 ) {
 			outputNode.setName( sig.getOutputsMap().keySet().iterator().next() );
 			setOutputTensor( sig.getOutputsOrThrow( outputNode.getName() ) );
@@ -87,12 +86,6 @@ public class TensorFlowNetwork extends Network {
 			shape[i] = tensorShape.getDim( i ).getSize();
 		}
 		return shape;
-	}
-
-	@Override
-	public void setInput( Dataset dataset ) {
-		inputNode.initialize( dataset );
-		outputNode.initialize( dataset );
 	}
 	
 	@Override
@@ -131,16 +124,13 @@ public class TensorFlowNetwork extends Network {
 	
 	@Override
 	public void initMapping() {
-		int inputDimCount = getInputTensorInfo().getTensorShape().getDimCount();
-		if ( !inputNode.isMappingInitialized() ) {
-			inputNode.setMappingDefaults(inputDimCount);
-		}
+		inputNode.initMapping();
 	}
 	
 	protected void calculateMapping() {
 
 		for ( int i = 0; i < inputNode.getNodeShape().length; i++ ) {
-			outputNode.setTFMapping( i, inputNode.getTFMapping( i ) );
+			outputNode.setNodeAxis( i, inputNode.getNodeAxis( i ) );
 		}
 		outputNode.setNodePadding( inputNode.getNodePadding() );
 		handleDimensionReduction();		
@@ -155,12 +145,36 @@ public class TensorFlowNetwork extends Network {
 	
 	private void handleDimensionReduction() {
 		if ( inputTensorInfo.getTensorShape().getDimCount() == outputTensorInfo.getTensorShape().getDimCount() + 1 ) {
-			getOutputNode().removeZFromMapping();
+			getOutputNode().removeZFromMapping(inputNode.getDataset());
+			Dataset outputDummy = createEmptyDuplicateWithoutZAxis( inputNode.getDataset() );
+			getOutputNode().initialize( outputDummy );
+		}else{
+			getOutputNode().initialize( inputNode.getDataset().duplicate() );
 		}
+	}
+	
+	private <T> Dataset createEmptyDuplicateWithoutZAxis(Dataset input) {
+		int numDims = input.numDimensions();
+		if(input.axis( Axes.Z ) != null){
+			numDims--;
+		}
+		long[] dims = new long[numDims];
+		AxisType[] axes = new AxisType[numDims];
+		int j = 0;
+		for(int i = 0; i < input.numDimensions(); i++) {
+			AxisType axisType = input.axis( i ).type(); 
+			if(axisType != Axes.Z) {
+				axes[j] = axisType;
+				dims[j] = input.dimension( i );
+				j++;
+			}
+		}
+		Dataset result = new ImageJ().dataset().create( new FloatType(), dims, "", axes );
+		return result;
 	}
 
 	@Override
-	public RandomAccessibleInterval< FloatType > execute( final RandomAccessibleInterval< FloatType > tile, boolean dropSingletonDims ) throws Exception {
+	public RandomAccessibleInterval< FloatType > execute( final RandomAccessibleInterval< FloatType > tile ) throws Exception {
 
 		final Tensor inputTensor = DatasetTensorflowConverter.datasetToTensor( tile, getInputNode().getMapping() );
 		if ( inputTensor != null ) {

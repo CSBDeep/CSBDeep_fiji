@@ -5,6 +5,7 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.fail;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
@@ -15,8 +16,10 @@ import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
 import net.imagej.display.DatasetView;
 import net.imagej.display.DefaultDatasetView;
+import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.FloatType;
 
 import org.scijava.command.Command;
 import org.scijava.command.CommandModule;
@@ -77,6 +80,12 @@ public abstract class CSBDeepTest {
 			assertEquals( input.dimension( i ), output.dimension( i_output ));
 			i_output++;
 		}
+	}
+	
+	protected static void printDim( final String title, final Dataset input ) {
+		final long[] dims = new long[ input.numDimensions() ];
+		input.dimensions( dims );
+		System.out.println( title + ": " + Arrays.toString( dims ) );
 	}
 
 }

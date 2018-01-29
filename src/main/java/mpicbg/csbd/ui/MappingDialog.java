@@ -77,7 +77,7 @@ public class MappingDialog {
 				if ( inputNode.getDatasetDimIndexByTFIndex( i ) != null ) {
 
 					final String dimName = inputNode.getDatasetDimNameByTFIndex( i );
-					final long dimSize = inputNode.getDatasetDimSizeFromTFIndex( i );
+					final long dimSize = inputNode.getDatasetDimSizeFromNodeDim( i );
 					final String tfDimSize = String.valueOf(
 							inputNode.getNodeShape()[tfDimCount]);
 
@@ -129,7 +129,7 @@ public class MappingDialog {
 					System.out.println(
 							"selected index for tf index " + i + ": " + drops.get(
 									i ).getSelectedIndex() );
-					inputNode.setTFMappingByKnownAxesIndex( i, drops.get( i ).getSelectedIndex() );
+					inputNode.setNodeAxisByKnownAxesIndex( i, drops.get( i ).getSelectedIndex() );
 				}
 				inputNode.printMapping();
 			}

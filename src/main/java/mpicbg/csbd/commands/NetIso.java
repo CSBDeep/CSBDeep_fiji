@@ -38,7 +38,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.concurrent.RejectedExecutionException;
 import java.util.stream.IntStream;
 
 import net.imagej.Dataset;
@@ -98,7 +97,8 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		ij.launch( args );
 
 		// ask the user for a file to open
-		final File file = ij.ui().chooseFile( null, "open" );
+//		final File file = ij.ui().chooseFile( null, "open" );
+		final File file = new File("/home/random/Development/imagej/plugins/CSBDeep-data/net_iso/input-2.tif");
 
 		if ( file != null && file.exists() ) {
 			// load the dataset
@@ -154,6 +154,8 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		// Upsampling
 		progressWindow.addLog( "Upsampling.." );
 		final RandomAccessibleInterval< FloatType > upsampled = upsample( normalizedInput, dimZ, scale );
+		
+		printDim( "upsampled:", upsampled);
 
 		// ========== ROTATION
 
@@ -164,6 +166,9 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		// Create the second rotated image
 		progressWindow.addLog( "Rotate around X.." );
 		final RandomAccessibleInterval< FloatType > rotated1 = Views.permute( rotated0, dimY, dimZ );
+		
+		printDim( "rotated0: ", rotated0 );
+		printDim( "rotated1: ", rotated1 );
 
 		// Copy the transformed images to apply the transformations
 		progressWindow.addLog( "Apply transformations.." );
@@ -176,9 +181,19 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		final List< RandomAccessibleInterval< FloatType > > result0 = new ArrayList<>();
 		final List< RandomAccessibleInterval< FloatType > > result1 = new ArrayList<>();
 
+		network.setDropSingletonDims( false );
+		network.setProgressWindow( progressWindow );
 		runBatches( rotated0_applied, rotated1_applied, result0, result1 );
+		
+		for (RandomAccessibleInterval< FloatType > img : result0 ){
+			printDim( "result0_child", img );
+		}
+		
+		for (RandomAccessibleInterval< FloatType > img : result1 ){
+			printDim( "result1_child", img );
+		}
 
-		resultDatasets = new ArrayList<>();
+		resultDatasets.clear();
 		for ( int i = 0; i + 1 < result0.size() && i + 1 < result1.size() && i / 2 < OUTPUT_NAMES.length; i += 2 ) {
 			//prediction for ZY rotation
 			RandomAccessibleInterval< FloatType > res0_pred =
@@ -187,12 +202,24 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 			//prediction for ZX rotation
 			RandomAccessibleInterval< FloatType > res1_pred =
 					Views.stack( result1.get( i ), result1.get( i + 1 ) );
+			
+			printDim( "res0_pred", res0_pred );
+			printDim( "res1_pred", res1_pred );
+			
+			//force the CHANNEL dim back to its original location
+			int outputChannelDim = ( int ) network.getOutputNode().getDatasetDimension( Axes.CHANNEL);
+			for(int dim = outputChannelDim+1; dim < res1_pred.numDimensions(); dim++) {
+				res0_pred = Views.permute( res0_pred, dim, dim-1 );
+				res1_pred = Views.permute( res1_pred, dim, dim-1 );
+			}
+			
+			printDim( "res0_pred", res0_pred );
+			printDim( "res1_pred", res1_pred );
 
 			// rotate output stacks back
-			//TODO the rotation dimensions are not dynamic yet, we should use variables
-			res0_pred = Views.permute( res0_pred, 0, 2 );
-			res1_pred = Views.permute( res1_pred, 1, 2 );
-			res1_pred = Views.permute( res1_pred, 0, 2 );
+			res0_pred = Views.permute( res0_pred, dimX, dimZ );
+			res1_pred = Views.permute( res1_pred, dimY, dimZ );
+			res1_pred = Views.permute( res1_pred, dimX, dimZ );
 
 			printDim( "res0_pred rotated back", res0_pred );
 			printDim( "res1_pred rotated back", res1_pred );
@@ -208,7 +235,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 					prediction );
 			printDim( "prediction", prediction );
 
-			resultDatasets.add( wrapIntoDatasetView( OUTPUT_NAMES[ i / 2 ], Views.permute( prediction, 2, 3 ) ) );
+			resultDatasets.add( wrapIntoDatasetView( OUTPUT_NAMES[ i / 2 ], prediction ) );
 		}
 		if ( !resultDatasets.isEmpty() ) {
 			progressWindow.addLog( "All done!" );
@@ -217,6 +244,55 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 			progressWindow.setCurrentStepFail();
 		}
 	}
+	
+	private void runBatch(
+			final RandomAccessibleInterval< FloatType > rotated,
+			final List< RandomAccessibleInterval< FloatType > > result ) {
+
+		result.clear();
+		
+		final BatchedTiledPrediction batchedPrediction0 =
+				new BatchedTiledPrediction( rotated, network, progressWindow, nTiles, 4, overlap, batchSize );
+		
+		TiledView< FloatType > tiledView = batchedPrediction0.preprocess();
+		
+		progressWindow.setProgressBarValue( 0 );
+		
+		progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
+
+		List< RandomAccessibleInterval< FloatType > > rawresults = null;
+		
+		try {
+			rawresults = runModel( tiledView); 
+		} catch ( final ExecutionException exc ) {
+			exc.printStackTrace();
+			restartModel( rotated, result );
+			return;
+
+		} catch ( final InterruptedException exc ) {
+			cancel();
+			return;
+		}
+		
+		result.addAll( batchedPrediction0.postprocess( rawresults ) );
+
+	}
+
+	protected void restartModel( RandomAccessibleInterval< FloatType > modelInput, List< RandomAccessibleInterval< FloatType > > result ) {
+		// We expect it to be an out of memory exception and
+		// try it again with more tiles.
+		// try it again with a smaller batch size.
+		batchSize /= 2;
+		// Check if the batch size is at 1 already
+		if ( batchSize < 1 ) {
+			progressWindow.setCurrentStepFail();
+			return;
+		}
+		progressWindow.addError( "Out of memory exception occurred. Trying with " + nTiles + " tiles..." );
+		progressWindow.addRounds( 1 );
+		progressWindow.setNextRound();
+		runBatch(modelInput, result);
+	}
 
 	private void runBatches(
 			final RandomAccessibleInterval< FloatType > rotated0,
@@ -224,42 +300,9 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 			final List< RandomAccessibleInterval< FloatType > > result0,
 			final List< RandomAccessibleInterval< FloatType > > result1 ) {
 
-		result0.clear();
-		result1.clear();
-
-		try {
-			final BatchedTiledPrediction batchedPrediction0 =
-					new BatchedTiledPrediction( rotated0, network, progressWindow, nTiles, 4, overlap, batchSize );
-			final BatchedTiledPrediction batchedPrediction1 =
-					new BatchedTiledPrediction( rotated1, network, progressWindow, nTiles, 4, overlap, batchSize );
-			batchedPrediction0.setDropSingletonDims( false );
-			batchedPrediction1.setDropSingletonDims( false );
-
-			result0.addAll( pool.submit( batchedPrediction0 ).get() );
-
-			progressWindow.setNextRound();
-			result1.addAll( pool.submit( batchedPrediction1 ).get() );
-
-		} catch ( RejectedExecutionException | InterruptedException exc ) {
-			return;
-		} catch ( final ExecutionException exc ) {
-			exc.printStackTrace();
-
-			// We expect it to be an out of memory exception and
-			// try it again with a smaller batch size.
-			batchSize /= 2;
-			// Check if the batch size is at 1 already
-			if ( batchSize < 1 ) {
-				progressWindow.setCurrentStepFail();
-				return;
-			}
-			progressWindow.addError( "Out of memory exception occurred. Trying with batch size: " + batchSize );
-			progressWindow.addRounds( 1 );
-			progressWindow.setNextRound();
-			runBatches( rotated0, rotated1, result0, result1 );
-			return;
-		}
-
+		runBatch( rotated0, result0 );
+		progressWindow.setNextRound();
+		runBatch( rotated1, result1 );
 	}
 
 	// ====================== HELPER METHODS =================================
@@ -396,8 +439,10 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		final TiledView< V > tiledViewIn2 = new TiledView<>( in2, blockSize );
 		final TiledView< W > tiledViewOut = new TiledView<>( out, blockSize );
 
-		final ExecutorService pool = Executors.newWorkStealingPool();
-		final List< Future< ? > > futures = new ArrayList< Future< ? > >();
+//		final ExecutorService pool = Executors.newWorkStealingPool();
+		final List< Future< ? > > futures = new ArrayList<>();
+		
+		futures.clear();
 
 		final Cursor< RandomAccessibleInterval< U > > tileCursorIn1 = Views.iterable( tiledViewIn1 ).cursor();
 		final RandomAccess< RandomAccessibleInterval< V > > tileRandomAccessIn2 = tiledViewIn2.randomAccess();

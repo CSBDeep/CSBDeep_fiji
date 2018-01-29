@@ -59,9 +59,11 @@ import net.imglib2.util.Intervals;
 import org.scijava.Cancelable;
 import org.scijava.Initializable;
 import org.scijava.ItemIO;
+import org.scijava.ItemVisibility;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 
+import mpicbg.csbd.imglib2.TiledView;
 import mpicbg.csbd.network.Network;
 import mpicbg.csbd.network.tensorflow.TensorFlowNetwork;
 import mpicbg.csbd.normalize.PercentileNormalizer;
@@ -96,7 +98,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected int overlap = 32;
 
 	@Parameter( type = ItemIO.BOTH, label = "result" )
-	protected List< DatasetView > resultDatasets;
+	protected List< DatasetView > resultDatasets = new ArrayList<>();
 
 	protected String modelFileUrl;
 	protected String modelName;
@@ -109,7 +111,6 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	CSBDeepProgress progressWindow;
 
 	ExecutorService pool = Executors.newSingleThreadExecutor();
-	List< TiledPrediction > predictions = new ArrayList<>();
 	
 	Network network = new TensorFlowNetwork();
 
@@ -123,8 +124,8 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		
 		input = datasetView.getData();
 		DatasetHelper.assignUnknownDimensions( input );
-		if(network.isInitialized()){
-			network.setInput( input );
+		if(network.isInitialized()) {
+			network.initMapping();
 		}
 
 	}
@@ -234,40 +235,34 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected void executeModel( final RandomAccessibleInterval< FloatType > modelInput ) {
 		
 		processDataset();
+		network.setProgressWindow( progressWindow );
+		
+		//run tiling
+		final TiledPrediction prediction =
+				new TiledPrediction( modelInput, network, progressWindow, nTiles, blockMultiple, overlap );
+		TiledView< FloatType > tiledView = prediction.preprocess();
+		
+		progressWindow.setProgressBarValue( 0 );
+		
+		progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
 
-		List< RandomAccessibleInterval< FloatType > > result = null;
+		List< RandomAccessibleInterval< FloatType > > rawresults = null;
+		
 		try {
-			final TiledPrediction prediction =
-					new TiledPrediction( modelInput, network, progressWindow, nTiles, blockMultiple, overlap );
-			predictions.add( prediction );
-			result = pool.submit( prediction ).get();
+			rawresults = runModel( tiledView); 
 		} catch ( final ExecutionException exc ) {
 			exc.printStackTrace();
-
-			// We expect it to be an out of memory exception and
-			// try it again with more tiles.
-			nTiles *= 2;
-			// Check if the number of tiles is to large already
-			if ( Arrays.stream( Intervals.dimensionsAsLongArray( modelInput ) ).max().getAsLong() / nTiles < blockMultiple ) {
-				progressWindow.setCurrentStepFail();
-				return;
-			}
-			progressWindow.addError( "Out of memory exception occurred. Trying with " + nTiles + " tiles..." );
-			progressWindow.addRounds( 1 );
-			progressWindow.setNextRound();
-			executeModel( modelInput );
+			restartModel( modelInput );
 			return;
 
 		} catch ( final InterruptedException exc ) {
-			progressWindow.addError( "Process canceled." );
-			progressWindow.setCurrentStepFail();
+			cancel();
+			return;
 		}
+		
+		List< RandomAccessibleInterval< FloatType > > result =  prediction.postprocess( rawresults );
 
-		if(resultDatasets == null) {
-			resultDatasets = new ArrayList<>();
-		}else {
-			resultDatasets.clear();
-		}
+		resultDatasets.clear();
 		
 		if(result != null){
 			for ( int i = 0; i < result.size() && i < OUTPUT_NAMES.length; i++ ) {
@@ -281,6 +276,32 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 				progressWindow.setCurrentStepFail();
 			}			
 		}
+	}
+
+	protected void cancel() {
+		progressWindow.addError( "Process canceled." );
+		progressWindow.setCurrentStepFail();		
+	}
+
+	protected List< RandomAccessibleInterval< FloatType > >
+			runModel( TiledView< FloatType > tiledView ) throws InterruptedException, ExecutionException {
+		network.setTiledView( tiledView );
+		return pool.submit( network ).get();
+	}
+
+	protected void restartModel( RandomAccessibleInterval< FloatType > modelInput ) {
+		// We expect it to be an out of memory exception and
+		// try it again with more tiles.
+		nTiles *= 2;
+		// Check if the number of tiles is to large already
+		if ( Arrays.stream( Intervals.dimensionsAsLongArray( modelInput ) ).max().getAsLong() / nTiles < blockMultiple ) {
+			progressWindow.setCurrentStepFail();
+			return;
+		}
+		progressWindow.addError( "Out of memory exception occurred. Trying with " + nTiles + " tiles..." );
+		progressWindow.addRounds( 1 );
+		progressWindow.setNextRound();
+		executeModel( modelInput );
 	}
 
 	public static void showError( final String errorMsg ) {

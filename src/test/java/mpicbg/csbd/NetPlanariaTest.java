@@ -22,9 +22,9 @@ public class NetPlanariaTest extends CSBDeepTest {
 	
 	@Test
 	public void testNetProject() {
-		testDataset(new FloatType(), new long[] {100, 100, 10}, new AxisType[] {Axes.X, Axes.Y, Axes.Z});
-		testDataset(new FloatType(), new long[] {100, 10, 100}, new AxisType[] {Axes.X, Axes.Z, Axes.Y});
-		testDataset(new ByteType(), new long[] {100, 100, 10}, new AxisType[] {Axes.X, Axes.Y, Axes.Z});
+		testDataset(new FloatType(), new long[] {50, 100, 10}, new AxisType[] {Axes.X, Axes.Y, Axes.Z});
+		testDataset(new FloatType(), new long[] {50, 10, 100}, new AxisType[] {Axes.X, Axes.Z, Axes.Y});
+		testDataset(new ByteType(), new long[] {100, 50, 10}, new AxisType[] {Axes.X, Axes.Y, Axes.Z});
 	}
 	
 	public <T extends RealType<T> & NativeType<T>> void testDataset(T type, long[] dims, AxisType[] axes) {

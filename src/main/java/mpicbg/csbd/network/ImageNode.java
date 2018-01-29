@@ -1,20 +1,22 @@
 package mpicbg.csbd.network;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
+import net.imagej.axis.CalibratedAxis;
 
 import mpicbg.csbd.util.ArrayHelper;
 
 public class ImageNode {
 	
+	// I do not use 
 	AxisType[] availableAxes = { Axes.X, Axes.Y, Axes.Z, Axes.TIME, Axes.CHANNEL };
 	
 	private String name;
-	private List< AxisType > datasetAxes = new ArrayList<>();
 	private List< AxisType > nodeAxes = new ArrayList<>();
 	private long[] nodeShape;
 	private List< Long > nodePadding = new ArrayList<>();
@@ -27,21 +29,14 @@ public class ImageNode {
 		
 	}
 	
-	public void initialize(Dataset dataset) {
+	public void initialize(final Dataset dataset) {
+		long[] dims = new long[dataset.numDimensions()];
+		dataset.dimensions( dims );
+		System.out.println( "Dataset dimensions: " + Arrays.toString( dims ) );
 		this.dataset = dataset;
-		datasetAxes.clear();
-		for(int i = 0; i < dataset.numDimensions(); i++){
-			datasetAxes.add( null );
-		}
-		for ( int i = 0; i < availableAxes.length; i++ ) {
-			final AxisType axis = availableAxes[ i ];
-			int index = dataset.dimensionIndex( axis );
-			if(index >= 0)
-				datasetAxes.set( dataset.dimensionIndex( axis ), axis );
-		}
 	}
 	
-	public void setNodeShape(long[] shape) {
+	public void setNodeShape(final long[] shape) {
 		nodeShape = shape;
 	}
 	
@@ -49,7 +44,7 @@ public class ImageNode {
 		initializeNodeMapping(nodeShape);
 	}
 	
-	public void initializeNodeMapping(long[] shape) {
+	public void initializeNodeMapping(final long[] shape) {
 		nodeAxes.clear();
 		for(int i = 0; i < shape.length; i++) {
 			nodeAxes.add( null );
@@ -68,21 +63,6 @@ public class ImageNode {
 		return name;
 	}
 	
-//	public void setMapping( int[] mapping ) {
-//		this.mapping = mapping;
-//	}
-	
-//	public int[] getMapping() {
-////		return mapping;
-//		int[] res = new int[nodeShape.length];
-//		int i = 0;
-//		for(AxisType axis : nodeAxes) {
-//			res[i] = datasetAxes.indexOf( axis );
-//			i++;
-//		}
-//		return res;
-//	}
-	
 	public int[] getMapping() {
 		return ArrayHelper.toIntArray( finalMapping );
 	}
@@ -92,7 +72,7 @@ public class ImageNode {
 		finalMapping.clear();
 		
 		for ( int i = 0; i < nodeShape.length; i++ ) {
-			finalMapping.add(getTfIndexByDatasetDim( i ));
+			finalMapping.add(getNodeDimByDatasetDim( i ));
 		}
 				
 		//if a dimension is not set, assign an unused dimension
@@ -100,8 +80,8 @@ public class ImageNode {
 	}
 	
 	public AxisType getDimType( final int dim ) {
-		if ( datasetAxes.size() > dim ) { 
-			return datasetAxes.get( dim ); 
+		if ( dataset.numDimensions() > dim ) { 
+			return dataset.axis( dim ).type(); 
 		}
 		return null;
 	}
@@ -110,7 +90,7 @@ public class ImageNode {
 		return dataset;
 	}
 	
-	public AxisType getLargestDim() {
+	public AxisType getLargestDatasetDim() {
 		// Get the largest dimension and its size
 		AxisType largestDim = null;
 		long largestSize = 0;
@@ -124,33 +104,40 @@ public class ImageNode {
 		return largestDim;
 	}
 	
-	public void setMappingDefaults(int tensorDimCount) {
+	public void initMapping() {
+		if ( !isMappingInitialized() ) {
+			setMappingDefaults();
+		}
+	}
+	
+	public void setMappingDefaults() {
 		System.out.println( "setmappingdefaults" );
 		setMappingInitialized( true );
+		int tensorDimCount = nodeShape.length;
 		if ( tensorDimCount == 5 ) {
-			nodeAxes.set( 0, Axes.TIME );
-			nodeAxes.set( 1, Axes.Z );
-			nodeAxes.set( 2, Axes.Y );
-			nodeAxes.set( 3, Axes.X );
-			nodeAxes.set( 4, Axes.CHANNEL );
+			setNodeAxis( 0, Axes.TIME );
+			setNodeAxis( 1, Axes.Z );
+			setNodeAxis( 2, Axes.Y );
+			setNodeAxis( 3, Axes.X );
+			setNodeAxis( 4, Axes.CHANNEL );
 		} else {
 			if ( tensorDimCount == 4 ) {
-				nodeAxes.set( 2, Axes.Y );
-				nodeAxes.set( 3, Axes.X );
+				setNodeAxis( 1, Axes.Y );
+				setNodeAxis( 2, Axes.X );
 				if ( dataset.dimension( Axes.Z ) > 1 ) {
-					nodeAxes.set( 1, Axes.Z );
+					setNodeAxis( 0, Axes.Z );
 					if ( dataset.dimension( Axes.CHANNEL ) > 1 ) {
-						nodeAxes.set( 4, Axes.CHANNEL );
+						setNodeAxis( 3, Axes.CHANNEL );
 					} else {
-						nodeAxes.set( 4, Axes.TIME );
+						setNodeAxis( 3, Axes.TIME );
 					}
 				} else {
 					if ( dataset.dimension( Axes.CHANNEL ) > 1 ) {
-						nodeAxes.set( 1, Axes.CHANNEL );
-						nodeAxes.set( 4, Axes.TIME );
+						setNodeAxis( 0, Axes.CHANNEL );
+						setNodeAxis( 3, Axes.TIME );
 					} else {
-						nodeAxes.set( 1, Axes.TIME );
-						nodeAxes.set( 4, Axes.CHANNEL );
+						setNodeAxis( 0, Axes.TIME );
+						setNodeAxis( 3, Axes.CHANNEL );
 					}
 				}
 			}
@@ -163,12 +150,12 @@ public class ImageNode {
 	}
 	
 	public int numDimensions() {
-		return datasetAxes.size();
+		return dataset.numDimensions();
 	}
 
 	public long getDatasetDimSize( final int knownAxesIndex ) {
 		if ( availableAxes.length > knownAxesIndex ) { 
-			return dataset.dimension( datasetAxes.indexOf( availableAxes[knownAxesIndex])); 
+			return dataset.dimension( dataset.dimensionIndex( availableAxes[knownAxesIndex])); 
 		}
 		return 1;
 	}
@@ -184,14 +171,13 @@ public class ImageNode {
 		return "not found";
 	}
 
-	public boolean removeZFromMapping() {
+	public boolean removeZFromMapping(Dataset initialDataset) {
 		System.out.println( "REMOVING Z" );
-		printMapping();
+		int datasetIndex = initialDataset.dimensionIndex( Axes.Z );
 		if(!reducedZ) {
 			if ( nodeAxes.contains( Axes.Z ) ) {
 				nodeAxes.remove( Axes.Z );
-				nodePadding.remove( datasetAxes.indexOf( Axes.Z ) );
-				datasetAxes.remove( Axes.Z );
+				nodePadding.remove( datasetIndex );
 				reducedZ = true;
 			}
 			printMapping();
@@ -200,10 +186,10 @@ public class ImageNode {
 	}
 
 	public void permuteInputAxes( final int dim1, final int dim2 ) {
-		final AxisType a1 = datasetAxes.get( dim1 );
-		final AxisType a2 = datasetAxes.get( dim2 );
-		datasetAxes.set( dim2, a1 );
-		datasetAxes.set( dim1, a2 );
+		final CalibratedAxis a1 = dataset.axis( dim1 );
+		final CalibratedAxis a2 = dataset.axis( dim2 );
+		dataset.setAxis( a1, dim2 );
+		dataset.setAxis( a2, dim1 );
 	}
 	
 	public void setMappingInitialized( final boolean mappingInitialized ) {
@@ -215,102 +201,106 @@ public class ImageNode {
 	}
 
 	public void printMapping() {
-		System.out.println( "axes:" + datasetAxes.toString() );
-		System.out.println( "axesTF:" + nodeAxes.toString() );
+		if(dataset != null) {
+    		AxisType[] axes = new AxisType[dataset.numDimensions()];
+    		for(int i = 0; i < dataset.numDimensions(); i++) {
+    			axes[i] = dataset.axis( i ).type();
+    		}
+    		System.out.println( "datasetAxes:" + Arrays.toString( axes ) );
+		}
+		System.out.println( "nodeAxes:" + nodeAxes.toString() );
 		System.out.println( "mapping:" + finalMapping.toString() );
 		System.out.println( "--------------" );
 	}
 	
-	public Long getDatasetDimSizeFromTFIndex( final int tfIndex5D ) {
-		Integer index = getDatasetDimIndexByTFIndex( tfIndex5D );
+	public Long getDatasetDimSizeFromNodeDim( final int nodeDim ) {
+		Integer index = getDatasetDimIndexByTFIndex( nodeDim );
 		if ( index != null ) {
 			return (long) index;
 		}
 		return ( long ) 1;
 	}
 
-	public Integer getDatasetDimIndexByTFIndex( final int tfIndex5D ) {
-		if ( nodeAxes.size() > tfIndex5D ) {
-			AxisType axis = nodeAxes.get( tfIndex5D );
-			if(datasetAxes.contains( axis )) {
-				return datasetAxes.indexOf( axis );
+	public Integer getDatasetDimIndexByTFIndex( final int nodeDim ) {
+		if ( nodeAxes.size() > nodeDim ) {
+			AxisType axis = nodeAxes.get( nodeDim );
+			if(dataset.axis( axis ) != null) {
+				return dataset.dimensionIndex( axis );
 			}
 		}
 		return null;
 	}
 
-	public String getDatasetDimNameByTFIndex( final int tfIndex5D ) {
-		if ( nodeAxes.size() > tfIndex5D) {
-			return getDatasetDimName( nodeAxes.get( tfIndex5D ) ); 
+	public String getDatasetDimNameByTFIndex( final int nodeDim ) {
+		if ( nodeAxes.size() > nodeDim) {
+			return getDatasetDimName( nodeAxes.get( nodeDim ) ); 
 		}
 		return null;
 	}
 
-	public Integer getTfIndexByDatasetDim( final int datasetDim ) {
-		if ( datasetAxes.size() > datasetDim ) { 
-			return nodeAxes.indexOf( datasetAxes.get( datasetDim ) ); 
+	public Integer getNodeDimByDatasetDim( final int datasetDim ) {
+		if ( dataset.numDimensions() > datasetDim ) {
+			return nodeAxes.indexOf( dataset.axis( datasetDim ).type() );
 		}
 		return -1;
 	}
 
-	public Integer getTfIndexByDimType( final AxisType type ) {
+	public Integer getNodeDimByAxis( final AxisType type ) {
 		if ( nodeAxes.contains( type ) ) { return nodeAxes.indexOf( type ); }
 		return -1;
 	}
 
-	public AxisType getDimTypeByDatasetDim( final int datasetDim ) {
-		if ( datasetAxes.size() > datasetDim ) { 
-			return datasetAxes.get( datasetDim ); 
+	public AxisType getAxisByDatasetDim( final int datasetDim ) {
+		if ( dataset.numDimensions() > datasetDim ) { 
+			return dataset.axis( datasetDim ).type(); 
 		}
 		return null;
 	}
 	
-	public void setTFMapping( final int index, final AxisType axisType ) {
-		nodeAxes.set( index, axisType );
+	public void setNodeAxis( final int index, final AxisType axisType ) {
+		if(nodeAxes.size() > index) {
+			nodeAxes.set( index, axisType );
+		}
 	}
 	
-	public AxisType getTFMapping( final int index ) {
+	public AxisType getNodeAxis( final int index ) {
 		return nodeAxes.get( index );
 	}
 	
-	public void setTFMappingByKnownAxesIndex( final int tfIndex5D, final int knownAxesIndex ) {
-		if ( knownAxesIndex < availableAxes.length && tfIndex5D < nodeAxes.size() ) {
-			nodeAxes.set( tfIndex5D, availableAxes[ knownAxesIndex ] );
+	public void setNodeAxisByKnownAxesIndex( final int nodeDim, final int knownAxesIndex ) {
+		if ( knownAxesIndex < availableAxes.length && nodeDim < nodeAxes.size() ) {
+			nodeAxes.set( nodeDim, availableAxes[ knownAxesIndex ] );
 		}
 	}
 
 	public void setMapping( AxisType[] newmapping ) {
-		resetMapping();
+		setMappingInitialized( true );
+		nodeAxes.clear();
 		for ( int i = 0; i < newmapping.length; i++ ) {
-			setTFMapping( i, newmapping[ i ] );
+			nodeAxes.add( newmapping[ i ] );
 		}
+		System.out.println( "Setting manual mapping:" );
 		printMapping();		
 	}
 	
 	public List<AxisType> getNodeAxes() {
 		return nodeAxes;
 	}
-	
-	public List<AxisType> getDatasetAxes() {
-		return datasetAxes;
-	}
 
 	public long getLargestDimSize() {
-		return dataset.dimension( getLargestDim() );
+		return dataset.dimension( getLargestDatasetDim() );
 	}
 
 	public int getLargestDimIndex() {
 		// Get the largest dimension and its size
 		int largestDim = -1;
 		long largestSize = 0;
-		int i = 0;
-		for ( AxisType axis : datasetAxes) {
-			final long dimSize = getDataset().dimension( axis );
-			if (axis.isXY() && dimSize > largestSize ) {
+		for ( int i = 0; i < dataset.numDimensions(); i++) {
+			final long dimSize = getDataset().dimension( i );
+			if (dataset.axis( i ).type().isXY() && dimSize > largestSize ) {
 				largestSize = dimSize;
 				largestDim = i;
 			}
-			i++;
 		}
 		return largestDim;
 	}
@@ -327,7 +317,11 @@ public class ImageNode {
 	}
 
 	public long getDatasetDimension( int index ) {
-		return dataset.dimension( datasetAxes.get( index ) );
+		return dataset.dimension( index );
+	}
+
+	public long getDatasetDimension( AxisType axisType ) {
+		return dataset.dimension( axisType );
 	}
 
 }

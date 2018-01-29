@@ -82,7 +82,7 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 
 	@Override
 	public void run() {
-
+		processDataset();
 		try {
 			validateInput(
 					input,

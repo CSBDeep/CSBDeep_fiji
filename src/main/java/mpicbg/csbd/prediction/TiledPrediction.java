@@ -31,13 +31,8 @@ package mpicbg.csbd.prediction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
 
-import net.imglib2.Cursor;
+import net.imagej.axis.Axes;
 import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
@@ -52,9 +47,7 @@ import mpicbg.csbd.network.Network;
 import mpicbg.csbd.ui.CSBDeepProgress;
 import mpicbg.csbd.util.Task;
 
-public class TiledPrediction
-		implements
-		Callable< List< RandomAccessibleInterval< FloatType > > > {
+public class TiledPrediction {
 
 	protected RandomAccessibleInterval< FloatType > input;
 	
@@ -67,19 +60,8 @@ public class TiledPrediction
 	protected long largestSize;
 
 	protected final CSBDeepProgress progressWindow;
-
-	protected Integer doneTileCount;
-
-	protected boolean cancelPressed = false;
 	
 	protected Task status;
-
-	/**
-	 * If singleton dimensions in the output should be dropped. Default: true
-	 */
-	protected boolean dropSingletonDims = true;
-
-	ExecutorService pool = Executors.newSingleThreadExecutor();
 
 	public TiledPrediction(
 			final RandomAccessibleInterval< FloatType > input,
@@ -109,7 +91,7 @@ public class TiledPrediction
 		progressWindow.setCurrentStepFail();
 	}
 
-	protected TiledView< FloatType > preprocess() {
+	public TiledView< FloatType > preprocess() {
 
 		if ( input != null ) {
 
@@ -200,70 +182,7 @@ public class TiledPrediction
 		return new TiledView<>( dataset, tileSize, padding );
 	}
 
-	public List< RandomAccessibleInterval< FloatType > > runModel( final TiledView< FloatType > tiledView ) throws ExecutionException {
-
-		progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
-
-		final boolean multithreading = false;
-
-		final Cursor< RandomAccessibleInterval< FloatType > > cursor =
-				Views.iterable( tiledView ).cursor();
-
-		// Loop over the tiles and execute the prediction
-		final List< RandomAccessibleInterval< FloatType > > results = new ArrayList<>();
-		final List< Future< RandomAccessibleInterval< FloatType > > > futures = new ArrayList<>();
-
-		progressWindow.setProgressBarValue( 0 );
-		doneTileCount = 0;
-
-		while ( cursor.hasNext() && !cancelPressed ) {
-			final RandomAccessibleInterval< FloatType > tile = cursor.next();
-			//uiService.show(tile);
-			final Future< RandomAccessibleInterval< FloatType > > future = pool.submit(
-					new TileRunner( tile ) );
-
-			log("Processing tile " + ( doneTileCount + 1 ) + ".." );
-
-			futures.add( future );
-
-			if ( !multithreading ) {
-				try {
-					final RandomAccessibleInterval< FloatType > res = future.get();
-					if ( res == null ) return null;
-					results.add( res );
-					upTileCount();
-				} catch ( final InterruptedException exc ) {
-					pool.shutdownNow();
-					fail();
-					return null;
-				}
-			}
-		}
-		if ( multithreading ) {
-			for ( final Future< RandomAccessibleInterval< FloatType > > future : futures ) {
-				try {
-					final RandomAccessibleInterval< FloatType > res = future.get();
-					if ( res == null ) return null;
-					results.add( res );
-					upTileCount();
-				} catch ( final InterruptedException exc ) {
-					pool.shutdownNow();
-					fail();
-					return null;
-				}
-			}
-		}
-
-		progressWindow.setCurrentStepDone();
-		return results;
-	}
-
-	protected void upTileCount() {
-		doneTileCount++;
-		progressWindow.setProgressBarValue( doneTileCount );
-	}
-
-	protected List< RandomAccessibleInterval< FloatType > > postprocess( final List< RandomAccessibleInterval< FloatType > > results ) {
+	public List< RandomAccessibleInterval< FloatType > > postprocess( final List< RandomAccessibleInterval< FloatType > > results ) {
 
 		if ( results != null && results.size() > 0 ) {
 
@@ -284,13 +203,17 @@ public class TiledPrediction
 			log( "Crop to original size.." );
 
 			RandomAccessibleInterval< FloatType > fittedResult = undoExpansion(result);
+			
+			dims = new long[fittedResult.numDimensions()];
+			fittedResult.dimensions( dims );
+			System.out.println( "fittedResult dimensions: " + Arrays.toString( dims ) );
 
 //			ImageJ ij = new ImageJ();
 //			ij.ui().show( "result", result );
 //			ij.ui().show( "fittedresult", fittedResult );
 //			ij.ui().show( "_expandedresult", expandedresult );
 
-			return splitByLastDim(fittedResult);
+			return splitByLastNodeDim(fittedResult);
 		}
 
 		progressWindow.setCurrentStepFail();
@@ -328,18 +251,12 @@ public class TiledPrediction
 		final int lastdim = fittedResult.numDimensions() - 1;
 		return splitChannels( fittedResult, lastdim );
 	}
-
-	@Override
-	public List< RandomAccessibleInterval< FloatType > > call() throws ExecutionException {
-		final TiledView< FloatType > tiledView = preprocess();
-
-		progressWindow.setProgressBarValue( 0 );
-
-		progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
-		final List< RandomAccessibleInterval< FloatType > > results = runModel( tiledView );
-
-		return postprocess( results );
-	}
+	
+	protected List< RandomAccessibleInterval< FloatType > > splitByLastNodeDim( RandomAccessibleInterval< FloatType > fittedResult ) {
+        final int dim = ( int ) network.getOutputNode().getDatasetDimension( 
+        		network.getOutputNode().getNodeAxis( network.getOutputNode().getNodeShape().length-1 ));
+        return splitChannels( fittedResult, dim );
+    }
 
 	public < T extends RealType< T > > List< RandomAccessibleInterval< FloatType > > splitChannels(
 			final RandomAccessibleInterval< FloatType > img,
@@ -384,67 +301,6 @@ public class TiledPrediction
 		im.max( max );
 		max[ d ] += ( size - im.dimension( d ) );
 		return Views.interval( Views.extendMirrorDouble( im ), new FinalInterval( min, max ) );
-	}
-	
-	/**
-	 * Set if singleton dimensions of the output image should be dropped. If the
-	 * tile size in one dimension is only one this could remove an important
-	 * dimension. Default value is true.
-	 */
-	public void setDropSingletonDims( final boolean dropSingletonDims ) {
-		this.dropSingletonDims = dropSingletonDims;
-	}
-
-	class TileRunner implements Callable< RandomAccessibleInterval< FloatType > > {
-
-		RandomAccessibleInterval< FloatType > tile;
-
-		public TileRunner(final RandomAccessibleInterval< FloatType > tile) {
-			this.tile = tile;
-		}
-
-		@Override
-		public RandomAccessibleInterval< FloatType > call() throws Exception {
-			RandomAccessibleInterval< FloatType > result = network.execute( tile, dropSingletonDims );
-			if ( result != null ) {
-				
-				removePadding(result);
-
-//				ImageJ ij = new ImageJ();
-//				ij.ui().show( result );
-
-			}
-			else {
-				throw new java.lang.RuntimeException("Network tile result is null");
-			}
-			return result;
-
-		}
-
-		protected void removePadding( RandomAccessibleInterval< FloatType > result ) {
-			int largestDim = network.getOutputNode().getLargestDimIndex();
-			long[] padding = network.getOutputNode().getNodePadding();
-
-			// Set padding to negative to remove it later
-			final long[] negPadding = padding.clone();				
-			negPadding[ largestDim ] = -padding[ largestDim ];
-			
-			long[] dims = new long[result.numDimensions()];
-			result.dimensions( dims );
-			System.out.println( "result from network: " + Arrays.toString( dims ) );
-
-			final long[] negPaddingPlus = new long[ result.numDimensions() ];
-			for ( int i = 0; i < negPadding.length; i++ ) {
-				negPaddingPlus[ i ] = negPadding[ i ];
-			}
-			result = Views.zeroMin( Views.expandZero( result, negPaddingPlus ) );
-			
-		}
-
-	}
-
-	public void cancel() {
-		pool.shutdownNow();
 	}
 
 }

@@ -31,6 +31,7 @@ package mpicbg.csbd.prediction;
 import java.util.Arrays;
 import java.util.List;
 
+import net.imagej.axis.Axes;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
 
@@ -64,21 +65,13 @@ public class BatchedTiledPrediction extends TiledPrediction {
 	protected TiledView< FloatType > createTiledView(RandomAccessibleInterval< FloatType > dataset, long[] tileSize) {
 		long[] padding = network.getInputNode().getNodePadding();
 		network.getInputNode().printMapping();
-		batchDim = network.getInputNode().getDatasetDimIndexByTFIndex( 0 );
-		channelDim = network.getInputNode().getDatasetDimIndexByTFIndex(
-				network.getInputNode().numDimensions() - 1 );
-		// If there is no channel dimension in the input image, we assume that a channel dimension might be added to the end of the image
-		if ( channelDim < 0 ) {
-			channelDim = input.numDimensions();
-		}
-		System.out.println( "batchDim  : " + batchDim );
-		System.out.println( "channelDim: " + channelDim );
+		
 		batchDimSize = tileSize[ batchDim ];
 		System.out.println( "batchDimSize  : " + batchDimSize );
 		batchesNum = ( int ) Math.ceil( ( float ) batchDimSize / ( float ) batchSize );
 		// If a smaller batch size is sufficient for the same amount of batches, we can use it
 		batchSize = ( int ) Math.ceil( ( float ) batchDimSize / ( float ) batchesNum );
-
+		
 		progressWindow.setProgressBarMax( tilesNum * batchesNum );
 
 		final long expandedBatchDimSize = batchesNum * batchSize;
@@ -93,6 +86,16 @@ public class BatchedTiledPrediction extends TiledPrediction {
 	@Override
 	protected RandomAccessibleInterval< FloatType >
     	expandToFitBlockSize( RandomAccessibleInterval< FloatType > dataset ) {
+		
+		batchDim = network.getInputNode().getDatasetDimIndexByTFIndex( 0 );
+		channelDim = ( int ) network.getInputNode().getDatasetDimension( Axes.CHANNEL );
+		// If there is no channel dimension in the input image, we assume that a channel dimension might be added to the end of the image
+		if ( channelDim < 0 ) {
+			channelDim = input.numDimensions();
+		}
+		System.out.println( "batchDim  : " + batchDim );
+		System.out.println( "channelDim: " + channelDim );
+		
         int largestDim = network.getInputNode().getLargestDimIndex();
         RandomAccessibleInterval< FloatType > expandedInput = expandDimToSize( input, largestDim, blockWidth * tilesNum );
 
