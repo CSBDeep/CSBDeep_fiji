@@ -34,6 +34,7 @@ import java.util.OptionalLong;
 
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
+import net.imagej.axis.Axes;
 import net.imglib2.type.numeric.RealType;
 
 import org.scijava.command.Command;
@@ -83,6 +84,7 @@ public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T > i
 	@Override
 	public void run() {
 		processDataset();
+		network.setDoDimensionReduction( true, Axes.Z );
 		try {
 			validateInput(
 					input,

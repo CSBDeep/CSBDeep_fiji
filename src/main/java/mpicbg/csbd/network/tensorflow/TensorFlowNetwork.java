@@ -118,10 +118,6 @@ public class TensorFlowNetwork extends Network {
 		calculateMapping();
 	}
 
-//	public RandomAccessibleInterval< FloatType > networkNodeToDataset(Tensor tensor, int[] mapping, boolean dropSingletonDims) {
-//		return DatasetTensorflowConverter.tensorToDataset( tensor, mapping, dropSingletonDims );
-//	}
-	
 	@Override
 	public void initMapping() {
 		inputNode.initMapping();
@@ -144,8 +140,8 @@ public class TensorFlowNetwork extends Network {
 	}
 	
 	private void handleDimensionReduction() {
-		if ( inputTensorInfo.getTensorShape().getDimCount() == outputTensorInfo.getTensorShape().getDimCount() + 1 ) {
-			getOutputNode().removeZFromMapping(inputNode.getDataset());
+		if ( doDimensionReduction ) {
+			getOutputNode().removeAxisFromMapping(inputNode.getDataset(), axisToRemove );
 			Dataset outputDummy = createEmptyDuplicateWithoutZAxis( inputNode.getDataset() );
 			getOutputNode().initialize( outputDummy );
 		}else{

@@ -65,6 +65,8 @@ public abstract class CSBDeepTest {
 	}
 	
 	protected void testResultAxesAndSize(Dataset input, Dataset output) {
+		printDim("input", input);
+		printDim("output", output);
 		for(int i = 0; i < input.numDimensions(); i++){
 			assertEquals( output.axis( i ).type(), input.axis( i ).type());
 			assertEquals( output.dimension( i ), input.dimension( i ));
@@ -72,6 +74,8 @@ public abstract class CSBDeepTest {
 	}
 	
 	protected void testResultAxesAndSizeByRemovingZ(Dataset input, Dataset output) {
+		printDim("input", input);
+		printDim("output", output);
 		int i_output = 0;
 		for(int i = 0; i < input.numDimensions(); i++){
 			AxisType axis = input.axis( i ).type();

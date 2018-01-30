@@ -253,8 +253,13 @@ public class TiledPrediction {
 	}
 	
 	protected List< RandomAccessibleInterval< FloatType > > splitByLastNodeDim( RandomAccessibleInterval< FloatType > fittedResult ) {
-        final int dim = ( int ) network.getOutputNode().getDatasetDimension( 
-        		network.getOutputNode().getNodeAxis( network.getOutputNode().getNodeShape().length-1 ));
+		int dim;
+		if(network.getOutputNode().numDimensions() < fittedResult.numDimensions()){
+			dim = fittedResult.numDimensions()-1;
+		}else {
+			dim = ( int ) network.getOutputNode().getDatasetDimension( 
+	        		network.getOutputNode().getNodeAxis( network.getOutputNode().getNodeShape().length-1 ));
+		}
         return splitChannels( fittedResult, dim );
     }
 

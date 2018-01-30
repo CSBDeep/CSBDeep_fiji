@@ -11,6 +11,8 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
 import net.imagej.Dataset;
+import net.imagej.axis.Axes;
+import net.imagej.axis.AxisType;
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
@@ -33,6 +35,8 @@ public abstract class Network implements Callable< List< RandomAccessibleInterva
 	protected CSBDeepProgress progressWindow;
 	protected Integer doneTileCount;
 	protected boolean dropSingletonDims = true;
+	protected boolean doDimensionReduction = false;
+	protected AxisType axisToRemove;
 	ExecutorService pool = Executors.newSingleThreadExecutor();
 	
 	public void loadLibrary() {}
@@ -180,6 +184,15 @@ public abstract class Network implements Callable< List< RandomAccessibleInterva
 	 */
 	public void setDropSingletonDims( final boolean dropSingletonDims ) {
 		this.dropSingletonDims = dropSingletonDims;
+	}
+	
+	public void setDoDimensionReduction( boolean doDimensionReduction ) {
+		setDoDimensionReduction( doDimensionReduction, Axes.Z );
+	}
+	
+	public void setDoDimensionReduction( boolean doDimensionReduction, AxisType axisToRemove ) {
+		this.doDimensionReduction = doDimensionReduction;
+		this.axisToRemove = axisToRemove;
 	}
 	
 	class TileRunner implements Callable< RandomAccessibleInterval< FloatType > > {

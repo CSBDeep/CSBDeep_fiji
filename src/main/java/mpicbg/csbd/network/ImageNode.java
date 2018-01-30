@@ -171,12 +171,12 @@ public class ImageNode {
 		return "not found";
 	}
 
-	public boolean removeZFromMapping(Dataset initialDataset) {
+	public boolean removeAxisFromMapping(Dataset initialDataset, AxisType axisToRemove) {
 		System.out.println( "REMOVING Z" );
-		int datasetIndex = initialDataset.dimensionIndex( Axes.Z );
+		int datasetIndex = initialDataset.dimensionIndex( axisToRemove );
 		if(!reducedZ) {
-			if ( nodeAxes.contains( Axes.Z ) ) {
-				nodeAxes.remove( Axes.Z );
+			if ( nodeAxes.contains( axisToRemove ) ) {
+				nodeAxes.remove( axisToRemove );
 				nodePadding.remove( datasetIndex );
 				reducedZ = true;
 			}
