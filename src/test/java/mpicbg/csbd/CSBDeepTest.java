@@ -16,10 +16,8 @@ import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
 import net.imagej.display.DatasetView;
 import net.imagej.display.DefaultDatasetView;
-import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
 
 import org.scijava.command.Command;
 import org.scijava.command.CommandModule;

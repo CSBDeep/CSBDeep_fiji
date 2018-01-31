@@ -252,7 +252,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 		result.clear();
 		
 		final BatchedTiledPrediction batchedPrediction0 =
-				new BatchedTiledPrediction( rotated, network, progressWindow, nTiles, 4, overlap, batchSize );
+				new BatchedTiledPrediction( rotated, network, progressWindow, nTiles, 4, overlap, batchSize, Axes.CHANNEL );
 		
 		TiledView< FloatType > tiledView = batchedPrediction0.preprocess();
 		

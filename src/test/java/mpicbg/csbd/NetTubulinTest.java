@@ -1,6 +1,6 @@
 package mpicbg.csbd;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.util.List;
 
@@ -15,16 +15,16 @@ import net.imglib2.type.numeric.real.FloatType;
 
 import org.junit.Test;
 
-import mpicbg.csbd.commands.NetPlanaria;
+import mpicbg.csbd.commands.NetTubulin;
 
 
-public class NetPlanariaTest extends CSBDeepTest {
+public class NetTubulinTest extends CSBDeepTest {
 	
 	@Test
-	public void testNetPlanaria() {
-		testDataset(new FloatType(), new long[] {50, 100, 10}, new AxisType[] {Axes.X, Axes.Y, Axes.Z});
-		testDataset(new FloatType(), new long[] {50, 10, 100}, new AxisType[] {Axes.X, Axes.Z, Axes.Y});
-		testDataset(new ByteType(), new long[] {100, 50, 10}, new AxisType[] {Axes.X, Axes.Y, Axes.Z});
+	public void testNetTubulin() {
+		testDataset(new FloatType(), new long[] {50, 100, 10}, new AxisType[] {Axes.X, Axes.Y, Axes.TIME});
+		testDataset(new FloatType(), new long[] {50, 10, 100}, new AxisType[] {Axes.X, Axes.TIME, Axes.Y});
+		testDataset(new ByteType(), new long[] {100, 50, 10}, new AxisType[] {Axes.X, Axes.Y, Axes.TIME});
 	}
 	
 	public <T extends RealType<T> & NativeType<T>> void testDataset(T type, long[] dims, AxisType[] axes) {
@@ -32,8 +32,8 @@ public class NetPlanariaTest extends CSBDeepTest {
 		launchImageJ();
 		final Dataset input = createDataset(type, dims, axes);
 		final DatasetView datasetView = wrapInDatasetView( input );
-		final List<DatasetView> result = runPlugin(NetPlanaria.class, datasetView);
-		assertTrue("result should contain one dataset", result.size() == 1);
+		final List<DatasetView> result = runPlugin(NetTubulin.class, datasetView);
+		assertEquals(1, result.size());
 		final Dataset output = result.get( 0 ).getData();
 		testResultAxesAndSize(input, output);
 	}

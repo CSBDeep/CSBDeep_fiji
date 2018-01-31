@@ -15,13 +15,13 @@ import net.imglib2.type.numeric.real.FloatType;
 
 import org.junit.Test;
 
-import mpicbg.csbd.commands.NetPlanaria;
+import mpicbg.csbd.commands.NetTribolium;
 
 
-public class NetPlanariaTest extends CSBDeepTest {
+public class NetTriboliumTest extends CSBDeepTest {
 	
 	@Test
-	public void testNetPlanaria() {
+	public void testNetTribolium() {
 		testDataset(new FloatType(), new long[] {50, 100, 10}, new AxisType[] {Axes.X, Axes.Y, Axes.Z});
 		testDataset(new FloatType(), new long[] {50, 10, 100}, new AxisType[] {Axes.X, Axes.Z, Axes.Y});
 		testDataset(new ByteType(), new long[] {100, 50, 10}, new AxisType[] {Axes.X, Axes.Y, Axes.Z});
@@ -32,7 +32,7 @@ public class NetPlanariaTest extends CSBDeepTest {
 		launchImageJ();
 		final Dataset input = createDataset(type, dims, axes);
 		final DatasetView datasetView = wrapInDatasetView( input );
-		final List<DatasetView> result = runPlugin(NetPlanaria.class, datasetView);
+		final List<DatasetView> result = runPlugin(NetTribolium.class, datasetView);
 		assertTrue("result should contain one dataset", result.size() == 1);
 		final Dataset output = result.get( 0 ).getData();
 		testResultAxesAndSize(input, output);

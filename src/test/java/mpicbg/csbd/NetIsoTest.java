@@ -34,7 +34,7 @@ public class NetIsoTest extends CSBDeepTest {
 		final Dataset input = createDataset(type, dims, axes);
 		final DatasetView datasetView = wrapInDatasetView( input );
 		final List<DatasetView> result = runPlugin(NetIso.class, datasetView);
-		assertTrue("NetIso result should contain one dataset", result.size() == 1);
+		assertTrue("result should contain one dataset", result.size() == 1);
 		final Dataset output = result.get( 0 ).getData();
 		testResultAxesAndSize(input, output);
 	}

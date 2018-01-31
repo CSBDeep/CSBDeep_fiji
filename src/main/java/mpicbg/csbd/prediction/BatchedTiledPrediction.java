@@ -32,6 +32,7 @@ import java.util.Arrays;
 import java.util.List;
 
 import net.imagej.axis.Axes;
+import net.imagej.axis.AxisType;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
 
@@ -56,9 +57,11 @@ public class BatchedTiledPrediction extends TiledPrediction {
 			final int tilesNum,
 			final int blockMultiple,
 			final int overlap,
-			final int batchSize ) {
+			final int batchSize,
+			AxisType channelAxis) {
 		super( input, network, progressWindow, tilesNum, blockMultiple, overlap );
 		this.batchSize = batchSize;
+		this.channelDim = ( int ) network.getInputNode().getDatasetDimension( channelAxis );
 	}
 	
 	@Override
@@ -88,7 +91,6 @@ public class BatchedTiledPrediction extends TiledPrediction {
     	expandToFitBlockSize( RandomAccessibleInterval< FloatType > dataset ) {
 		
 		batchDim = network.getInputNode().getDatasetDimIndexByTFIndex( 0 );
-		channelDim = ( int ) network.getInputNode().getDatasetDimension( Axes.CHANNEL );
 		// If there is no channel dimension in the input image, we assume that a channel dimension might be added to the end of the image
 		if ( channelDim < 0 ) {
 			channelDim = input.numDimensions();

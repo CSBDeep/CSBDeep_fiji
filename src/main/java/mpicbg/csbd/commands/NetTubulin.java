@@ -82,7 +82,8 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 		ij.launch( args );
 
 		// ask the user for a file to open
-		final File file = ij.ui().chooseFile( null, "open" );
+//		final File file = ij.ui().chooseFile( null, "open" );
+		final File file = new File("/home/random/Development/imagej/plugins/CSBDeep-data/net_tubulin/input2.tif");
 
 		if ( file != null && file.exists() ) {
 			// load the dataset
@@ -145,7 +146,7 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 
 		runBatches( normalizedInput, result, normalizedInput.numDimensions() == 3 );
 
-		resultDatasets = new ArrayList<>();
+		resultDatasets.clear();
 		for ( int i = 0; i < result.size() && i < OUTPUT_NAMES.length; i++ ) {
 			progressWindow.addLog( "Displaying " + OUTPUT_NAMES[ i ] + " image.." );
 			resultDatasets.add( wrapIntoDatasetView( OUTPUT_NAMES[ i ], Views.dropSingletonDimensions( result.get( i ) ) ) );
@@ -167,7 +168,7 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 
 		TiledPrediction tiledPrediction;
 		if ( useBatch ) {
-			tiledPrediction = new BatchedTiledPrediction( rotated, network, progressWindow, nTiles, BLOCK_MULTIPLE, overlap, batchSize );
+			tiledPrediction = new BatchedTiledPrediction( rotated, network, progressWindow, nTiles, BLOCK_MULTIPLE, overlap, batchSize, Axes.TIME );
 		} else {
 			tiledPrediction = new TiledPrediction( rotated, network, progressWindow, nTiles, BLOCK_MULTIPLE, overlap );
 		}
