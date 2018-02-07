@@ -13,7 +13,7 @@
 
 	<groupId>mpicbg.csbd</groupId>
 	<artifactId>CSBDeep</artifactId>
-	<version>0.1.6</version>
+	<version>0.1.7-SNAPSHOT</version>
 
 	<name>CSBDeep</name>
 	<description>CSBDeep: CNNs for image restoration of fluorescence microscopy.</description>
