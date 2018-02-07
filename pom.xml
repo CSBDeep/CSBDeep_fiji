@@ -7,13 +7,13 @@
 	<parent>
 		<groupId>org.scijava</groupId>
 		<artifactId>pom-scijava</artifactId>
-		<version>19.0.0</version>
+		<version>19.2.0</version>
 		<relativePath />
 	</parent>
 
 	<groupId>mpicbg.csbd</groupId>
 	<artifactId>CSBDeep</artifactId>
-	<version>0.1.6-SNAPSHOT</version>
+	<version>0.1.6</version>
 
 	<name>CSBDeep</name>
 	<description>CSBDeep: CNNs for image restoration of fluorescence microscopy.</description>
