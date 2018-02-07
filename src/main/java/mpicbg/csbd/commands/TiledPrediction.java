@@ -397,19 +397,20 @@ public class TiledPrediction
 
 	protected RandomAccessibleInterval< FloatType > executeGraphWithPadding( final RandomAccessibleInterval< FloatType > tile ) throws Exception {
 
-		final Tensor inputTensor = DatasetConverter.datasetToTensor( tile, mappingIn );
-		if ( inputTensor != null ) {
-			Tensor outputTensor = null;
-			outputTensor = TensorFlowRunner.executeGraph(
+		try (final Tensor inputTensor = DatasetConverter.datasetToTensor( tile, mappingIn )) {
+			if ( inputTensor == null ) { return null; }
+			try (final Tensor outputTensor = TensorFlowRunner.executeGraph(
 					model,
 					inputTensor,
 					bridge.getInputTensorInfo(),
-					bridge.getOutputTensorInfo() );
+					bridge.getOutputTensorInfo() )) {
 
-			if ( outputTensor != null ) { return DatasetConverter.tensorToDataset(
-					outputTensor,
-					mappingOut,
-					dropSingletonDims ); }
+				if ( outputTensor != null ) { return DatasetConverter.tensorToDataset(
+						outputTensor,
+						mappingOut,
+						dropSingletonDims ); }
+			}
+
 		}
 		return null;
 	}
