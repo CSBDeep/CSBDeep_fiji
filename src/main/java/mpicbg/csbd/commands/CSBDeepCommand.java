@@ -349,7 +349,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		} else {
 			progressWindow.setCurrentStepFail();
 		}
-		model.session().close();
+		model.close();
 	}
 
 	public void showError( final String errorMsg ) {
