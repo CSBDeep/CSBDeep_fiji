@@ -80,7 +80,7 @@ import mpicbg.csbd.normalize.PercentileNormalizer;
 import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 import mpicbg.csbd.ui.CSBDeepProgress;
 
-public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
+public abstract class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
 		implements
 		Cancelable,
 		Initializable,
@@ -128,10 +128,12 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected boolean processedDataset = false;
 	private boolean useTensorFlowGPU = true;
 
-	CSBDeepProgress progressWindow;
+	protected CSBDeepProgress progressWindow;
 
-	ExecutorService pool = Executors.newSingleThreadExecutor();
-	List< TiledPrediction > predictions = new ArrayList<>();
+	protected ExecutorService pool = Executors.newSingleThreadExecutor();
+	protected List< TiledPrediction > predictions = new ArrayList<>();
+
+	private AxisType[] mapping;
 
 	private static final String MODEL_TAG = "serve";
 	// Same as
@@ -236,17 +238,31 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	}
 
 	public void run() {
+		runInternal();
+		freeResources();
+	}
 
+	/**
+	 * Executes the model on the given input.
+	 * Override this method if running the model requires some special pre- and/or
+	 * postprocessing.
+	 */
+	protected void runInternal() {
 		if ( input == null ) { return; }
 		modelChanged();
+		updateBridge();
 		initGui();
 		initModel();
 		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
 		executeModel( normalizeInput() );
 	}
 
-	public void setMapping( final AxisType[] mapping ) {
-		if ( bridge != null ) {
+	protected void setMapping( final AxisType[] mapping ) {
+		this.mapping = mapping;
+	}
+
+	public void updateBridge() {
+		if ( mapping != null && bridge != null ) {
 			if ( bridge.getInputTensorInfo() != null ) {
 				bridge.resetMapping();
 				for ( int i = 0; i < mapping.length; i++ ) {
@@ -255,18 +271,6 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 				bridge.printMapping();
 			}
 		}
-	}
-
-	public void runWithMapping( final AxisType[] mapping ) {
-
-		if ( input == null ) { return; }
-		modelChanged();
-
-		setMapping( mapping );
-		initGui();
-		initModel();
-		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
-		executeModel( normalizeInput() );
 	}
 
 	protected void initGui() {
@@ -349,7 +353,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		} else {
 			progressWindow.setCurrentStepFail();
 		}
-		model.session().close();
+		model.close();
 	}
 
 	public void showError( final String errorMsg ) {
@@ -367,7 +371,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	@Override
 	public void cancel( final String reason ) {
-
+		freeResources();
 	}
 
 	@Override
@@ -380,7 +384,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		if ( e.getSource().equals( progressWindow.getCancelBtn() ) ) {
 
 			//TODO this is not yet fully working. The tile that is currently computed does not stop.
-			pool.shutdownNow();
+			freeResources();
 			progressWindow.addError( "Process canceled." );
 			progressWindow.setCurrentStepFail();
 		}
@@ -433,5 +437,11 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 					.dimension( i ) ) { throw new IOException( "Can not process image. Dimension " + i + " musst be of size " + expectedDims[ i ]
 							.getAsLong() + ".\nExpected format: " + formatDesc ); }
 		}
+	}
+
+	private void freeResources() {
+		model.close();
+		pool.shutdownNow();
+		progressWindow.getCancelBtn().removeActionListener( this );
 	}
 }

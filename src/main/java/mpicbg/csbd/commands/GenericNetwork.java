@@ -324,6 +324,8 @@ public class GenericNetwork< T extends RealType< T > > extends PercentileNormali
 
 		executeModel( normalizedInput );
 
+		model.close();
+		pool.shutdown();
 	}
 
 	private void executeModel( final RandomAccessibleInterval< FloatType > normalizedInput ) {

@@ -96,7 +96,8 @@ public class NetPlanaria< T extends RealType< T > > extends CSBDeepCommand< T >
 				mapping[ 1 ] = Axes.CHANNEL;
 				mapping[ 4 ] = Axes.Z;
 			}
-			super.runWithMapping( mapping );
+			setMapping( mapping );
+			super.run();
 		} catch ( final IOException e ) {
 			showError( e.getMessage() );
 		}
