@@ -239,11 +239,7 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 
 	public void run() {
 		runInternal();
-
-		// Close the model to free all TensorFlow objects
-		progressWindow.getCancelBtn().removeActionListener( this );
-		model.close();
-		pool.shutdown();
+		freeResources();
 	}
 
 	/**
@@ -375,7 +371,7 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 
 	@Override
 	public void cancel( final String reason ) {
-		pool.shutdownNow();
+		freeResources();
 	}
 
 	@Override
@@ -388,7 +384,7 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 		if ( e.getSource().equals( progressWindow.getCancelBtn() ) ) {
 
 			//TODO this is not yet fully working. The tile that is currently computed does not stop.
-			pool.shutdownNow();
+			freeResources();
 			progressWindow.addError( "Process canceled." );
 			progressWindow.setCurrentStepFail();
 		}
@@ -441,5 +437,11 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 					.dimension( i ) ) { throw new IOException( "Can not process image. Dimension " + i + " musst be of size " + expectedDims[ i ]
 							.getAsLong() + ".\nExpected format: " + formatDesc ); }
 		}
+	}
+
+	private void freeResources() {
+		model.close();
+		pool.shutdownNow();
+		progressWindow.getCancelBtn().removeActionListener( this );
 	}
 }
