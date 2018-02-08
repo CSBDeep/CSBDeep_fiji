@@ -112,7 +112,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 	}
 
 	@Override
-	public void run() {
+	public void runInternal() {
 		try {
 			validateInput(
 					input,
@@ -382,6 +382,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 				e.printStackTrace();
 			}
 		}
+		pool.shutdown();
 	}
 
 	private < U extends RealType< U >, V extends RealType< V >, W extends RealType< W > > void pointwiseGeometricMean(
@@ -447,6 +448,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 				e.printStackTrace();
 			}
 		}
+		pool.shutdown();
 	}
 
 	private long[] computeBlockSize( final RandomAccessibleInterval< ? > in ) {

@@ -80,7 +80,7 @@ import mpicbg.csbd.normalize.PercentileNormalizer;
 import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 import mpicbg.csbd.ui.CSBDeepProgress;
 
-public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
+public abstract class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
 		implements
 		Cancelable,
 		Initializable,
@@ -128,10 +128,10 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected boolean processedDataset = false;
 	private boolean useTensorFlowGPU = true;
 
-	CSBDeepProgress progressWindow;
+	protected CSBDeepProgress progressWindow;
 
-	ExecutorService pool = Executors.newSingleThreadExecutor();
-	List< TiledPrediction > predictions = new ArrayList<>();
+	protected ExecutorService pool = Executors.newSingleThreadExecutor();
+	protected List< TiledPrediction > predictions = new ArrayList<>();
 
 	private static final String MODEL_TAG = "serve";
 	// Same as
@@ -236,7 +236,19 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	}
 
 	public void run() {
+		runInternal();
 
+		// Close the model to free all TensorFlow objects
+		model.close();
+		pool.shutdown();
+	}
+
+	/**
+	 * Executes the model on the given input.
+	 * Override this method if running the model requires some special pre- and/or
+	 * postprocessing.
+	 */
+	protected void runInternal() {
 		if ( input == null ) { return; }
 		modelChanged();
 		initGui();
@@ -367,7 +379,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	@Override
 	public void cancel( final String reason ) {
-
+		pool.shutdownNow();
 	}
 
 	@Override

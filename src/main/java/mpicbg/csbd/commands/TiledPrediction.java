@@ -85,7 +85,7 @@ public class TiledPrediction
 	 */
 	private boolean dropSingletonDims = true;
 
-	ExecutorService pool = Executors.newSingleThreadExecutor();
+	protected ExecutorService pool;
 
 	public TiledPrediction(
 			final RandomAccessibleInterval< FloatType > input,
@@ -191,6 +191,9 @@ public class TiledPrediction
 
 	public List< RandomAccessibleInterval< FloatType > > runModel( final TiledView< FloatType > tiledView ) throws ExecutionException {
 
+		// Create the executor pool
+		pool = Executors.newSingleThreadExecutor();
+
 		progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
 
 		final boolean multithreading = false;
@@ -247,6 +250,9 @@ public class TiledPrediction
 				}
 			}
 		}
+
+		// Shutdown the executor pool
+		pool.shutdown();
 
 		progressWindow.setCurrentStepDone();
 		return results;
@@ -462,7 +468,9 @@ public class TiledPrediction
 	}
 
 	public void cancel() {
-		pool.shutdownNow();
+		if ( pool != null ) {
+			pool.shutdownNow();
+		}
 	}
 
 }

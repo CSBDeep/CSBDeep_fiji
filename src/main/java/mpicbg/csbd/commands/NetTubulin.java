@@ -96,7 +96,7 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 	}
 
 	@Override
-	public void run() {
+	public void runInternal() {
 		Exception prevException = null;
 		try {
 			try {
