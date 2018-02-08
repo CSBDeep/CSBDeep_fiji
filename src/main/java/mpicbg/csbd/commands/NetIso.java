@@ -133,6 +133,7 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 
 		final AxisType[] mapping = { Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
 		setMapping( mapping );
+		updateBridge();
 
 		final int dimChannel = input.dimensionIndex( Axes.CHANNEL );
 		final int dimX = input.dimensionIndex( Axes.X );

@@ -133,6 +133,8 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 	protected ExecutorService pool = Executors.newSingleThreadExecutor();
 	protected List< TiledPrediction > predictions = new ArrayList<>();
 
+	private AxisType[] mapping;
+
 	private static final String MODEL_TAG = "serve";
 	// Same as
 	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
@@ -251,14 +253,19 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 	protected void runInternal() {
 		if ( input == null ) { return; }
 		modelChanged();
+		updateBridge();
 		initGui();
 		initModel();
 		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
 		executeModel( normalizeInput() );
 	}
 
-	public void setMapping( final AxisType[] mapping ) {
-		if ( bridge != null ) {
+	protected void setMapping( final AxisType[] mapping ) {
+		this.mapping = mapping;
+	}
+
+	public void updateBridge() {
+		if ( mapping != null && bridge != null ) {
 			if ( bridge.getInputTensorInfo() != null ) {
 				bridge.resetMapping();
 				for ( int i = 0; i < mapping.length; i++ ) {
@@ -267,18 +274,6 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 				bridge.printMapping();
 			}
 		}
-	}
-
-	public void runWithMapping( final AxisType[] mapping ) {
-
-		if ( input == null ) { return; }
-		modelChanged();
-
-		setMapping( mapping );
-		initGui();
-		initModel();
-		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
-		executeModel( normalizeInput() );
 	}
 
 	protected void initGui() {

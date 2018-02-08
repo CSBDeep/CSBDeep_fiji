@@ -122,6 +122,7 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 
 		final AxisType[] mapping = { Axes.TIME, Axes.Y, Axes.X, Axes.CHANNEL };
 		setMapping( mapping );
+		updateBridge();
 
 		initGui();
 
