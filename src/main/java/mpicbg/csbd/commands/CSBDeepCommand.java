@@ -241,6 +241,7 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 		runInternal();
 
 		// Close the model to free all TensorFlow objects
+		progressWindow.getCancelBtn().removeActionListener( this );
 		model.close();
 		pool.shutdown();
 	}
