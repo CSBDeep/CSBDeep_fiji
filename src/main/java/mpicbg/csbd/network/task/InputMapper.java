@@ -1,4 +1,4 @@
-package mpicbg.csbd.tasks;
+package mpicbg.csbd.network.task;
 
 import net.imagej.Dataset;
 import net.imagej.axis.AxisType;

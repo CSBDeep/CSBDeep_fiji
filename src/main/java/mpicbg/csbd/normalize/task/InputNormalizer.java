@@ -1,4 +1,4 @@
-package mpicbg.csbd.tasks;
+package mpicbg.csbd.normalize.task;
 
 import java.util.List;
 

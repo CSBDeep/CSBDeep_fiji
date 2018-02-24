@@ -1,4 +1,4 @@
-package mpicbg.csbd.tasks;
+package mpicbg.csbd.normalize.task;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -7,7 +7,7 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
 
 import mpicbg.csbd.normalize.PercentileNormalizer;
-import mpicbg.csbd.util.DefaultTask;
+import mpicbg.csbd.task.DefaultTask;
 
 public class DefaultInputNormalizer extends DefaultTask implements InputNormalizer {
 

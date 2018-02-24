@@ -13,6 +13,9 @@ import net.imglib2.type.numeric.real.FloatType;
 
 import org.junit.Test;
 
+import mpicbg.csbd.util.task.DefaultInputProcessor;
+import mpicbg.csbd.util.task.InputProcessor;
+
 public class InputProcessorTest {
 
 	@Test

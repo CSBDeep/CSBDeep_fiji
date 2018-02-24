@@ -10,7 +10,7 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
 
 import mpicbg.csbd.imglib2.TiledView;
-import mpicbg.csbd.util.Task;
+import mpicbg.csbd.task.Task;
 
 public interface Network extends Callable< List< RandomAccessibleInterval< FloatType > > > {
 

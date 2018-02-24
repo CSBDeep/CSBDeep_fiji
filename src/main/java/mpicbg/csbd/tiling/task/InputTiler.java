@@ -1,4 +1,4 @@
-package mpicbg.csbd.tasks;
+package mpicbg.csbd.tiling.task;
 
 import java.util.List;
 

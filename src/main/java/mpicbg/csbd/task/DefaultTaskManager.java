@@ -1,4 +1,4 @@
-package mpicbg.csbd.util;
+package mpicbg.csbd.task;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,9 +27,6 @@ public class DefaultTaskManager implements TaskManager {
 
 	@Override
 	public void cancel() {
-//		pool.shutdownNow();
-//		failMsg = PROGRESS_CANCELED;
-//		commandFailed = true;
 		for ( final Task task : tasks ) {
 			task.cancel();
 		}

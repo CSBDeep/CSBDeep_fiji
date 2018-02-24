@@ -1,4 +1,4 @@
-package mpicbg.csbd.tasks;
+package mpicbg.csbd.tiling.task;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -7,9 +7,9 @@ import net.imagej.axis.AxisType;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
 
+import mpicbg.csbd.task.DefaultTask;
 import mpicbg.csbd.tiling.AdvancedTiledView;
 import mpicbg.csbd.tiling.Tiling;
-import mpicbg.csbd.util.DefaultTask;
 
 public class DefaultOutputTiler extends DefaultTask implements OutputTiler {
 

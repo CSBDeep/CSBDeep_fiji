@@ -36,7 +36,7 @@ import net.imglib2.type.numeric.real.FloatType;
 
 import mpicbg.csbd.imglib2.ArrangedView;
 import mpicbg.csbd.imglib2.CombinedView;
-import mpicbg.csbd.util.Task;
+import mpicbg.csbd.task.Task;
 
 public class BatchedTiling extends DefaultTiling {
 

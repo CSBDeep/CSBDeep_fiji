@@ -44,7 +44,7 @@ import net.imglib2.view.Views;
 import mpicbg.csbd.imglib2.ArrangedView;
 import mpicbg.csbd.imglib2.CombinedView;
 import mpicbg.csbd.imglib2.TiledView;
-import mpicbg.csbd.util.Task;
+import mpicbg.csbd.task.Task;
 
 public class DefaultTiling implements Tiling {
 

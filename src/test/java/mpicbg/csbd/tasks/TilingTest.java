@@ -14,11 +14,11 @@ import net.imglib2.view.Views;
 import org.junit.Test;
 
 import mpicbg.csbd.CSBDeepTest;
+import mpicbg.csbd.task.DefaultTask;
+import mpicbg.csbd.task.Task;
 import mpicbg.csbd.tiling.AdvancedTiledView;
 import mpicbg.csbd.tiling.DefaultTiling;
 import mpicbg.csbd.tiling.Tiling;
-import mpicbg.csbd.util.DefaultTask;
-import mpicbg.csbd.util.Task;
 
 public class TilingTest extends CSBDeepTest {
 

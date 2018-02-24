@@ -68,11 +68,11 @@ import org.scijava.plugin.Plugin;
 
 import mpicbg.csbd.imglib2.TiledView;
 import mpicbg.csbd.network.Network;
-import mpicbg.csbd.tasks.DefaultOutputProcessor;
-import mpicbg.csbd.tasks.InputProcessor;
-import mpicbg.csbd.tasks.OutputProcessor;
+import mpicbg.csbd.task.DefaultTask;
 import mpicbg.csbd.tiling.BatchedTiling;
-import mpicbg.csbd.util.DefaultTask;
+import mpicbg.csbd.util.task.DefaultOutputProcessor;
+import mpicbg.csbd.util.task.InputProcessor;
+import mpicbg.csbd.util.task.OutputProcessor;
 
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Isotropic Reconstruction - Retina", headless = true )
 public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > implements Command {

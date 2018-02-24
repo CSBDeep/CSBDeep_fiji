@@ -1,4 +1,4 @@
-package mpicbg.csbd.tasks;
+package mpicbg.csbd.network.task;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
@@ -9,8 +9,8 @@ import java.util.stream.Collectors;
 import net.imglib2.type.numeric.real.FloatType;
 
 import mpicbg.csbd.network.Network;
+import mpicbg.csbd.task.DefaultTask;
 import mpicbg.csbd.tiling.AdvancedTiledView;
-import mpicbg.csbd.util.DefaultTask;
 
 public class DefaultModelExecutor extends DefaultTask implements ModelExecutor {
 

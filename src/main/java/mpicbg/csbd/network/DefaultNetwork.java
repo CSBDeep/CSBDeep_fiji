@@ -21,8 +21,8 @@ import net.imglib2.view.Views;
 import org.scijava.io.location.Location;
 
 import mpicbg.csbd.imglib2.TiledView;
+import mpicbg.csbd.task.Task;
 import mpicbg.csbd.util.IOHelper;
-import mpicbg.csbd.util.Task;
 
 public abstract class DefaultNetwork implements Network {
 

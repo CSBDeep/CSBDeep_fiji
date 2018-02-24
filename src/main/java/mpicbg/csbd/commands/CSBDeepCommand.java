@@ -54,31 +54,31 @@ import org.scijava.plugin.Parameter;
 import mpicbg.csbd.imglib2.TiledView;
 import mpicbg.csbd.network.ImageTensor;
 import mpicbg.csbd.network.Network;
+import mpicbg.csbd.network.task.DefaultInputMapper;
+import mpicbg.csbd.network.task.DefaultModelExecutor;
+import mpicbg.csbd.network.task.DefaultModelLoader;
+import mpicbg.csbd.network.task.InputMapper;
+import mpicbg.csbd.network.task.ModelExecutor;
+import mpicbg.csbd.network.task.ModelLoader;
 import mpicbg.csbd.network.tensorflow.TensorFlowNetwork;
 import mpicbg.csbd.normalize.PercentileNormalizer;
-import mpicbg.csbd.tasks.DefaultInputMapper;
-import mpicbg.csbd.tasks.DefaultInputNormalizer;
-import mpicbg.csbd.tasks.DefaultInputProcessor;
-import mpicbg.csbd.tasks.DefaultInputTiler;
-import mpicbg.csbd.tasks.DefaultModelExecutor;
-import mpicbg.csbd.tasks.DefaultModelLoader;
-import mpicbg.csbd.tasks.DefaultOutputProcessor;
-import mpicbg.csbd.tasks.DefaultOutputTiler;
-import mpicbg.csbd.tasks.InputMapper;
-import mpicbg.csbd.tasks.InputNormalizer;
-import mpicbg.csbd.tasks.InputProcessor;
-import mpicbg.csbd.tasks.InputTiler;
-import mpicbg.csbd.tasks.ModelExecutor;
-import mpicbg.csbd.tasks.ModelLoader;
-import mpicbg.csbd.tasks.OutputProcessor;
-import mpicbg.csbd.tasks.OutputTiler;
+import mpicbg.csbd.normalize.task.DefaultInputNormalizer;
+import mpicbg.csbd.normalize.task.InputNormalizer;
+import mpicbg.csbd.task.Task;
+import mpicbg.csbd.task.TaskForceManager;
+import mpicbg.csbd.task.TaskManager;
 import mpicbg.csbd.tiling.AdvancedTiledView;
 import mpicbg.csbd.tiling.DefaultTiling;
 import mpicbg.csbd.tiling.Tiling;
+import mpicbg.csbd.tiling.task.DefaultInputTiler;
+import mpicbg.csbd.tiling.task.DefaultOutputTiler;
+import mpicbg.csbd.tiling.task.InputTiler;
+import mpicbg.csbd.tiling.task.OutputTiler;
 import mpicbg.csbd.util.DatasetHelper;
-import mpicbg.csbd.util.DefaultTaskManager;
-import mpicbg.csbd.util.Task;
-import mpicbg.csbd.util.TaskManager;
+import mpicbg.csbd.util.task.DefaultInputProcessor;
+import mpicbg.csbd.util.task.DefaultOutputProcessor;
+import mpicbg.csbd.util.task.InputProcessor;
+import mpicbg.csbd.util.task.OutputProcessor;
 
 public abstract class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
 		implements
@@ -147,21 +147,21 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 		modelExecutor = initModelExecutor();
 		outputTiler = initOutputTiler();
 		outputProcessor = initOutputProcessor();
+	}
 
-		taskManager = new DefaultTaskManager();
-		taskManager.initialize();
-//		taskManager.createTaskForce("Preprocessing", modelLoader, inputMapper, inputProcessor, inputNormalizer);
-//		taskManager.createTaskForce("Tiling", inputTiler);
-//		taskManager.createTaskForce("Execution", modelExecutor);
-//		taskManager.createTaskForce("Postprocessing", outputTiler, outputProcessor);
-		taskManager.add( ( Task ) modelLoader );
-		taskManager.add( ( Task ) inputMapper );
-		taskManager.add( ( Task ) inputProcessor );
-		taskManager.add( ( Task ) inputNormalizer );
-		taskManager.add( ( Task ) inputTiler );
-		taskManager.add( ( Task ) modelExecutor );
-		taskManager.add( ( Task ) outputTiler );
-		taskManager.add( ( Task ) outputProcessor );
+	protected void initTaskManager() {
+		taskManager = new TaskForceManager();
+		final TaskForceManager tfm = ( TaskForceManager ) taskManager;
+		tfm.initialize();
+		tfm.createTaskForce(
+				"Preprocessing",
+				( Task ) modelLoader,
+				( Task ) inputMapper,
+				( Task ) inputProcessor,
+				( Task ) inputNormalizer );
+		tfm.createTaskForce( "Tiling", ( Task ) inputTiler );
+		tfm.createTaskForce( "Execution", ( Task ) modelExecutor );
+		tfm.createTaskForce( "Postprocessing", ( Task ) outputTiler, ( Task ) outputProcessor );
 	}
 
 	protected InputMapper initInputMapper() {

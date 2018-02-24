@@ -1,4 +1,4 @@
-package mpicbg.csbd.tasks;
+package mpicbg.csbd.util.task;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,7 +17,7 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
 
 import mpicbg.csbd.network.Network;
-import mpicbg.csbd.util.DefaultTask;
+import mpicbg.csbd.task.DefaultTask;
 
 public class DefaultOutputProcessor extends DefaultTask implements OutputProcessor {
 

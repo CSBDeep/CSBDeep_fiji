@@ -1,4 +1,4 @@
-package mpicbg.csbd.util;
+package mpicbg.csbd.task;
 
 public class DefaultTask implements Task {
 

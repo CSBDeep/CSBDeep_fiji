@@ -33,7 +33,7 @@ import net.imagej.axis.AxisType;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
 
-import mpicbg.csbd.util.Task;
+import mpicbg.csbd.task.Task;
 
 public interface Tiling {
 
