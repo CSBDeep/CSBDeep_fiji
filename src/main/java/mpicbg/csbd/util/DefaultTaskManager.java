@@ -59,4 +59,9 @@ public class DefaultTaskManager implements TaskManager {
 		}
 	}
 
+	@Override
+	public void close() {
+		taskPresenter.close();
+	}
+
 }

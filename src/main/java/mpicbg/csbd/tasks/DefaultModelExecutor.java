@@ -15,14 +15,16 @@ import mpicbg.csbd.util.DefaultTask;
 public class DefaultModelExecutor extends DefaultTask implements ModelExecutor {
 
 	protected static String PROGRESS_CANCELED = "";
-	protected ExecutorService pool = Executors.newSingleThreadExecutor();
+	protected ExecutorService pool = null;
 
 	@Override
 	public List< AdvancedTiledView< FloatType > >
 			run( final List< AdvancedTiledView< FloatType > > input, final Network network ) {
 		setStarted();
+		pool = Executors.newSingleThreadExecutor();
 		final List< AdvancedTiledView< FloatType > > output =
 				input.stream().map( tile -> run( tile, network ) ).collect( Collectors.toList() );
+		pool.shutdown();
 		setFinished();
 		return output;
 	}
@@ -59,7 +61,9 @@ public class DefaultModelExecutor extends DefaultTask implements ModelExecutor {
 
 	@Override
 	public void cancel( final String reason ) {
-		pool.shutdownNow();
+		if ( pool != null && !pool.isShutdown() ) {
+			pool.shutdownNow();
+		}
 	}
 
 	@Override

@@ -1,8 +1,8 @@
 /*-
  * #%L
- * CSBDeep Fiji Plugin: Use deep neural networks for image restoration for fluorescence microscopy.
+ * CSBDeep: CNNs for image restoration of fluorescence microscopy.
  * %%
- * Copyright (C) 2017 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
+ * Copyright (C) 2017 - 2018 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -80,7 +80,7 @@ import mpicbg.csbd.util.DefaultTaskManager;
 import mpicbg.csbd.util.Task;
 import mpicbg.csbd.util.TaskManager;
 
-public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
+public abstract class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
 		implements
 		Cancelable,
 		Initializable {
@@ -105,27 +105,27 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	protected TiledView< FloatType > tiledView;
 	List< RandomAccessibleInterval< FloatType > > rawresults = null;
 
-	public String modelFileUrl;
-	public String modelName;
-	public String inputNodeName = "input";
-	public String outputNodeName = "output";
-	public int blockMultiple = 32;
+	protected String modelFileUrl;
+	protected String modelName;
+	protected String inputNodeName = "input";
+	protected String outputNodeName = "output";
+	protected int blockMultiple = 32;
 
 	protected boolean processedDataset = false;
 
-	TaskManager taskManager;
+	protected TaskManager taskManager;
 
 	protected Network network;
 	protected Tiling tiling;
 
-	InputProcessor inputProcessor;
-	InputMapper inputMapper;
-	InputNormalizer inputNormalizer;
-	InputTiler inputTiler;
-	ModelLoader modelLoader;
-	ModelExecutor modelExecutor;
-	OutputTiler outputTiler;
-	OutputProcessor outputProcessor;
+	protected InputProcessor inputProcessor;
+	protected InputMapper inputMapper;
+	protected InputNormalizer inputNormalizer;
+	protected InputTiler inputTiler;
+	protected ModelLoader modelLoader;
+	protected ModelExecutor modelExecutor;
+	protected OutputTiler outputTiler;
+	protected OutputProcessor outputProcessor;
 
 	@Override
 	public void initialize() {
@@ -220,6 +220,11 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 				outputTiler.run( tiledOutput, tiling, getAxesArray( network.getOutputNode() ) );
 		resultDatasets.clear();
 		resultDatasets.addAll( outputProcessor.run( output, datasetView, network ) );
+	}
+
+	protected void close() {
+		taskManager.close();
+		network.close();
 	}
 
 	private AxisType[] getAxesArray( final ImageTensor outputNode ) {
@@ -318,6 +323,7 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 	@Override
 	public void cancel( final String reason ) {
 		modelExecutor.cancel( reason );
+		close();
 	}
 
 	protected static void

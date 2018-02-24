@@ -25,6 +25,11 @@ public class DefaultTaskPresenter implements TaskPresenter, ActionListener {
 		progressWindow = CSBDeepProgress.createWithGPUWarning();
 		progressWindow.getCancelBtn().addActionListener( this );
 	}
+	
+	@Override
+	public void close() {
+		progressWindow.getCancelBtn().removeActionListener( this );
+	}
 
 	@Override
 	public void addStep( final String title ) {

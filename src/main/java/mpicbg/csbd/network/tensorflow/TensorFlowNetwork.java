@@ -221,4 +221,12 @@ public class TensorFlowNetwork extends DefaultNetwork {
 		return outputTensorInfo;
 	}
 
+	@Override
+	public void close() {
+		super.close();
+		if ( model != null ) {
+			model.close();
+		}
+	}
+
 }

@@ -1,8 +1,8 @@
 /*-
  * #%L
- * CSBDeep Fiji Plugin: Use deep neural networks for image restoration for fluorescence microscopy.
+ * CSBDeep: CNNs for image restoration of fluorescence microscopy.
  * %%
- * Copyright (C) 2017 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
+ * Copyright (C) 2017 - 2018 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -58,28 +58,6 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 
 	}
 
-	public static void main( final String... args ) throws Exception {
-		// create the ImageJ application context with all available services
-		final ImageJ ij = new ImageJ();
-
-		ij.launch( args );
-
-		// ask the user for a file to open
-		final File file = ij.ui().chooseFile( null, "open" );
-
-		if ( file != null && file.exists() ) {
-			// load the dataset
-			final Dataset dataset = ij.scifio().datasetIO().open( file.getAbsolutePath() );
-
-			// show the image
-			ij.ui().show( dataset );
-
-			// invoke the plugin
-			ij.command().run( NetTribolium.class, true );
-		}
-
-	}
-
 	@Override
 	public void run() {
 		try {
@@ -100,5 +78,27 @@ public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
 		} catch ( final IOException e ) {
 			showError( e.getMessage() );
 		}
+	}
+	
+	public static void main( final String... args ) throws Exception {
+		// create the ImageJ application context with all available services
+		final ImageJ ij = new ImageJ();
+
+		ij.launch( args );
+
+		// ask the user for a file to open
+		final File file = ij.ui().chooseFile( null, "open" );
+
+		if ( file != null && file.exists() ) {
+			// load the dataset
+			final Dataset dataset = ij.scifio().datasetIO().open( file.getAbsolutePath() );
+
+			// show the image
+			ij.ui().show( dataset );
+
+			// invoke the plugin
+			ij.command().run( NetTribolium.class, true );
+		}
+
 	}
 }

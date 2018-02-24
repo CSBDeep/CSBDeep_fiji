@@ -222,6 +222,13 @@ public abstract class DefaultNetwork implements Network {
 		this.axisToRemove = axisToRemove;
 	}
 
+	@Override
+	public void close() {
+		if ( pool != null ) {
+			pool.shutdown();
+		}
+	}
+
 	class TileRunner implements Callable< RandomAccessibleInterval< FloatType > > {
 
 		RandomAccessibleInterval< FloatType > tile;

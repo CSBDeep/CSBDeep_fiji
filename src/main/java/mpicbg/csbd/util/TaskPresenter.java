@@ -20,4 +20,6 @@ public interface TaskPresenter {
 
 	public void logError( String msg );
 
+	void close();
+
 }

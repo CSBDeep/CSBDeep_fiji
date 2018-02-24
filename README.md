@@ -1,6 +1,11 @@
 # CSBDeep Fiji Plugin
 
 ## Install
+
+### ImageJ update site
+The CSBDeep plugin can be installed from the ImageJ update site `http://sites.imagej.net/CSBDeep/`. See the [CSBDeep Wiki Pages](https://github.com/CSBDeep/CSBDeep/wiki) for more details.
+
+### From source
 1. Clone this repository.
 2. Run the following command from inside the repo:
 ```
@@ -8,16 +13,15 @@ mvn -Dimagej.app.directory=/path/to/Fiji.app/ -Ddelete.other.versions=true
 ```
 
 ## Run
-1. Clone data repository https://github.com/frauzufall/CSBDeep-data.
+1. Download the [examplary image data](http://csbdeep.bioimagecomputing.com/exemplary-image-data.zip)
 2. Open Fiji.
-3. Open an image from the data repo, e.g. `CSBDeep-data/net_denoise/input.png`.
+3. Open an example image, e.g. `tribolium.tif`.
 4. Run the plugin via `Plugins > CSBDeep`.
-5. Chose an `Import model`, e.g. `CSBDeep-data/net_denoise/resunet.pb`. In this case, you still have to adjust the input node name to `input_1`, for the other models `input` should be fine.
-6. Run the plugin by pressing `Ok`.
+5. Run the plugin by pressing `Ok`.
 
-The first image popping up is the normalized image (for debugging).
+If all goes well, an image will be displayed representing the result of the model execution.
 
-If all goes well, another image will be displayed representing the result of the model execution.
+See the [CSBDeep Wiki Pages](https://github.com/CSBDeep/CSBDeep/wiki) for more details.
 
 ## Develop
 
@@ -34,3 +38,8 @@ See the according [CSBDeep Wiki page](https://github.com/mpicbg-csbd/CSBDeep/wik
 ### Muliple GPUs
 
 See the according [CSBDeep Wiki page](https://github.com/mpicbg-csbd/CSBDeep/wiki/CSBDeep-in-Fiji-–-Installation#multiple-gpus).
+
+## License
+
+This project is licensed under the BSD 2-clause "Simplified" License -- see the [LICENSE.txt](LICENSE.txt) file for details.
+

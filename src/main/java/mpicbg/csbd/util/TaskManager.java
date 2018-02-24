@@ -14,4 +14,6 @@ public interface TaskManager {
 
 	public void update( Task task );
 
+	public void close();
+
 }

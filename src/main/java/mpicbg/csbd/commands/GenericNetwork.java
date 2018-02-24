@@ -1,18 +1,18 @@
 ///*-
 // * #%L
-// * CSBDeep Fiji Plugin: Use deep neural networks for image restoration for fluorescence microscopy.
+// * CSBDeep: CNNs for image restoration of fluorescence microscopy.
 // * %%
-// * Copyright (C) 2017 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
+// * Copyright (C) 2017 - 2018 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
 // * %%
 // * Redistribution and use in source and binary forms, with or without
 // * modification, are permitted provided that the following conditions are met:
-// * 
+// *
 // * 1. Redistributions of source code must retain the above copyright notice,
 // *    this list of conditions and the following disclaimer.
 // * 2. Redistributions in binary form must reproduce the above copyright notice,
 // *    this list of conditions and the following disclaimer in the documentation
 // *    and/or other materials provided with the distribution.
-// * 
+// *
 // * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
 // * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
 // * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -75,11 +75,8 @@
 //import org.tensorflow.framework.MetaGraphDef;
 //import org.tensorflow.framework.SignatureDef;
 //
-//import mpicbg.csbd.network.Network;
-//import mpicbg.csbd.network.tensorflow.DatasetTensorBridge;
-//import mpicbg.csbd.network.tensorflow.TensorFlowNetwork;
 //import mpicbg.csbd.normalize.PercentileNormalizer;
-//import mpicbg.csbd.prediction.TiledPrediction;
+//import mpicbg.csbd.tensorflow.DatasetTensorBridge;
 //import mpicbg.csbd.ui.CSBDeepProgress;
 //import mpicbg.csbd.ui.MappingDialog;
 //
@@ -130,6 +127,9 @@
 //	protected int overlap = 32;
 //
 //	@Parameter
+//	private TensorFlowService tensorFlowService;
+//
+//	@Parameter
 //	private LogService log;
 //
 //	@Parameter
@@ -147,17 +147,34 @@
 //	@Parameter( type = ItemIO.OUTPUT )
 //	protected List< Dataset > resultDatasets;
 //
+//	private SavedModelBundle model;
+//	private SignatureDef sig;
+//	private DatasetTensorBridge bridge;
+//	private boolean processedDataset = false;
+//	private boolean useTensorFlowGPU = true;
 //	protected int blockMultiple = 32;
 //
 //	CSBDeepProgress progressWindow;
 //
 //	ExecutorService pool = Executors.newCachedThreadPool();
 //
-//	Network network = new TensorFlowNetwork();
+//	// Same as the tag used in export_saved_model in the Python code.
+//	private static final String MODEL_TAG = "serve";
+//	// Same as
+//	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
+//	// in Python. Perhaps this should be an exported constant in TensorFlow's Java
+//	// API.
+//	private static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY = "serving_default";
 //
 //	@Override
 //	public void initialize() {
-//		network.loadLibrary();
+//		try {
+//			System.loadLibrary( "tensorflow_jni" );
+//		} catch ( final UnsatisfiedLinkError e ) {
+//			useTensorFlowGPU = false;
+//			System.out.println(
+//					"Couldn't load tensorflow from library path. Using CPU version from jar file." );
+//		}
 //	}
 //
 //	/*
@@ -307,16 +324,18 @@
 //
 //		executeModel( normalizedInput );
 //
+//		model.close();
+//		pool.shutdown();
 //	}
 //
 //	private void executeModel( final RandomAccessibleInterval< FloatType > normalizedInput ) {
-//		
-//		Network network = TensorFlowNetwork.FromDatasetMapping( bridge );
 //
 //		List< RandomAccessibleInterval< FloatType > > result = null;
 //		try {
-//			result = pool.submit(
-//					new TiledPrediction( normalizedInput, network, model, progressWindow, nTiles, blockMultiple, overlap ) ).get();
+//			result = pool
+//					.submit(
+//							new TiledPrediction( normalizedInput, bridge, model, progressWindow, nTiles, blockMultiple, overlap ) )
+//					.get();
 //		} catch ( final ExecutionException exc ) {
 //			exc.printStackTrace();
 //

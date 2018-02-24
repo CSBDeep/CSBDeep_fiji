@@ -1,8 +1,8 @@
 /*-
  * #%L
- * CSBDeep Fiji Plugin: Use deep neural networks for image restoration for fluorescence microscopy.
+ * CSBDeep: CNNs for image restoration of fluorescence microscopy.
  * %%
- * Copyright (C) 2017 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
+ * Copyright (C) 2017 - 2018 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -58,6 +58,28 @@ public class NetPlanaria< T extends RealType< T > > extends CSBDeepCommand< T >
 
 	}
 
+	@Override
+	public void run() {
+		try {
+			validateInput(
+					getInput(),
+					"3D grayscale image with dimension order X-Y-Z",
+					OptionalLong.empty(),
+					OptionalLong.empty(),
+					OptionalLong.empty() );
+
+			final AxisType[] mapping = { Axes.TIME, Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
+			if ( getInput().dimension( Axes.Z ) < getInput().dimension( Axes.CHANNEL ) ) {
+				mapping[ 1 ] = Axes.CHANNEL;
+				mapping[ 4 ] = Axes.Z;
+			}
+			setMapping( mapping );
+			super.run();
+		} catch ( final IOException e ) {
+			showError( e.getMessage() );
+		}
+	}
+
 	public static void main( final String... args ) throws Exception {
 		// create the ImageJ application context with all available services
 		final ImageJ ij = new ImageJ();
@@ -80,27 +102,5 @@ public class NetPlanaria< T extends RealType< T > > extends CSBDeepCommand< T >
 			ij.command().run( NetPlanaria.class, true );
 		}
 
-	}
-
-	@Override
-	public void run() {
-		try {
-			validateInput(
-					getInput(),
-					"3D grayscale image with dimension order X-Y-Z",
-					OptionalLong.empty(),
-					OptionalLong.empty(),
-					OptionalLong.empty() );
-
-			final AxisType[] mapping = { Axes.TIME, Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
-			if ( getInput().dimension( Axes.Z ) < getInput().dimension( Axes.CHANNEL ) ) {
-				mapping[ 1 ] = Axes.CHANNEL;
-				mapping[ 4 ] = Axes.Z;
-			}
-			setMapping( mapping );
-			super.run();
-		} catch ( final IOException e ) {
-			showError( e.getMessage() );
-		}
 	}
 }
