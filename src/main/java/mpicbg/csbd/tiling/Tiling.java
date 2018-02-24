@@ -26,37 +26,19 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package mpicbg.csbd.network.tensorflow;
+package mpicbg.csbd.tiling;
 
-import net.imagej.tensorflow.Tensors;
+import net.imagej.Dataset;
+import net.imagej.axis.AxisType;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.view.Views;
 
-import org.tensorflow.Tensor;
+import mpicbg.csbd.util.Task;
 
-public class DatasetTensorflowConverter {
+public interface Tiling {
 
-	public static RandomAccessibleInterval< FloatType > tensorToDataset(
-			final Tensor tensor,
-			final int[] mapping,
-			final boolean dropSingletonDims ) {
-
-		final RandomAccessibleInterval< FloatType > outImg = Tensors.imgFloat( tensor, mapping );
-		return dropSingletonDims ? Views.dropSingletonDimensions( outImg ) : outImg;
-	}
-
-	public static Tensor datasetToTensor(
-			RandomAccessibleInterval< FloatType > image,
-			final int[] mapping ) {
-
-		// Add dimensions until it fits the input tensor
-		while ( image.numDimensions() < mapping.length ) {
-			image = Views.addDimension( image, 0, 0 );
-		}
-
-		// Create the tensor
-		return Tensors.tensor( image, mapping );
-	}
-
+	public AdvancedTiledView< FloatType > preprocess(RandomAccessibleInterval< FloatType > input, Dataset dataset, Task parent);	
+	
+	public RandomAccessibleInterval< FloatType> postprocess( Task parent, final AdvancedTiledView< FloatType > results, AxisType[] axisTypes );
+	
 }

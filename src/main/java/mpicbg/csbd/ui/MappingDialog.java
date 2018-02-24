@@ -6,13 +6,13 @@
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -40,11 +40,11 @@ import javax.swing.JPanel;
 import javax.swing.JTextField;
 import javax.swing.SwingConstants;
 
-import mpicbg.csbd.network.ImageNode;
+import mpicbg.csbd.network.ImageTensor;
 
 public class MappingDialog {
 
-	public static void create( final ImageNode inputNode ) {
+	public static void create( final ImageTensor inputNode ) {
 
 		if ( inputNode.isMappingInitialized() ) {
 			final List< JComboBox< String > > drops = new ArrayList<>();
@@ -79,7 +79,7 @@ public class MappingDialog {
 					final String dimName = inputNode.getDatasetDimNameByTFIndex( i );
 					final long dimSize = inputNode.getDatasetDimSizeFromNodeDim( i );
 					final String tfDimSize = String.valueOf(
-							inputNode.getNodeShape()[tfDimCount]);
+							inputNode.getNodeShape()[ tfDimCount ] );
 
 					final JTextField field = new JTextField();
 					field.setText( tfDimSize );

@@ -6,13 +6,13 @@
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -66,7 +66,8 @@ public class NetPlanaria< T extends RealType< T > > extends CSBDeepCommand< T >
 
 		// ask the user for a file to open
 //		final File file = ij.ui().chooseFile( null, "open" );
-		final File file = new File("/home/random/Development/imagej/plugins/CSBDeep-data/net_planaria_registered/input.tif");
+		final File file =
+				new File( "/home/random/Development/imagej/plugins/CSBDeep-data/net_planaria_registered/input.tif" );
 
 		if ( file != null && file.exists() ) {
 			// load the dataset
@@ -83,21 +84,21 @@ public class NetPlanaria< T extends RealType< T > > extends CSBDeepCommand< T >
 
 	@Override
 	public void run() {
-		processDataset();
 		try {
 			validateInput(
-					input,
+					getInput(),
 					"3D grayscale image with dimension order X-Y-Z",
 					OptionalLong.empty(),
 					OptionalLong.empty(),
 					OptionalLong.empty() );
 
 			final AxisType[] mapping = { Axes.TIME, Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
-			if ( input.dimension( Axes.Z ) < input.dimension( Axes.CHANNEL ) ) {
+			if ( getInput().dimension( Axes.Z ) < getInput().dimension( Axes.CHANNEL ) ) {
 				mapping[ 1 ] = Axes.CHANNEL;
 				mapping[ 4 ] = Axes.Z;
 			}
-			super.runWithMapping( mapping );
+			setMapping( mapping );
+			super.run();
 		} catch ( final IOException e ) {
 			showError( e.getMessage() );
 		}

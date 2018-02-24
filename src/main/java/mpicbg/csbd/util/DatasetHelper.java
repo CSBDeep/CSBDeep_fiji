@@ -10,9 +10,9 @@ import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
 
 public class DatasetHelper {
-	
+
 	static AxisType[] axes = { Axes.X, Axes.Y, Axes.Z, Axes.TIME, Axes.CHANNEL };
-	
+
 	public static void assignUnknownDimensions( final Dataset image ) {
 
 		final List< AxisType > unusedAxes = new ArrayList<>();
@@ -44,17 +44,20 @@ public class DatasetHelper {
 		}
 
 	}
-	
+
 	public static void validate(
 			final Dataset dataset,
 			final String formatDesc,
 			final OptionalLong... expectedDims ) throws IOException {
-		if ( dataset.numDimensions() != expectedDims.length ) { throw new IOException( "Can not process " + dataset
-				.numDimensions() + "D images.\nExpected format: " + formatDesc ); }
+		if ( dataset.numDimensions() != expectedDims.length ) { 
+			throw new IOException( "Can not process " + dataset.numDimensions() 
+					+ "D images.\nExpected format: " + formatDesc ); 
+		}
 		for ( int i = 0; i < expectedDims.length; i++ ) {
-			if ( expectedDims[ i ].isPresent() && expectedDims[ i ].getAsLong() != dataset
-					.dimension( i ) ) { throw new IOException( "Can not process image. Dimension " + i + " musst be of size " + expectedDims[ i ]
-							.getAsLong() + ".\nExpected format: " + formatDesc ); }
+			if ( expectedDims[ i ].isPresent() && expectedDims[ i ].getAsLong() != dataset.dimension( i ) ) { 
+				throw new IOException( "Can not process image. Dimension " + i 
+						+ " musst be of size " + expectedDims[ i ].getAsLong() 
+						+ ".\nExpected format: " + formatDesc ); }
 		}
 	}
 

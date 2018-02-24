@@ -6,13 +6,13 @@
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -44,7 +44,7 @@ import org.scijava.plugin.Plugin;
  */
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Surface Projection - Flywing", headless = true )
 public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T > implements Command {
-	
+
 	@Override
 	public void initialize() {
 
@@ -64,14 +64,15 @@ public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T > i
 
 		// ask the user for a file to open
 //		final File file = ij.ui().chooseFile( null, "open" );
-		final File file = new File("/home/random/Development/imagej/plugins/CSBDeep-data/net_project/input-1.tif");
+		final File file =
+				new File( "/home/random/Development/imagej/plugins/CSBDeep-data/net_project/input-1.tif" );
 
 		if ( file != null && file.exists() ) {
 			// load the dataset
 			final Dataset dataset = ij.scifio().datasetIO().open( file.getAbsolutePath() );
 
 			// show the image
-			if(!ij.ui().isHeadless()){
+			if ( !ij.ui().isHeadless() ) {
 				ij.ui().show( dataset );
 			}
 
@@ -83,11 +84,10 @@ public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T > i
 
 	@Override
 	public void run() {
-		processDataset();
 		network.setDoDimensionReduction( true, Axes.Z );
 		try {
 			validateInput(
-					input,
+					getInput(),
 					"3D grayscale image with dimension order X-Y-Z",
 					OptionalLong.empty(),
 					OptionalLong.empty(),
@@ -97,5 +97,5 @@ public class NetProject< T extends RealType< T > > extends CSBDeepCommand< T > i
 			showError( e.getMessage() );
 		}
 	}
-	
+
 }

@@ -28,30 +28,19 @@
  */
 package mpicbg.csbd.commands;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.OptionalLong;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import javax.swing.JOptionPane;
 
 import net.imagej.Dataset;
-import net.imagej.DatasetService;
-import net.imagej.ImgPlus;
+import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
 import net.imagej.display.DatasetView;
-import net.imagej.display.DefaultDatasetView;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.img.ImgView;
-import net.imglib2.img.array.ArrayImgFactory;
-import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
@@ -59,108 +48,152 @@ import net.imglib2.util.Intervals;
 import org.scijava.Cancelable;
 import org.scijava.Initializable;
 import org.scijava.ItemIO;
-import org.scijava.ItemVisibility;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 
 import mpicbg.csbd.imglib2.TiledView;
+import mpicbg.csbd.network.ImageTensor;
 import mpicbg.csbd.network.Network;
 import mpicbg.csbd.network.tensorflow.TensorFlowNetwork;
 import mpicbg.csbd.normalize.PercentileNormalizer;
-import mpicbg.csbd.prediction.TiledPrediction;
-import mpicbg.csbd.ui.CSBDeepProgress;
+import mpicbg.csbd.tasks.DefaultInputMapper;
+import mpicbg.csbd.tasks.DefaultInputNormalizer;
+import mpicbg.csbd.tasks.DefaultInputProcessor;
+import mpicbg.csbd.tasks.DefaultInputTiler;
+import mpicbg.csbd.tasks.DefaultModelExecutor;
+import mpicbg.csbd.tasks.DefaultModelLoader;
+import mpicbg.csbd.tasks.DefaultOutputProcessor;
+import mpicbg.csbd.tasks.DefaultOutputTiler;
+import mpicbg.csbd.tasks.InputMapper;
+import mpicbg.csbd.tasks.InputNormalizer;
+import mpicbg.csbd.tasks.InputProcessor;
+import mpicbg.csbd.tasks.InputTiler;
+import mpicbg.csbd.tasks.ModelExecutor;
+import mpicbg.csbd.tasks.ModelLoader;
+import mpicbg.csbd.tasks.OutputProcessor;
+import mpicbg.csbd.tasks.OutputTiler;
+import mpicbg.csbd.tiling.AdvancedTiledView;
+import mpicbg.csbd.tiling.DefaultTiling;
+import mpicbg.csbd.tiling.Tiling;
 import mpicbg.csbd.util.DatasetHelper;
+import mpicbg.csbd.util.DefaultTaskManager;
+import mpicbg.csbd.util.Task;
+import mpicbg.csbd.util.TaskManager;
 
 public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
 		implements
 		Cancelable,
-		Initializable,
-		ActionListener {
+		Initializable {
 
 	protected static String[] OUTPUT_NAMES = { "result" };
 
-	/* extracted from the dataset view */
-	protected Dataset input;
-
 	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
-	protected DatasetView datasetView;
+	public DatasetView datasetView;
 
 	@Parameter
 	protected LogService log;
 
-	@Parameter
-	protected DatasetService datasetService;
-
 	@Parameter( label = "Number of tiles", min = "1" )
-	protected int nTiles = 8;
+	public int nTiles = 8;
 
 	@Parameter( label = "Overlap between tiles", min = "0", stepSize = "16" )
-	protected int overlap = 32;
+	public int overlap = 32;
 
 	@Parameter( type = ItemIO.BOTH, label = "result" )
 	protected List< DatasetView > resultDatasets = new ArrayList<>();
 
-	protected String modelFileUrl;
-	protected String modelName;
-	protected String inputNodeName = "input";
-	protected String outputNodeName = "output";
-	protected int blockMultiple = 32;
+	protected TiledView< FloatType > tiledView;
+	List< RandomAccessibleInterval< FloatType > > rawresults = null;
+
+	public String modelFileUrl;
+	public String modelName;
+	public String inputNodeName = "input";
+	public String outputNodeName = "output";
+	public int blockMultiple = 32;
 
 	protected boolean processedDataset = false;
 
-	CSBDeepProgress progressWindow;
+	TaskManager taskManager;
 
-	ExecutorService pool = Executors.newSingleThreadExecutor();
-	
-	Network network = new TensorFlowNetwork();
+	protected Network network;
+	protected Tiling tiling;
+
+	InputProcessor inputProcessor;
+	InputMapper inputMapper;
+	InputNormalizer inputNormalizer;
+	InputTiler inputTiler;
+	ModelLoader modelLoader;
+	ModelExecutor modelExecutor;
+	OutputTiler outputTiler;
+	OutputProcessor outputProcessor;
 
 	@Override
 	public void initialize() {
+		initNetwork();
+		initTasks();
+	}
+
+	protected void initNetwork() {
+		network = new TensorFlowNetwork();
 		network.loadLibrary();
 	}
 
-	/** Executed whenever the {@link #input} parameter changes. */
-	protected void processDataset() {
-		
-		input = datasetView.getData();
-		DatasetHelper.assignUnknownDimensions( input );
-		if(network.isInitialized()) {
-			network.initMapping();
-		}
+	private void initTasks() {
+		inputMapper = initInputMapper();
+		inputProcessor = initInputProcessor();
+		inputNormalizer = initInputNormalizer();
+		inputTiler = initInputTiler();
+		modelLoader = initModelLoader();
+		modelExecutor = initModelExecutor();
+		outputTiler = initOutputTiler();
+		outputProcessor = initOutputProcessor();
 
-	}
-	
-	protected void loadNetworkFile() throws FileNotFoundException {
-		network.loadModel( modelFileUrl, modelName );
-	}
-	
-	protected void initializeNetwork() {
-		network.loadInputNode(inputNodeName, input);
-		network.loadOutputNode(outputNodeName);
-		network.initMapping();
-	}
-	
-	protected boolean noInputData() {
-		return input == null;
-	}
-	
-	protected boolean noModel() {
-		return !network.isInitialized();
+		taskManager = new DefaultTaskManager();
+		taskManager.initialize();
+//		taskManager.createTaskForce("Preprocessing", modelLoader, inputMapper, inputProcessor, inputNormalizer);
+//		taskManager.createTaskForce("Tiling", inputTiler);
+//		taskManager.createTaskForce("Execution", modelExecutor);
+//		taskManager.createTaskForce("Postprocessing", outputTiler, outputProcessor);
+		taskManager.add( ( Task ) modelLoader );
+		taskManager.add( ( Task ) inputMapper );
+		taskManager.add( ( Task ) inputProcessor );
+		taskManager.add( ( Task ) inputNormalizer );
+		taskManager.add( ( Task ) inputTiler );
+		taskManager.add( ( Task ) modelExecutor );
+		taskManager.add( ( Task ) outputTiler );
+		taskManager.add( ( Task ) outputProcessor );
 	}
 
-	protected void loadNetwork() {
+	protected InputMapper initInputMapper() {
+		return new DefaultInputMapper();
+	}
 
-		try {
+	protected InputProcessor initInputProcessor() {
+		return new DefaultInputProcessor();
+	}
 
-			loadNetworkFile();
-			initializeNetwork();
+	protected InputNormalizer initInputNormalizer() {
+		return new DefaultInputNormalizer();
+	}
 
-		} catch ( FileNotFoundException exc1 ) {
+	protected InputTiler initInputTiler() {
+		return new DefaultInputTiler();
+	}
 
-			exc1.printStackTrace();
+	protected ModelLoader initModelLoader() {
+		return new DefaultModelLoader();
+	}
 
-		}
+	protected ModelExecutor initModelExecutor() {
+		return new DefaultModelExecutor();
+	}
 
+	protected OutputTiler initOutputTiler() {
+		return new DefaultOutputTiler();
+	}
+
+	protected OutputProcessor initOutputProcessor() {
+		return new DefaultOutputProcessor();
 	}
 
 	public void run() {
@@ -168,148 +201,113 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 		if ( noInputData() )
 			return;
 
-		initGui();
-		
-		loadFinalModelStep();
-		
-		processDataset();
-		
-		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
-		executeModel( normalizeInput() );
+		modelLoader.run(
+				modelName,
+				network,
+				modelFileUrl,
+				inputNodeName,
+				outputNodeName,
+				datasetView );
+		inputMapper.run( getInput(), network );
+		final List< RandomAccessibleInterval< FloatType > > processedInput =
+				inputProcessor.run( getInput() );
+		final List< RandomAccessibleInterval< FloatType > > normalizedInput =
+				inputNormalizer.run( processedInput );
+		initTiling();
+		final List< AdvancedTiledView< FloatType > > tiledOutput =
+				tryToTileAndRunNetwork( normalizedInput );
+		final List< RandomAccessibleInterval< FloatType > > output =
+				outputTiler.run( tiledOutput, tiling, getAxesArray( network.getOutputNode() ) );
+		resultDatasets.clear();
+		resultDatasets.addAll( outputProcessor.run( output, datasetView, network ) );
+	}
+
+	private AxisType[] getAxesArray( final ImageTensor outputNode ) {
+		final AxisType[] res = new AxisType[ outputNode.numDimensions() + 1 ];
+		for ( int i = 0; i < outputNode.numDimensions(); i++ ) {
+			res[ i ] = outputNode.getAxisByDatasetDim( i );
+		}
+		res[ res.length - 1 ] = Axes.CHANNEL;
+		return res;
+	}
+
+	protected void initTiling() {
+		tiling = new DefaultTiling( nTiles, blockMultiple, overlap );
+	}
+
+	private List< AdvancedTiledView< FloatType > > tryToTileAndRunNetwork(
+			final List< RandomAccessibleInterval< FloatType > > normalizedInput ) {
+		List< AdvancedTiledView< FloatType > > tiledOutput = null;
+		boolean isOutOfMemory = true;
+		boolean canHandleOutOfMemory = true;
+		while ( isOutOfMemory && canHandleOutOfMemory ) {
+			try {
+				final List< AdvancedTiledView< FloatType > > tiledInput =
+						inputTiler.run( normalizedInput, getInput(), tiling );
+				tiledOutput = modelExecutor.run( tiledInput, network );
+				isOutOfMemory = false;
+			} catch ( final OutOfMemoryError e ) {
+				isOutOfMemory = true;
+				canHandleOutOfMemory = tryHandleOutOfMemoryError();
+			}
+		}
+		return tiledOutput;
 	}
 
 	public void setMapping( final AxisType[] mapping ) {
-		if ( network.getInputNode() != null ) {
-			network.getInputNode().setMapping( mapping );
-		}
+		inputMapper.setMapping( mapping );
 	}
 
-	public void runWithMapping( final AxisType[] mapping ) {
-
-		if ( noInputData() )
-			return;
-		
-		initGui();
-		
-		loadFinalModelStep();
-		
-		processDataset();
-
-		setMapping( mapping );
-		
-		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
-		executeModel( normalizeInput() );
+	private boolean noInputData() {
+		return getInput() == null;
 	}
 
-	protected void initGui() {
-		progressWindow = CSBDeepProgress.create( network.isSupportingGPU() );
-		progressWindow.getCancelBtn().addActionListener( this );
-
-	}
-
-	protected void loadFinalModelStep() {
-		progressWindow.setStepStart( CSBDeepProgress.STEP_LOADMODEL );
-
-		progressWindow.addLog( "Loading model " + modelName + ".. " );
-
-		if ( noModel() ) {
-			loadNetwork();
-			if ( noModel() ) {
-				progressWindow.setCurrentStepFail();
-				return;
-			}
-		}
-
-		progressWindow.setCurrentStepDone();
-
-	}
-
-	protected RandomAccessibleInterval< FloatType > normalizeInput() {
-
-		progressWindow.addLog(
-				"Normalize (" + percentileBottom + " - " + percentileTop + " -> " + min + " - " + max + "] .. " );
-
-		return normalize(( RandomAccessibleInterval ) input.getImgPlus() );
-	}
-
-	protected void executeModel( final RandomAccessibleInterval< FloatType > modelInput ) {
-		
-		processDataset();
-		network.setProgressWindow( progressWindow );
-		
-		//run tiling
-		final TiledPrediction prediction =
-				new TiledPrediction( modelInput, network, progressWindow, nTiles, blockMultiple, overlap );
-		TiledView< FloatType > tiledView = prediction.preprocess();
-		
-		progressWindow.setProgressBarValue( 0 );
-		
-		progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
-
-		List< RandomAccessibleInterval< FloatType > > rawresults = null;
-		
-		try {
-			rawresults = runModel( tiledView); 
-		} catch ( final ExecutionException exc ) {
-			exc.printStackTrace();
-			restartModel( modelInput );
-			return;
-
-		} catch ( final InterruptedException exc ) {
-			cancel();
-			return;
-		}
-		
-		List< RandomAccessibleInterval< FloatType > > result =  prediction.postprocess( rawresults );
-
-		resultDatasets.clear();
-		
-		if(result != null){
-			for ( int i = 0; i < result.size() && i < OUTPUT_NAMES.length; i++ ) {
-				progressWindow.addLog( "Displaying " + OUTPUT_NAMES[ i ] + " image.." );
-				resultDatasets.add( wrapIntoDatasetView( OUTPUT_NAMES[ i ], result.get( i ) ) );
-			}
-			if ( !resultDatasets.isEmpty() ) {
-				progressWindow.addLog( "All done!" );
-				progressWindow.setCurrentStepDone();
-			} else {
-				progressWindow.setCurrentStepFail();
-			}			
-		}
-	}
-
-	protected void cancel() {
-		progressWindow.addError( "Process canceled." );
-		progressWindow.setCurrentStepFail();		
-	}
-
-	protected List< RandomAccessibleInterval< FloatType > >
-			runModel( TiledView< FloatType > tiledView ) throws InterruptedException, ExecutionException {
-		network.setTiledView( tiledView );
-		return pool.submit( network ).get();
-	}
-
-	protected void restartModel( RandomAccessibleInterval< FloatType > modelInput ) {
+	private boolean tryHandleOutOfMemoryError() {
 		// We expect it to be an out of memory exception and
 		// try it again with more tiles.
-		nTiles *= 2;
-		// Check if the number of tiles is to large already
-		if ( Arrays.stream( Intervals.dimensionsAsLongArray( modelInput ) ).max().getAsLong() / nTiles < blockMultiple ) {
-			progressWindow.setCurrentStepFail();
-			return;
+		final Task modelExecutorTask = ( Task ) modelExecutor;
+		if ( !handleOutOfMemoryError() ) {
+			modelExecutorTask.setFailed();
+			return false;
 		}
-		progressWindow.addError( "Out of memory exception occurred. Trying with " + nTiles + " tiles..." );
-		progressWindow.addRounds( 1 );
-		progressWindow.setNextRound();
-		executeModel( modelInput );
+		modelExecutorTask.logError(
+				"Out of memory exception occurred. Trying with " + nTiles + " tiles..." );
+		modelExecutorTask.startNewIteration();
+		( ( Task ) inputTiler ).addIteration();
+		return true;
 	}
 
-	public static void showError( final String errorMsg ) {
+	protected boolean handleOutOfMemoryError() {
+		nTiles *= 2;
+		// Check if the number of tiles is too large already
+		if ( Arrays.stream(
+				Intervals.dimensionsAsLongArray(
+						getInput() ) ).max().getAsLong() / nTiles < blockMultiple ) { return false; }
+		return true;
+	}
+
+	protected static void showError( final String errorMsg ) {
 		JOptionPane.showMessageDialog(
 				null,
 				errorMsg,
 				"Error",
 				JOptionPane.ERROR_MESSAGE );
+	}
+
+	public Dataset getInput() {
+		return datasetView.getData();
+	}
+
+	public void validateInput(
+			final Dataset dataset,
+			final String formatDesc,
+			final OptionalLong... expectedDims ) throws IOException {
+		DatasetHelper.validate( dataset, formatDesc, expectedDims );
+	}
+
+	@Override
+	public String getCancelReason() {
+		return null;
 	}
 
 	@Override
@@ -319,68 +317,14 @@ public class CSBDeepCommand< T extends RealType< T > > extends PercentileNormali
 
 	@Override
 	public void cancel( final String reason ) {
-
+		modelExecutor.cancel( reason );
 	}
 
-	@Override
-	public String getCancelReason() {
-		return null;
-	}
-
-	@Override
-	public void actionPerformed( final ActionEvent e ) {
-		if ( e.getSource().equals( progressWindow.getCancelBtn() ) ) {
-
-			//TODO this is not yet fully working. The tile that is currently computed does not stop.
-			pool.shutdownNow();
-			progressWindow.addError( "Process canceled." );
-			progressWindow.setCurrentStepFail();
-		}
-	}
-
-	protected static void printDim( final String title, final RandomAccessibleInterval< FloatType > img ) {
+	protected static void
+			printDim( final String title, final RandomAccessibleInterval< FloatType > img ) {
 		final long[] dims = new long[ img.numDimensions() ];
 		img.dimensions( dims );
 		System.out.println( title + ": " + Arrays.toString( dims ) );
 	}
 
-	protected < U extends RealType< U > & NativeType< U > > DatasetView wrapIntoDatasetView(
-			final String name,
-			final RandomAccessibleInterval< U > img ) {
-		DefaultDatasetView resDatasetView = new DefaultDatasetView();
-		Dataset d = wrapIntoDataset( name, img );
-		resDatasetView.setContext( d.getContext() );
-		resDatasetView.initialize( d );
-		resDatasetView.rebuild();
-
-		// Set LOT
-		for ( int i = 0; i < datasetView.getColorTables().size(); i++ ) {
-			resDatasetView.setColorTable( datasetView.getColorTables().get( i ), i );
-		}
-		return resDatasetView;
-	}
-
-	protected < U extends RealType< U > & NativeType< U > > Dataset wrapIntoDataset( final String name, final RandomAccessibleInterval< U > img ) {
-		
-		long[] imgdim = new long[img.numDimensions()];
-		img.dimensions( imgdim );
-
-		//TODO convert back to original format to be able to save and load it (float 32 bit does not load in Fiji)
-		final Dataset dataset = datasetService.create( new ImgPlus<>( ImgView.wrap( img, new ArrayImgFactory<>() ) ) );
-		dataset.setName( name );
-		for ( int i = 0; i < dataset.numDimensions(); i++ ) {
-			dataset.setAxis( input.axis( network.getOutputNode().getDimType( i ) ).get(), i );
-		}
-		// NB: Doesn't work somehow
-//		int compositeChannelCount = input.getCompositeChannelCount();
-//		dataset.setCompositeChannelCount( compositeChannelCount );
-		return dataset;
-	}
-
-	public static void validateInput(
-			final Dataset dataset,
-			final String formatDesc,
-			final OptionalLong... expectedDims ) throws IOException {
-		DatasetHelper.validate(dataset, formatDesc, expectedDims);
-	}
 }

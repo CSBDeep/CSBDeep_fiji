@@ -30,28 +30,19 @@ package mpicbg.csbd.commands;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.OptionalLong;
-import java.util.concurrent.ExecutionException;
 
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
-import net.imagej.axis.AxisType;
-import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.view.Views;
 
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
-import mpicbg.csbd.imglib2.TiledView;
-import mpicbg.csbd.prediction.BatchedTiledPrediction;
-import mpicbg.csbd.prediction.TiledPrediction;
-import mpicbg.csbd.ui.CSBDeepProgress;
+import mpicbg.csbd.tiling.BatchedTiling;
+import mpicbg.csbd.tiling.DefaultTiling;
 
 /**
  */
@@ -75,6 +66,49 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 
 	}
 
+	@Override
+	protected void initTiling() {
+		if ( getInput().numDimensions() == 3 ) {
+			final int batchDim = network.getInputNode().getDatasetDimIndexByTFIndex( 0 );
+			final int channelDim = network.getInputNode().getDatasetDimensionIndex( Axes.TIME );
+			tiling = new BatchedTiling( nTiles, BLOCK_MULTIPLE, overlap, batchSize, batchDim, channelDim );
+		} else {
+			tiling = new DefaultTiling( nTiles, BLOCK_MULTIPLE, overlap );
+		}
+	}
+
+	@Override
+	public void run() {
+		Exception prevException = null;
+		try {
+			try {
+				validateInput(
+						getInput(),
+						"3D image with dimension order X-Y-T",
+						OptionalLong.empty(),
+						OptionalLong.empty(),
+						OptionalLong.empty() );
+			} catch ( final IOException e ) {
+				prevException = e;
+				validateInput(
+						getInput(),
+						"2D image with dimension order X-Y",
+						OptionalLong.empty(),
+						OptionalLong.empty() );
+			}
+			super.run();
+		} catch ( final IOException e ) {
+			showError( prevException.getMessage() + "\nOR\n" + e.getMessage() );
+		}
+	}
+
+	@Override
+	protected boolean handleOutOfMemoryError() {
+		batchSize /= 2;
+		if ( batchSize < 1 ) { return false; }
+		return true;
+	}
+
 	public static void main( final String... args ) throws Exception {
 		// create the ImageJ application context with all available services
 		final ImageJ ij = new ImageJ();
@@ -83,7 +117,8 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 
 		// ask the user for a file to open
 //		final File file = ij.ui().chooseFile( null, "open" );
-		final File file = new File("/home/random/Development/imagej/plugins/CSBDeep-data/net_tubulin/input2.tif");
+		final File file =
+				new File( "/home/random/Development/imagej/plugins/CSBDeep-data/net_tubulin/input2.tif" );
 
 		if ( file != null && file.exists() ) {
 			// load the dataset
@@ -96,119 +131,5 @@ public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
 			ij.command().run( NetTubulin.class, true );
 		}
 
-	}
-
-	@Override
-	public void run() {
-		processDataset();
-		Exception prevException = null;
-		try {
-			try {
-				validateInput(
-						input,
-						"3D image with dimension order X-Y-T",
-						OptionalLong.empty(),
-						OptionalLong.empty(),
-						OptionalLong.empty() );
-			} catch ( final IOException e ) {
-				prevException = e;
-				validateInput( input, "2D image with dimension order X-Y", OptionalLong.empty(), OptionalLong.empty() );
-			}
-			runModel();
-		} catch ( final IOException e ) {
-			showError( prevException.getMessage() + "\nOR\n" + e.getMessage() );
-		}
-	}
-
-	private void runModel() {
-
-		if ( noInputData() )
-			return;
-
-		initGui();
-		
-		loadFinalModelStep();
-		
-		final AxisType[] mapping = { Axes.TIME, Axes.Y, Axes.X, Axes.CHANNEL };
-		setMapping( mapping );
-		
-		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
-		
-		network.setProgressWindow( progressWindow );
-		network.setDropSingletonDims( false );
-
-		// Normalize the input
-		progressWindow.addLog( "Normalize input.. " );
-		final RandomAccessibleInterval< FloatType > normalizedInput = normalizeInput();
-
-		// Outputs
-		final List< RandomAccessibleInterval< FloatType > > result = new ArrayList<>();
-
-		runBatches( normalizedInput, result, normalizedInput.numDimensions() == 3 );
-
-		resultDatasets.clear();
-		for ( int i = 0; i < result.size() && i < OUTPUT_NAMES.length; i++ ) {
-			progressWindow.addLog( "Displaying " + OUTPUT_NAMES[ i ] + " image.." );
-			resultDatasets.add( wrapIntoDatasetView( OUTPUT_NAMES[ i ], Views.dropSingletonDimensions( result.get( i ) ) ) );
-		}
-		if ( !resultDatasets.isEmpty() ) {
-			progressWindow.addLog( "All done!" );
-			progressWindow.setCurrentStepDone();
-		} else {
-			progressWindow.setCurrentStepFail();
-		}
-	}
-
-	private void runBatches(
-			final RandomAccessibleInterval< FloatType > rotated,
-			final List< RandomAccessibleInterval< FloatType > > result,
-			final boolean useBatch ) {
-
-		result.clear();
-
-		TiledPrediction tiledPrediction;
-		if ( useBatch ) {
-			tiledPrediction = new BatchedTiledPrediction( rotated, network, progressWindow, nTiles, BLOCK_MULTIPLE, overlap, batchSize, Axes.TIME );
-		} else {
-			tiledPrediction = new TiledPrediction( rotated, network, progressWindow, nTiles, BLOCK_MULTIPLE, overlap );
-		}
-		
-		TiledView< FloatType > tiledView = tiledPrediction.preprocess();
-		
-		progressWindow.setProgressBarValue( 0 );
-		
-		progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
-
-		List< RandomAccessibleInterval< FloatType > > rawresults = null;
-		
-		try {
-			rawresults = runModel( tiledView); 
-		} catch ( final ExecutionException exc ) {
-			exc.printStackTrace();
-			restartModel( rotated, result, useBatch );
-			return;
-
-		} catch ( final InterruptedException exc ) {
-			cancel();
-			return;
-		}
-		
-		result.addAll( tiledPrediction.postprocess( rawresults ) );
-
-	}
-	
-	protected void restartModel( RandomAccessibleInterval< FloatType > modelInput, List< RandomAccessibleInterval< FloatType > > result, boolean useBatch ) {
-		// We expect it to be an out of memory exception and
-		// try it again with a smaller batch size.
-		batchSize /= 2;
-		// Check if the batch size is at 1 already
-		if ( batchSize < 1 ) {
-			progressWindow.setCurrentStepFail();
-			return;
-		}
-		progressWindow.addError( "Out of memory exception occurred. Trying with batch size: " + batchSize );
-		progressWindow.addRounds( 1 );
-		progressWindow.setNextRound();
-		runBatches( modelInput, result, useBatch );
 	}
 }

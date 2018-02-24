@@ -6,13 +6,13 @@
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
@@ -26,23 +26,19 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package mpicbg.csbd.prediction;
+package mpicbg.csbd.tiling;
 
 import java.util.Arrays;
 import java.util.List;
 
-import net.imagej.axis.Axes;
-import net.imagej.axis.AxisType;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
 
 import mpicbg.csbd.imglib2.ArrangedView;
 import mpicbg.csbd.imglib2.CombinedView;
-import mpicbg.csbd.imglib2.TiledView;
-import mpicbg.csbd.network.Network;
-import mpicbg.csbd.ui.CSBDeepProgress;
+import mpicbg.csbd.util.Task;
 
-public class BatchedTiledPrediction extends TiledPrediction {
+public class BatchedTiling extends DefaultTiling {
 
 	protected int batchesNum;
 	protected int batchSize;
@@ -50,56 +46,59 @@ public class BatchedTiledPrediction extends TiledPrediction {
 	protected int channelDim;
 	protected long batchDimSize;
 
-	public BatchedTiledPrediction(
-			final RandomAccessibleInterval< FloatType > input,
-			final Network network,
-			final CSBDeepProgress progressWindow,
+	public BatchedTiling(
 			final int tilesNum,
 			final int blockMultiple,
 			final int overlap,
 			final int batchSize,
-			AxisType channelAxis) {
-		super( input, network, progressWindow, tilesNum, blockMultiple, overlap );
+			final int batchDim,
+			final int channelDim ) {
+		super( tilesNum, blockMultiple, overlap );
 		this.batchSize = batchSize;
-		this.channelDim = ( int ) network.getInputNode().getDatasetDimension( channelAxis );
+		this.batchDim = batchDim;
+		this.channelDim = channelDim;
 	}
-	
+
 	@Override
-	protected TiledView< FloatType > createTiledView(RandomAccessibleInterval< FloatType > dataset, long[] tileSize) {
-		long[] padding = network.getInputNode().getNodePadding();
-		network.getInputNode().printMapping();
-		
+	protected AdvancedTiledView< FloatType > createTiledView(
+			final Task parent,
+			final RandomAccessibleInterval< FloatType > dataset,
+			final long[] tileSize,
+			final long[] padding ) {
+
 		batchDimSize = tileSize[ batchDim ];
 		System.out.println( "batchDimSize  : " + batchDimSize );
 		batchesNum = ( int ) Math.ceil( ( float ) batchDimSize / ( float ) batchSize );
 		// If a smaller batch size is sufficient for the same amount of batches, we can use it
 		batchSize = ( int ) Math.ceil( ( float ) batchDimSize / ( float ) batchesNum );
-		
-		progressWindow.setProgressBarMax( tilesNum * batchesNum );
+
+		parent.setNumSteps( tilesNum * batchesNum );
 
 		final long expandedBatchDimSize = batchesNum * batchSize;
 		tileSize[ batchDim ] = batchSize;
 		final RandomAccessibleInterval< FloatType > expandedInput2 =
 				expandDimToSize( dataset, batchDim, expandedBatchDimSize );
-		final TiledView< FloatType > tiledView2 =
-				new TiledView<>( expandedInput2, tileSize, padding );
+		final AdvancedTiledView< FloatType > tiledView2 =
+				new AdvancedTiledView<>( expandedInput2, tileSize, padding );
 		return tiledView2;
 	}
-	
+
 	@Override
 	protected RandomAccessibleInterval< FloatType >
-    	expandToFitBlockSize( RandomAccessibleInterval< FloatType > dataset ) {
-		
-		batchDim = network.getInputNode().getDatasetDimIndexByTFIndex( 0 );
+			expandToFitBlockSize(
+					final RandomAccessibleInterval< FloatType > dataset,
+					final long blockWidth,
+					final int largestDim ) {
+
 		// If there is no channel dimension in the input image, we assume that a channel dimension might be added to the end of the image
 		if ( channelDim < 0 ) {
-			channelDim = input.numDimensions();
+			channelDim = dataset.numDimensions();
 		}
 		System.out.println( "batchDim  : " + batchDim );
 		System.out.println( "channelDim: " + channelDim );
-		
-        int largestDim = network.getInputNode().getLargestDimIndex();
-        RandomAccessibleInterval< FloatType > expandedInput = expandDimToSize( input, largestDim, blockWidth * tilesNum );
+
+		RandomAccessibleInterval< FloatType > expandedInput =
+				expandDimToSize( dataset, largestDim, blockWidth * tilesNum );
 
 		long[] imdims = new long[ expandedInput.numDimensions() ];
 		expandedInput.dimensions( imdims );
@@ -122,12 +121,13 @@ public class BatchedTiledPrediction extends TiledPrediction {
 		System.out.println( "imdims2: " + Arrays.toString( imdims ) );
 //			printDim( "After expand", im );
 		return expandedInput;
-    }
-	
+	}
+
 	@Override
 	protected RandomAccessibleInterval< FloatType >
-    	arrangeAndCombineTiles( List< RandomAccessibleInterval< FloatType > > results ) {
-		int largestDim = network.getOutputNode().getLargestDimIndex();
+			arrangeAndCombineTiles(
+					final List< RandomAccessibleInterval< FloatType > > results,
+					final int largestDim ) {
 		final long[] grid = new long[ results.get( 0 ).numDimensions() ];
 		for ( int i = 0; i < grid.length; i++ ) {
 			if ( i == largestDim ) {
@@ -148,24 +148,7 @@ public class BatchedTiledPrediction extends TiledPrediction {
 		System.out.println( "grid: " + Arrays.toString( grid ) );
 		final RandomAccessibleInterval< FloatType > result =
 				new CombinedView<>( new ArrangedView<>( results, grid ) );
-        return result;
-    }
-	
-	@Override
-	protected RandomAccessibleInterval< FloatType >
-	undoExpansion( RandomAccessibleInterval< FloatType > result ) {
-        int largestDim = network.getOutputNode().getLargestDimIndex();
-        RandomAccessibleInterval< FloatType > fittedResult =
-				expandDimToSize( result, largestDim, largestSize );
-		fittedResult = expandDimToSize( fittedResult, batchDim, batchDimSize );
-		// undo Expand other dimensions to fit blockMultiple
-		for ( int i = 0; i < input.numDimensions(); i++ ) {
-			if ( i != largestDim && i != batchDim && i != channelDim ) {
-				fittedResult = expandDimToSize( fittedResult, i, input.dimension( i ) );
-			}
-		}
-
-        return fittedResult;
-    }
+		return result;
+	}
 
 }

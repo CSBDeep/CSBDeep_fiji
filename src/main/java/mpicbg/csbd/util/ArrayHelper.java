@@ -5,7 +5,7 @@ import java.util.List;
 
 public class ArrayHelper {
 
-	public static void replaceNegativeIndicesWithUnusedIndices( final List<Integer> arr ) {
+	public static void replaceNegativeIndicesWithUnusedIndices( final List< Integer > arr ) {
 		final List< Integer > indices = new ArrayList<>();
 		for ( int i = 0; i < arr.size(); i++ ) {
 			indices.add( arr.get( i ) );
@@ -22,10 +22,10 @@ public class ArrayHelper {
 		}
 	}
 
-	public static int[] toIntArray(List<Integer> list){
-		int[] ret = new int[list.size()];
-		for(int i = 0;i < ret.length;i++)
-			ret[i] = list.get(i);
+	public static int[] toIntArray( final List< Integer > list ) {
+		final int[] ret = new int[ list.size() ];
+		for ( int i = 0; i < ret.length; i++ )
+			ret[ i ] = list.get( i );
 		return ret;
 	}
 

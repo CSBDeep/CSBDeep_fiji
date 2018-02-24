@@ -1,44 +1,60 @@
 package mpicbg.csbd.util;
 
+public interface Task {
 
-public class Task {
+	public void setManager( TaskManager manager );
 
-	private int numSteps;
-	private boolean finished;
-	private boolean failed;
-	
-	public Task() {
-		finished = false;
-		failed = false;
-		numSteps = 0;
-	}
+	public boolean isStarted();
 
-	public void setNumSteps(int numSteps) {
-		this.numSteps = numSteps;
-	}
+	public boolean isFinished();
 
-	public int getNumSteps() {
-		return numSteps;
-	}
+	public boolean isFailed();
 
-	public void setFinished(boolean finished) {
-		this.finished = finished;
-	}
+	public void setStarted();
 
-	public boolean isFinished() {
-		return finished;
-	}
+	public void setIdle();
 
-	public void setFailed(boolean failed) {
-		this.failed = failed;
-	}
+	public void setFailed();
 
-	public boolean isFailed() {
-		return failed;
-	}
-	
-	public boolean hasSteps() {
-		return numSteps > 0;
-	}
+	public void setFinished();
 
+	public void setFinished( boolean finished );
+
+	public boolean hasMultipleSteps();
+
+	public int numSteps();
+
+	public void setNumSteps( int steps );
+
+	public void nextStep();
+
+	public boolean hasIterations();
+
+	public int numIterations();
+
+	public void addIteration();
+
+	public void startNewIteration();
+
+	public void setIterations( int iterations );
+
+	public void nextIteration();
+
+	public void log( String msg );
+
+	public void logError( String msg );
+
+	public int getCurrentIteration();
+
+	public void setCurrentIteration( int currentIteration );
+
+	public int getCurrentStep();
+
+	public void setCurrentStep( int currentStep );
+
+	public String getTitle();
+
+	public void setTitle( String title );
+
+	public void cancel();
 }
