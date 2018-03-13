@@ -1,15 +1,5 @@
 package mpicbg.csbd;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
-
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
@@ -20,14 +10,21 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
-
 import org.junit.Test;
 import org.scijava.command.Command;
 import org.scijava.command.CommandModule;
+import org.scijava.module.Module;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.Future;
+
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
 
 public class CSBDeepTest {
 
-	private ImageJ ij;
+	protected ImageJ ij;
 
 	@Test
 	public void testCSBDeepTest() {
@@ -44,11 +41,6 @@ public class CSBDeepTest {
 
 	protected void launchImageJ() {
 		ij = new ImageJ();
-
-		// TODO figure out how to run test headless
-//		ij.ui().setHeadless( true );
-
-		ij.launch();
 	}
 
 	protected < T extends RealType< T > & NativeType< T > > Dataset
@@ -66,22 +58,14 @@ public class CSBDeepTest {
 
 	protected < C extends Command > List< DatasetView >
 			runPlugin( final Class< C > pluginClass, final DatasetView datasetView ) {
-		final List< DatasetView > result = new ArrayList<>();
 		final Future< CommandModule > future = ij.command().run(
 				pluginClass,
 				true,
 				"datasetView",
-				datasetView,
-				"resultDatasets",
-				result );
+				datasetView);
 		assertFalse( "Plugin future is null", future == null );
-		try {
-			future.get();
-		} catch ( InterruptedException | ExecutionException exc ) {
-			exc.printStackTrace();
-			fail();
-		}
-		return result;
+		final Module module = ij.module().waitFor(future);
+		return (List<DatasetView>) module.getOutput("resultDatasets");
 	}
 
 	protected void testResultAxesAndSize( final Dataset input, final Dataset output ) {
