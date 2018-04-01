@@ -35,8 +35,12 @@ public class NetTubulinTest extends CSBDeepTest {
 		final Dataset input = createDataset( type, dims, axes );
 		final DatasetView datasetView = wrapInDatasetView( input );
 		final List< DatasetView > result = runPlugin( NetTubulin.class, datasetView );
+		datasetView.dispose();
 		assertEquals( 1, result.size() );
 		final Dataset output = result.get( 0 ).getData();
+		for(DatasetView obj : result) {
+			obj.dispose();
+		}
 		testResultAxesAndSize( input, output );
 	}
 

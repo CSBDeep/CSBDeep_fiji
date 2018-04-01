@@ -180,8 +180,8 @@ public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > imple
 	}
 
 	@Override
-	protected void close() {
-		super.close();
+	public void dispose() {
+		super.dispose();
 		pool.shutdown();
 	}
 

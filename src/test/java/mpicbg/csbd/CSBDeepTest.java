@@ -40,7 +40,8 @@ public class CSBDeepTest {
 	}
 
 	protected void launchImageJ() {
-		ij = new ImageJ();
+		if(ij == null)
+			ij = new ImageJ();
 	}
 
 	protected < T extends RealType< T > & NativeType< T > > Dataset

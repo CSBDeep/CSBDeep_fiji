@@ -1,18 +1,18 @@
 package mpicbg.csbd.network;
 
-import java.io.FileNotFoundException;
-import java.util.List;
-import java.util.concurrent.Callable;
-
+import mpicbg.csbd.imglib2.TiledView;
+import mpicbg.csbd.task.Task;
 import net.imagej.Dataset;
 import net.imagej.axis.AxisType;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
+import org.scijava.Disposable;
 
-import mpicbg.csbd.imglib2.TiledView;
-import mpicbg.csbd.task.Task;
+import java.io.FileNotFoundException;
+import java.util.List;
+import java.util.concurrent.Callable;
 
-public interface Network extends Callable< List< RandomAccessibleInterval< FloatType > > > {
+public interface Network extends Callable< List< RandomAccessibleInterval< FloatType > > >, Disposable {
 
 	public void loadLibrary();
 
@@ -55,6 +55,5 @@ public interface Network extends Callable< List< RandomAccessibleInterval< Float
 	public void setDoDimensionReduction( boolean doDimensionReduction, AxisType axisToRemove );
 
 	public void doDimensionReduction();
-	public void close();
 
 }

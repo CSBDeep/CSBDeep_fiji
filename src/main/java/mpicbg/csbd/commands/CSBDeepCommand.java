@@ -46,6 +46,7 @@ import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
 
 import org.scijava.Cancelable;
+import org.scijava.Disposable;
 import org.scijava.Initializable;
 import org.scijava.ItemIO;
 import org.scijava.log.LogService;
@@ -83,9 +84,8 @@ import mpicbg.csbd.util.task.OutputProcessor;
 public abstract class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
 		implements
 		Cancelable,
-		Initializable {
-
-	protected static String[] OUTPUT_NAMES = { "result" };
+		Initializable,
+		Disposable {
 
 	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
 	public DatasetView datasetView;
@@ -214,6 +214,9 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 				outputTiler.run( tiledOutput, tiling, getAxesArray( network.getOutputNode() ) );
 		resultDatasets.clear();
 		resultDatasets.addAll( outputProcessor.run( output, datasetView, network ) );
+
+		dispose();
+
 	}
 
 	protected void prepareInputAndNetwork() {
@@ -227,9 +230,15 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 //		inputMapper.run( getInput(), network );
 	}
 
-	protected void close() {
-		taskManager.close();
-		network.close();
+	@Override
+	public void dispose() {
+		if(taskManager != null) {
+			taskManager.close();
+		}
+		if(network != null) {
+			network.dispose();
+		}
+		datasetView.dispose();
 	}
 
 	private AxisType[] getAxesArray( final ImageTensor outputNode ) {
@@ -328,7 +337,7 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 	@Override
 	public void cancel( final String reason ) {
 		modelExecutor.cancel( reason );
-		close();
+		dispose();
 	}
 
 	protected static void

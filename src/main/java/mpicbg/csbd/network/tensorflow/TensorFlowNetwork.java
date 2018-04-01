@@ -94,6 +94,9 @@ public class TensorFlowNetwork extends DefaultNetwork {
 	@Override
 	protected boolean loadModel( final Location source, final String modelName ) {
 		try {
+			if(model != null) {
+				model.close();
+			}
 			model = tensorFlowService.loadModel( source, modelName, MODEL_TAG );
 		} catch ( TensorFlowException | IOException e ) {
 			e.printStackTrace();
@@ -191,17 +194,22 @@ public class TensorFlowNetwork extends DefaultNetwork {
 		final Tensor inputTensor =
 				DatasetTensorflowConverter.datasetToTensor( tile, getInputNode().getMapping() );
 		if ( inputTensor != null ) {
-			Tensor outputTensor = null;
-			outputTensor = TensorFlowRunner.executeGraph(
+			RandomAccessibleInterval<FloatType> output = null;
+			Tensor outputTensor = TensorFlowRunner.executeGraph(
 					model,
 					inputTensor,
 					getInputTensorInfo(),
 					getOutputTensorInfo() );
 
-			if ( outputTensor != null ) { return DatasetTensorflowConverter.tensorToDataset(
-					outputTensor,
-					getOutputNode().getMapping(),
-					dropSingletonDims ); }
+			if ( outputTensor != null ) {
+				output = DatasetTensorflowConverter.tensorToDataset(
+						outputTensor,
+						getOutputNode().getMapping(),
+						dropSingletonDims);
+				outputTensor.close();
+			}
+			inputTensor.close();
+			return output;
 		}
 		return null;
 	}
@@ -232,8 +240,8 @@ public class TensorFlowNetwork extends DefaultNetwork {
 	}
 
 	@Override
-	public void close() {
-		super.close();
+	public void dispose() {
+		super.dispose();
 		if ( model != null ) {
 			model.close();
 		}

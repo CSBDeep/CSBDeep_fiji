@@ -63,10 +63,14 @@ public class NetProjectTest extends CSBDeepTest {
 		final Dataset input = createDataset( type, dims, axes );
 		final DatasetView datasetView = wrapInDatasetView( input );
 		final List< DatasetView > result = runPlugin( NetProject.class, datasetView );
+		datasetView.dispose();
 		assertTrue(
 				"result should contain one dataset bis contains " + result.size(),
 				result.size() == 1 );
 		final Dataset output = result.get( 0 ).getData();
+		for(DatasetView obj : result) {
+			obj.dispose();
+		}
 		testResultAxesAndSizeByRemovingAxis( input, output, Axes.Z );
 	}
 

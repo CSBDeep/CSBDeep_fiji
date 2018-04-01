@@ -223,7 +223,7 @@ public abstract class DefaultNetwork implements Network {
 	}
 
 	@Override
-	public void close() {
+	public void dispose() {
 		if ( pool != null ) {
 			pool.shutdown();
 		}
