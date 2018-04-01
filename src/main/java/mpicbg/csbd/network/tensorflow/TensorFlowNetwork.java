@@ -15,6 +15,7 @@ import net.imglib2.type.numeric.real.FloatType;
 import org.scijava.io.location.Location;
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
+import org.tensorflow.TensorFlow;
 import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
@@ -40,25 +41,13 @@ public class TensorFlowNetwork extends DefaultNetwork {
 	public TensorFlowNetwork() {
 		final ImageJ ij = new ImageJ();
 		tensorFlowService = ( TensorFlowService ) ij.get( TensorFlowService.class.getName() );
+		System.out.println("imagej-tensorflow version: " + tensorFlowService.getVersion());
+		System.out.println("tensorflow version: " + TensorFlow.version());
 	}
 
 	@Override
 	public void loadLibrary() {
-		System.out.println( "Loading tensorflow jni from library path..." );
-		try {
-			System.loadLibrary( "tensorflow_jni" );
-			supportsGPU = true;
-		} catch ( final UnsatisfiedLinkError e ) {
-			supportsGPU = false;
-			System.out.println( "Couldn't load tensorflow from library path:" );
-			System.out.println( e.getMessage() );
-			System.out.println(
-					"If the problem is CUDA related. Make sure CUDA and cuDNN are in the LD_LIBRARY_PATH." );
-			System.out.println(
-					"The current library path is: LD_LIBRARY_PATH=" + System.getenv(
-							"LD_LIBRARY_PATH" ) );
-			System.out.println( "Using CPU version from jar file." );
-		}
+		System.out.println( "The current library path is: LD_LIBRARY_PATH=" + System.getenv( "LD_LIBRARY_PATH" ) );
 	}
 
 	@Override
