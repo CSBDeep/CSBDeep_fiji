@@ -132,6 +132,16 @@ public class TensorFlowNetwork extends DefaultNetwork {
 			outputNode.setNodeAxis( i, inputNode.getNodeAxis( i ) );
 		}
 		handleDimensionReduction();
+		generateMapping();
+	}
+
+	@Override
+	public void doDimensionReduction() {
+		handleDimensionReduction();
+		generateMapping();
+	}
+
+	private void generateMapping() {
 		inputNode.generateMapping();
 		outputNode.generateMapping();
 
@@ -143,7 +153,7 @@ public class TensorFlowNetwork extends DefaultNetwork {
 
 	private void handleDimensionReduction() {
 		if ( doDimensionReduction ) {
-			getOutputNode().removeAxisFromMapping( inputNode.getDataset(), axisToRemove );
+			getOutputNode().removeAxisFromMapping( axisToRemove );
 			final Dataset outputDummy =
 					createEmptyDuplicateWithoutAxis( inputNode.getDataset(), axisToRemove );
 			getOutputNode().initialize( outputDummy );

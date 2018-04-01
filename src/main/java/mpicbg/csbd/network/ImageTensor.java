@@ -1,20 +1,20 @@
 package mpicbg.csbd.network;
 
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-
+import mpicbg.csbd.util.ArrayHelper;
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
 import net.imagej.axis.CalibratedAxis;
 
-import mpicbg.csbd.util.ArrayHelper;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 // TODO rename
 public class ImageTensor {
 
-	// I do not use
+	//I do not use the following line because it was returning the axes in a different order in different setups
+//	AxisType[] axes = Axes.knownTypes();
 	AxisType[] availableAxes = { Axes.X, Axes.Y, Axes.Z, Axes.TIME, Axes.CHANNEL };
 
 	private String name;
@@ -36,8 +36,16 @@ public class ImageTensor {
 		System.out.println( "Dataset dimensions: " + Arrays.toString( dims ) );
 	}
 
+	public AxisType[] getAvailableAxes() {
+		return availableAxes;
+	}
+
 	public void setNodeShape( final long[] shape ) {
+
 		nodeShape = shape;
+		while(nodeAxes.size() > nodeShape.length) {
+			nodeAxes.remove(nodeAxes.size()-1);
+		}
 	}
 
 	public void initializeNodeMapping() {
@@ -167,10 +175,8 @@ public class ImageTensor {
 		return "not found";
 	}
 
-	public boolean
-			removeAxisFromMapping( final Dataset initialDataset, final AxisType axisToRemove ) {
-		System.out.println( "REMOVING Z" );
-		final int datasetIndex = initialDataset.dimensionIndex( axisToRemove );
+	public boolean removeAxisFromMapping( final AxisType axisToRemove ) {
+		System.out.println( "REMOVING " + axisToRemove.getLabel() );
 		if ( !reducedZ ) {
 			if ( nodeAxes.contains( axisToRemove ) ) {
 				nodeAxes.remove( axisToRemove );
@@ -209,7 +215,7 @@ public class ImageTensor {
 		System.out.println( "--------------" );
 	}
 
-	public Long getDatasetDimSizeFromNodeDim( final int nodeDim ) {
+	public Long getDatasetDimSizeByNodeDim(final int nodeDim ) {
 		final Integer index = getDatasetDimIndexByTFIndex( nodeDim );
 		if ( index != null ) { return ( long ) index; }
 		return ( long ) 1;
@@ -223,7 +229,7 @@ public class ImageTensor {
 		return null;
 	}
 
-	public String getDatasetDimNameByTFIndex( final int nodeDim ) {
+	public String getDatasetDimNameByNodeDim(final int nodeDim ) {
 		if ( nodeAxes.size() > nodeDim ) { return getDatasetDimName( nodeAxes.get( nodeDim ) ); }
 		return null;
 	}

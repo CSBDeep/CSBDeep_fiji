@@ -28,34 +28,32 @@
  */
 package mpicbg.csbd.ui;
 
-import java.awt.GridLayout;
+import mpicbg.csbd.network.ImageTensor;
+
+import javax.swing.*;
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
-import javax.swing.BorderFactory;
-import javax.swing.JComboBox;
-import javax.swing.JLabel;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JTextField;
-import javax.swing.SwingConstants;
-
-import mpicbg.csbd.network.ImageTensor;
-
 public class MappingDialog {
 
-	public static void create( final ImageTensor inputNode ) {
+	private static String NOT_USED_LABEL = "-";
+
+	public static void create( final ImageTensor inputNode, final ImageTensor outputNode ) {
 
 		if ( inputNode.isMappingInitialized() ) {
-			final List< JComboBox< String > > drops = new ArrayList<>();
+			final List< JComboBox< String > > inputDrops = new ArrayList<>();
+			final List< JComboBox< String > > outputDrops = new ArrayList<>();
 
 			final JPanel dialogPanel = new JPanel();
 			final JPanel inputDimPanel = new JPanel();
 			final JPanel imgDimPanel = new JPanel();
-			final JPanel mappingPanel = new JPanel();
+			final JPanel inputMappingPanel = new JPanel();
+			final JPanel outputMappingPanel = new JPanel();
 
 			imgDimPanel.setBorder( BorderFactory.createTitledBorder( "Image" ) );
-			mappingPanel.setBorder( BorderFactory.createTitledBorder( "Mapping" ) );
+			inputMappingPanel.setBorder( BorderFactory.createTitledBorder( "Mapping input" ) );
+			outputMappingPanel.setBorder( BorderFactory.createTitledBorder( "Mapping output" ) );
 			inputDimPanel.setBorder( BorderFactory.createTitledBorder( "Model input" ) );
 
 			final List< String > dimStringsSize = new ArrayList<>();
@@ -71,36 +69,50 @@ public class MappingDialog {
 				imgDimPanel.add( field );
 				dimStringsSize.add( MappingDialog.dimString( dimName, dimSize ) );
 			}
+			dimStringsSize.add( NOT_USED_LABEL );
 
 			int tfDimCount = 0;
-			for ( int i = 0; i < inputNode.numDimensions(); i++ ) {
-				if ( inputNode.getDatasetDimIndexByTFIndex( i ) != null ) {
+			for ( int i = 0; i < inputNode.getNodeShape().length; i++ ) {
 
-					final String dimName = inputNode.getDatasetDimNameByTFIndex( i );
-					final long dimSize = inputNode.getDatasetDimSizeFromNodeDim( i );
-					final String tfDimSize = String.valueOf(
-							inputNode.getNodeShape()[ tfDimCount ] );
-
-					final JTextField field = new JTextField();
-					field.setText( tfDimSize );
-					field.setEditable( false );
-					inputDimPanel.add( new JLabel( tfDimCount + ":", SwingConstants.RIGHT ) );
-					inputDimPanel.add( field );
-					inputDimPanel.add( field );
-
-					final String[] dimStringsLengthArr = new String[ dimStringsSize.size() ];
-					for ( int j = 0; j < dimStringsSize.size(); j++ ) {
-						dimStringsLengthArr[ j ] = dimStringsSize.get( j );
-					}
-					final JComboBox< String > dimDrop = new JComboBox<>( dimStringsLengthArr );
-					dimDrop.setSelectedItem( MappingDialog.dimString( dimName, dimSize ) );
-					mappingPanel.add(
-							new JLabel( tfDimCount + " [" + tfDimSize + "] :", SwingConstants.RIGHT ) );
-					mappingPanel.add( dimDrop );
-					drops.add( dimDrop );
-
-					tfDimCount++;
+				final String dimName = inputNode.getDatasetDimNameByNodeDim( i );
+				final long dimSize = inputNode.getDatasetDimSizeByNodeDim( i );
+				final String tfDimSize = String.valueOf(
+						inputNode.getNodeShape()[ tfDimCount ] );
+				final String[] dimStringsLengthArr = new String[ dimStringsSize.size() ];
+				for ( int j = 0; j < dimStringsSize.size(); j++ ) {
+					dimStringsLengthArr[ j ] = dimStringsSize.get( j );
 				}
+				final JComboBox< String > dimDrop = new JComboBox<>( dimStringsLengthArr );
+				dimDrop.setSelectedItem( MappingDialog.dimString( dimName, dimSize ) );
+				inputMappingPanel.add(
+						new JLabel( tfDimCount + " [" + tfDimSize + "] :", SwingConstants.RIGHT ) );
+				inputMappingPanel.add( dimDrop );
+				inputDrops.add( dimDrop );
+
+				tfDimCount++;
+			}
+
+			tfDimCount = 0;
+
+			for ( int i = 0; i < outputNode.getNodeShape().length; i++ ) {
+
+				final String dimName = outputNode.getDatasetDimNameByNodeDim( i );
+				final long dimSize = outputNode.getDatasetDimSizeByNodeDim( i );
+				final String tfDimSize = String.valueOf(
+						outputNode.getNodeShape()[ tfDimCount ] );
+
+				String[] availableAxes = new String[outputNode.getAvailableAxes().length];
+				for(int j = 0; j < availableAxes.length; j++) {
+					availableAxes[j] = outputNode.getAvailableAxes()[j].getLabel();
+				}
+				final JComboBox< String > dimDrop = new JComboBox<>(availableAxes);
+				dimDrop.setSelectedItem( MappingDialog.dimString( dimName, dimSize ) );
+				outputMappingPanel.add(
+						new JLabel( tfDimCount + " [" + tfDimSize + "] :", SwingConstants.RIGHT ) );
+				outputMappingPanel.add( dimDrop );
+				outputDrops.add( dimDrop );
+
+				tfDimCount++;
 			}
 
 			final GridLayout col1Layout = new GridLayout( 0, 1 );
@@ -110,12 +122,13 @@ public class MappingDialog {
 
 			imgDimPanel.setLayout( col5Layout );
 			inputDimPanel.setLayout( col5Layout );
-			mappingPanel.setLayout( col5Layout );
+			inputMappingPanel.setLayout( col5Layout );
 			dialogPanel.setLayout( col1Layout );
 
 			dialogPanel.add( imgDimPanel );
 			dialogPanel.add( inputDimPanel );
-			dialogPanel.add( mappingPanel );
+			dialogPanel.add( inputMappingPanel );
+			dialogPanel.add( outputMappingPanel );
 
 			final int result = JOptionPane.showConfirmDialog(
 					null,
@@ -125,13 +138,15 @@ public class MappingDialog {
 
 			if ( result == JOptionPane.OK_OPTION ) {
 				inputNode.printMapping();
-				for ( int i = 0; i < drops.size(); i++ ) {
-					System.out.println(
-							"selected index for tf index " + i + ": " + drops.get(
-									i ).getSelectedIndex() );
-					inputNode.setNodeAxisByKnownAxesIndex( i, drops.get( i ).getSelectedIndex() );
+				for ( int i = 0; i < inputDrops.size(); i++ ) {
+//					System.out.println(
+//							"selected index for tf index " + i + ": " + inputDrops.get(
+//									i ).getSelectedIndex() );
+					inputNode.setNodeAxisByKnownAxesIndex( i, inputDrops.get( i ).getSelectedIndex() );
 				}
-				inputNode.printMapping();
+				for ( int i = 0; i < outputDrops.size(); i++ ) {
+					outputNode.setNodeAxisByKnownAxesIndex( i, outputDrops.get( i ).getSelectedIndex() );
+				}
 			}
 		} else {
 			System.out.println(

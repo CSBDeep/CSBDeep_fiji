@@ -1,8 +1,7 @@
 package mpicbg.csbd.util.task;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import mpicbg.csbd.network.Network;
+import mpicbg.csbd.task.DefaultTask;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.ImgPlus;
@@ -16,8 +15,8 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
 
-import mpicbg.csbd.network.Network;
-import mpicbg.csbd.task.DefaultTask;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DefaultOutputProcessor extends DefaultTask implements OutputProcessor {
 
@@ -95,8 +94,12 @@ public class DefaultOutputProcessor extends DefaultTask implements OutputProcess
 
 		final ArrayList< RandomAccessibleInterval< FloatType > > res = new ArrayList<>();
 
-		for ( int i = 0; i < img.dimension( channelDim ); i++ ) {
-			res.add( Views.zeroMin( Views.hyperSlice( img, channelDim, i ) ) );
+		if(channelDim >= 0 && img.dimension( channelDim ) > 0) {
+			for ( int i = 0; i < img.dimension( channelDim ); i++ ) {
+				res.add( Views.zeroMin( Views.hyperSlice( img, channelDim, i ) ) );
+			}
+		} else {
+			res.add(img);
 		}
 
 		return res;

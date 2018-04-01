@@ -168,11 +168,9 @@ public class CSBDeepProgress extends JPanel
 		okButton = new JButton( "Ok" );
 		okButton.setEnabled( false );
 		cancelButton = new JButton( "Cancel" );
-		cancelButton.addActionListener( new ActionListener() {
-
-			@Override
-			public void actionPerformed( final ActionEvent e ) {}
-		} );
+		cancelButton.addActionListener(e -> {
+			//TODO
+		});
 
 		resetProgress();
 

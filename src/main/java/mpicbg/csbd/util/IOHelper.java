@@ -12,6 +12,9 @@ import org.scijava.io.location.Location;
 public class IOHelper {
 
 	public static Location loadFileOrURL( final String path ) throws FileNotFoundException {
+		if(path == null) {
+			throw new FileNotFoundException( "No path specified" );
+		}
 		final File file = new File( path );
 		Location source;
 		if ( !file.exists() ) {

@@ -1,131 +1,91 @@
-///*-
-// * #%L
-// * CSBDeep: CNNs for image restoration of fluorescence microscopy.
-// * %%
-// * Copyright (C) 2017 - 2018 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
-// * %%
-// * Redistribution and use in source and binary forms, with or without
-// * modification, are permitted provided that the following conditions are met:
-// *
-// * 1. Redistributions of source code must retain the above copyright notice,
-// *    this list of conditions and the following disclaimer.
-// * 2. Redistributions in binary form must reproduce the above copyright notice,
-// *    this list of conditions and the following disclaimer in the documentation
-// *    and/or other materials provided with the distribution.
-// *
-// * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
-// * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
-// * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
-// * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
-// * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
-// * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
-// * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
-// * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
-// * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
-// * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
-// * POSSIBILITY OF SUCH DAMAGE.
-// * #L%
-// */
-//package mpicbg.csbd.commands;
-//
-//import com.google.protobuf.InvalidProtocolBufferException;
-//
-//import java.awt.event.ActionEvent;
-//import java.awt.event.ActionListener;
-//import java.io.File;
-//import java.io.IOException;
-//import java.util.ArrayList;
-//import java.util.Arrays;
-//import java.util.List;
-//import java.util.concurrent.ExecutionException;
-//import java.util.concurrent.ExecutorService;
-//import java.util.concurrent.Executors;
-//
-//import javax.swing.JOptionPane;
-//
-//import net.imagej.Dataset;
-//import net.imagej.DatasetService;
-//import net.imagej.ImageJ;
-//import net.imagej.ImgPlus;
-//import net.imagej.ops.OpService;
-//import net.imagej.tensorflow.TensorFlowService;
-//import net.imglib2.IterableInterval;
-//import net.imglib2.RandomAccessibleInterval;
-//import net.imglib2.img.ImgView;
-//import net.imglib2.img.array.ArrayImgFactory;
-//import net.imglib2.type.NativeType;
-//import net.imglib2.type.numeric.RealType;
-//import net.imglib2.type.numeric.real.FloatType;
-//import net.imglib2.util.Intervals;
-//
-//import org.scijava.Cancelable;
-//import org.scijava.Initializable;
-//import org.scijava.ItemIO;
-//import org.scijava.ItemVisibility;
-//import org.scijava.command.Command;
-//import org.scijava.io.location.FileLocation;
-//import org.scijava.log.LogService;
-//import org.scijava.plugin.Parameter;
-//import org.scijava.plugin.Plugin;
-//import org.scijava.prefs.PrefService;
-//import org.scijava.ui.UIService;
-//import org.scijava.widget.Button;
-//import org.tensorflow.SavedModelBundle;
-//import org.tensorflow.TensorFlowException;
-//import org.tensorflow.framework.MetaGraphDef;
-//import org.tensorflow.framework.SignatureDef;
-//
-//import mpicbg.csbd.normalize.PercentileNormalizer;
-//import mpicbg.csbd.tensorflow.DatasetTensorBridge;
-//import mpicbg.csbd.ui.CSBDeepProgress;
-//import mpicbg.csbd.ui.MappingDialog;
-//
-///**
-// */
-//@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Generic network", headless = true )
-//public class GenericNetwork< T extends RealType< T > > extends PercentileNormalizer< T >
-//		implements
-//		Command,
-//		Cancelable,
-//		Initializable,
-//		ActionListener {
-//
+/*-
+ * #%L
+ * CSBDeep: CNNs for image restoration of fluorescence microscopy.
+ * %%
+ * Copyright (C) 2017 - 2018 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
+ * %%
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ * #L%
+ */
+package mpicbg.csbd.commands;
+
+import mpicbg.csbd.ui.MappingDialog;
+import net.imagej.Dataset;
+import net.imagej.ImageJ;
+import net.imagej.axis.Axes;
+import net.imagej.axis.AxisType;
+import net.imglib2.type.numeric.RealType;
+import org.scijava.ItemVisibility;
+import org.scijava.command.Command;
+import org.scijava.plugin.Parameter;
+import org.scijava.plugin.Plugin;
+import org.scijava.prefs.PrefService;
+import org.scijava.widget.Button;
+
+import java.io.File;
+
+/**
+ */
+@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Generic network", headless = true )
+public class GenericNetwork< T extends RealType< T > >  extends CSBDeepCommand< T > implements Command {
+
 //	private static final String OUTPUT_NAME = "output_";
-//
+
 //	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
 //	private Dataset input;
-//
-//	@Parameter( visibility = ItemVisibility.MESSAGE )
-//	protected String normtext = "Normalization";
-//	@Parameter
-//	protected boolean _normalizeInput = true;
-//	@Parameter
-//	protected float _percentileBottom = 0.03f;
-//	@Parameter
-//	protected float _percentileTop = 0.998f;
-//
-//	protected float _min = 0;
-//	protected float _max = 1;
-//
-//	@Parameter( label = "Clamp normalization" )
-//	protected boolean _clamp = false;
-//
-//	@Parameter( label = "Import model (.zip)", callback = "modelChanged", initializer = "modelInitialized", persist = false )
-//	private File modelFile;
-//	private final String modelFileKey = "modelfile-anynetwork";
-//
+
+	@Parameter( visibility = ItemVisibility.MESSAGE )
+	protected String normtext = "Normalization";
+	@Parameter
+	protected boolean _normalizeInput = true;
+	@Parameter
+	protected float _percentileBottom = 0.03f;
+	@Parameter
+	protected float _percentileTop = 0.998f;
+
+	protected float _min = 0;
+	protected float _max = 1;
+
+	@Parameter( label = "Clamp normalization" )
+	protected boolean _clamp = false;
+
+	@Parameter( label = "Import model (.zip)", callback = "modelChanged", initializer = "modelInitialized", persist = false )
+	private File modelFile;
+	private final String modelFileKey = "modelfile-anynetwork";
+	@Parameter( label = "Model name")
+	private String _modelName;
+
 //	private String inputNodeName = "input";
 //	private String outputNodeName = "output";
-//
-//	@Parameter( label = "Adjust image <-> tensorflow mapping", callback = "openTFMappingDialog" )
-//	private Button changeTFMapping;
-//
+
+	@Parameter( label = "Adjust image <-> tensorflow mapping", callback = "openTFMappingDialog" )
+	private Button changeTFMapping;
+
 //	@Parameter( label = "Number of tiles", min = "1" )
 //	protected int nTiles = 1;
 //
 //	@Parameter( label = "Overlap between tiles", min = "0", stepSize = "16" )
 //	protected int overlap = 32;
-//
+
 //	@Parameter
 //	private TensorFlowService tensorFlowService;
 //
@@ -137,27 +97,27 @@
 //
 //	@Parameter
 //	private OpService opService;
-//
-//	@Parameter
-//	private PrefService prefService;
-//
+
+	@Parameter
+	private PrefService prefService;
+
 //	@Parameter
 //	private DatasetService datasetService;
-//
+
 //	@Parameter( type = ItemIO.OUTPUT )
 //	protected List< Dataset > resultDatasets;
-//
+
 //	private SavedModelBundle model;
 //	private SignatureDef sig;
 //	private DatasetTensorBridge bridge;
 //	private boolean processedDataset = false;
 //	private boolean useTensorFlowGPU = true;
 //	protected int blockMultiple = 32;
-//
+
 //	CSBDeepProgress progressWindow;
-//
+
 //	ExecutorService pool = Executors.newCachedThreadPool();
-//
+
 //	// Same as the tag used in export_saved_model in the Python code.
 //	private static final String MODEL_TAG = "serve";
 //	// Same as
@@ -165,7 +125,7 @@
 //	// in Python. Perhaps this should be an exported constant in TensorFlow's Java
 //	// API.
 //	private static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY = "serving_default";
-//
+
 //	@Override
 //	public void initialize() {
 //		try {
@@ -176,7 +136,7 @@
 //					"Couldn't load tensorflow from library path. Using CPU version from jar file." );
 //		}
 //	}
-//
+
 //	/*
 //	 * model can be imported via savedmodel
 //	 */
@@ -198,7 +158,7 @@
 //		}
 //		return true;
 //	}
-//
+
 //	/** Executed whenever the {@link #input} parameter changes. */
 //	protected void processDataset() {
 //
@@ -210,71 +170,76 @@
 //		}
 //
 //	}
-//
-//	/** Executed whenever the {@link #modelFile} parameter is initialized. */
-//	protected void modelInitialized() {
-//		final String p_modelfile = prefService.get( modelFileKey, "" );
-//		if ( p_modelfile != "" ) {
-//			modelFile = new File( p_modelfile );
-//			modelChanged();
+
+	/** Executed whenever the {@link #modelFile} parameter is initialized. */
+	protected void modelInitialized() {
+		final String p_modelfile = prefService.get( modelFileKey, "" );
+		if ( p_modelfile != "" ) {
+			modelFile = new File( p_modelfile );
+		}
+	}
+
+	/** Executed whenever the {@link #modelFile} parameter changes. */
+	protected void modelChanged() {
+
+		if ( modelFile != null ) {
+			savePreferences();
+		}
+
+	}
+
+	protected void openTFMappingDialog() {
+
+		prepareInputAndNetwork();
+
+		MappingDialog.create( network.getInputNode(), network.getOutputNode() );
+	}
+
+	@Override
+	protected void prepareInputAndNetwork() {
+		modelFileUrl = modelFile.getAbsolutePath();
+		modelName = _modelName;
+		super.prepareInputAndNetwork();
+		checkAndResolveDimensionReduction();
+	}
+
+	private void checkAndResolveDimensionReduction() {
+		for(AxisType axis : network.getInputNode().getNodeAxes()) {
+			if(!network.getOutputNode().getNodeAxes().contains(axis)){
+				System.out.println("FOUND DIMENSION TO REDUCE: " + axis.getLabel());
+				network.setDoDimensionReduction( true, axis );
+			}
+		}
+		network.doDimensionReduction();
+	}
+
+	@Override
+	public void run() {
+
+		normalizeInput = _normalizeInput;
+		percentileBottom = _percentileBottom;
+		percentileTop = _percentileTop;
+		min = _min;
+		max = _max;
+		clamp = _clamp;
+
+		prepareInputAndNetwork();
+		checkAndResolveDimensionReduction();
+
+//		try {
+			// TODO is validation input needed?
+//			validateInput(
+//					getInput(),
+//					"3D grayscale image with dimension order X-Y-Z",
+//					OptionalLong.empty(),
+//					OptionalLong.empty(),
+//					OptionalLong.empty());
+			super.run();
+//		} catch (final IOException e) {
+//			showError(e.getMessage());
 //		}
-//	}
-//
-//	/** Executed whenever the {@link #modelFile} parameter changes. */
-//	protected void modelChanged() {
-//
-////		System.out.println("modelChanged");
-//
-//		if ( modelFile != null ) {
-//			savePreferences();
-//		}
-//
-//		processDataset();
-//
-//		if ( input == null ) { return; }
-//
-//		if ( loadModel() ) {
-//
-//			// Extract names from the model signature.
-//			// The strings "input", "probabilities" and "patches" are meant to be
-//			// in sync with the model exporter (export_saved_model()) in Python.
-//			try {
-//				sig = MetaGraphDef.parseFrom( model.metaGraphDef() ).getSignatureDefOrThrow(
-//						DEFAULT_SERVING_SIGNATURE_DEF_KEY );
-//			} catch ( final InvalidProtocolBufferException e ) {
-//				e.printStackTrace();
-//			}
-//			if ( sig != null && sig.isInitialized() ) {
-//				if ( sig.getInputsCount() > 0 ) {
-//					inputNodeName = sig.getInputsMap().keySet().iterator().next();
-//					if ( bridge != null ) {
-//						bridge.setInputTensor( sig.getInputsOrThrow( inputNodeName ) );
-//					}
-//				}
-//				if ( sig.getOutputsCount() > 0 ) {
-//					outputNodeName = sig.getOutputsMap().keySet().iterator().next();
-//					if ( bridge != null ) {
-//						bridge.setOutputTensor( sig.getOutputsOrThrow( outputNodeName ) );
-//					}
-//				}
-//				if ( bridge != null && !bridge.isMappingInitialized() ) {
-//					bridge.setMappingDefaults();
-//				}
-//			}
-//		}
-//	}
-//
-//	protected void openTFMappingDialog() {
-//
-//		processDataset();
-//
-//		if ( bridge.getInputTensorInfo() == null ) {
-//			modelChanged();
-//		}
-//
-//		MappingDialog.create( bridge );
-//	}
-//
+	}
+
 //	@Override
 //	public void run() {
 //
@@ -324,10 +289,10 @@
 //
 //		executeModel( normalizedInput );
 //
-//		model.close();
+//		model.dispose();
 //		pool.shutdown();
 //	}
-//
+
 //	private void executeModel( final RandomAccessibleInterval< FloatType > normalizedInput ) {
 //
 //		List< RandomAccessibleInterval< FloatType > > result = null;
@@ -372,42 +337,44 @@
 //			progressWindow.setCurrentStepFail();
 //		}
 //	}
-//
-//	private void savePreferences() {
-//		prefService.put( modelFileKey, modelFile.getAbsolutePath() );
-//	}
-//
-//	/**
-//	 * This main function serves for development purposes.
-//	 * It allows you to run the plugin immediately out of
-//	 * your integrated development environment (IDE).
-//	 *
-//	 * @param args
-//	 *            whatever, it's ignored
-//	 * @throws Exception
-//	 */
-//	public static void main( final String... args ) throws Exception {
-//
-//		final ImageJ ij = new ImageJ();
-//
-//		ij.launch( args );
-//
-//		// ask the user for a file to open
+
+	private void savePreferences() {
+		prefService.put( modelFileKey, modelFile.getAbsolutePath() );
+	}
+
+	/**
+	 * This main function serves for development purposes.
+	 * It allows you to run the plugin immediately out of
+	 * your integrated development environment (IDE).
+	 *
+	 * @param args
+	 *            whatever, it's ignored
+	 * @throws Exception
+	 */
+	public static void main( final String... args ) throws Exception {
+
+		final ImageJ ij = new ImageJ();
+
+		ij.launch( args );
+
+		// ask the user for a file to open
 //		final File file = ij.ui().chooseFile( null, "open" );
-//
-//		if ( file != null && file.exists() ) {
-//			// load the dataset
-//			final Dataset dataset = ij.scifio().datasetIO().open( file.getAbsolutePath() );
-//
-//			// show the image
-//			ij.ui().show( dataset );
-//
-//			// invoke the plugin
-//			ij.command().run( GenericNetwork.class, true );
-//		}
-//
-//	}
-//
+		final File file =
+				new File( "/home/random/Development/imagej/plugins/CSBDeep-data/net_project/input-1.tif" );
+
+		if ( file != null && file.exists() ) {
+			// load the dataset
+			final Dataset dataset = ij.scifio().datasetIO().open( file.getAbsolutePath() );
+
+			// show the image
+			ij.ui().show( dataset );
+
+			// invoke the plugin
+			ij.command().run( GenericNetwork.class, true );
+		}
+
+	}
+
 //	public void showError( final String errorMsg ) {
 //		JOptionPane.showMessageDialog(
 //				null,
@@ -449,4 +416,4 @@
 //		}
 //		return dataset;
 //	}
-//}
+}

@@ -54,6 +54,7 @@ public interface Network extends Callable< List< RandomAccessibleInterval< Float
 
 	public void setDoDimensionReduction( boolean doDimensionReduction, AxisType axisToRemove );
 
+	public void doDimensionReduction();
 	public void close();
 
 }

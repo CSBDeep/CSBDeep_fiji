@@ -99,19 +99,14 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 	@Parameter( label = "Overlap between tiles", min = "0", stepSize = "16" )
 	public int overlap = 32;
 
-	@Parameter( type = ItemIO.BOTH, label = "result" )
+	@Parameter( type = ItemIO.OUTPUT, label = "result" )
 	protected List< DatasetView > resultDatasets = new ArrayList<>();
-
-	protected TiledView< FloatType > tiledView;
-	List< RandomAccessibleInterval< FloatType > > rawresults = null;
 
 	protected String modelFileUrl;
 	protected String modelName;
 	protected String inputNodeName = "input";
 	protected String outputNodeName = "output";
 	protected int blockMultiple = 32;
-
-	protected boolean processedDataset = false;
 
 	protected TaskManager taskManager;
 
@@ -201,16 +196,15 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 		if ( noInputData() )
 			return;
 
-		modelLoader.run(
-				modelName,
-				network,
-				modelFileUrl,
-				inputNodeName,
-				outputNodeName,
-				datasetView );
-		inputMapper.run( getInput(), network );
+		prepareInputAndNetwork();
 		final List< RandomAccessibleInterval< FloatType > > processedInput =
 				inputProcessor.run( getInput() );
+
+		System.out.println("_____input_____");
+		network.getInputNode().printMapping();
+		System.out.println("_____output_____");
+		network.getOutputNode().printMapping();
+
 		final List< RandomAccessibleInterval< FloatType > > normalizedInput =
 				inputNormalizer.run( processedInput );
 		initTiling();
@@ -220,6 +214,17 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 				outputTiler.run( tiledOutput, tiling, getAxesArray( network.getOutputNode() ) );
 		resultDatasets.clear();
 		resultDatasets.addAll( outputProcessor.run( output, datasetView, network ) );
+	}
+
+	protected void prepareInputAndNetwork() {
+		modelLoader.run(
+				modelName,
+				network,
+				modelFileUrl,
+				inputNodeName,
+				outputNodeName,
+				datasetView );
+//		inputMapper.run( getInput(), network );
 	}
 
 	protected void close() {

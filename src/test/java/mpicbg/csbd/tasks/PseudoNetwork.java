@@ -78,7 +78,7 @@ public class PseudoNetwork extends DefaultNetwork {
 
 	private void handleDimensionReduction() {
 		if ( doDimensionReduction ) {
-			getOutputNode().removeAxisFromMapping( inputNode.getDataset(), axisToRemove );
+			getOutputNode().removeAxisFromMapping( axisToRemove );
 			final Dataset outputDummy =
 					createEmptyDuplicateWithoutAxis( inputNode.getDataset(), axisToRemove );
 			getOutputNode().initialize( outputDummy );
@@ -119,6 +119,10 @@ public class PseudoNetwork extends DefaultNetwork {
 	@Override
 	public boolean isInitialized() {
 		return initialized;
+	}
+
+	@Override
+	public void doDimensionReduction() {
 	}
 
 	public long[] getInputShape() {
