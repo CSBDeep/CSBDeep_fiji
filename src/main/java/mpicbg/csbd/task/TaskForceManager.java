@@ -74,7 +74,7 @@ public class TaskForceManager implements TaskManager {
 		taskPresenter.close();
 	}
 
-	public void createTaskForce( final String codeName, final Task... tasks ) {
+	public <T extends Task> void createTaskForce( final String codeName, final T... tasks ) {
 		final TaskForce taskForce = new TaskForce( codeName, tasks );
 		taskForces.add( taskForce );
 		taskForce.setManager( this );

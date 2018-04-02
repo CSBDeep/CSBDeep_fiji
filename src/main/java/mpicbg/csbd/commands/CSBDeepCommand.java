@@ -148,15 +148,10 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 		taskManager = new TaskForceManager();
 		final TaskForceManager tfm = ( TaskForceManager ) taskManager;
 		tfm.initialize();
-		tfm.createTaskForce(
-				"Preprocessing",
-				( Task ) modelLoader,
-				( Task ) inputMapper,
-				( Task ) inputProcessor,
-				( Task ) inputNormalizer );
-		tfm.createTaskForce( "Tiling", ( Task ) inputTiler );
-		tfm.createTaskForce( "Execution", ( Task ) modelExecutor );
-		tfm.createTaskForce( "Postprocessing", ( Task ) outputTiler, ( Task ) outputProcessor );
+		tfm.createTaskForce("Preprocessing", modelLoader, inputMapper, inputProcessor, inputNormalizer );
+		tfm.createTaskForce("Tiling", inputTiler );
+		tfm.createTaskForce("Execution", modelExecutor );
+		tfm.createTaskForce("Postprocessing", outputTiler, outputProcessor );
 	}
 
 	protected InputMapper initInputMapper() {
