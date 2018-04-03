@@ -75,7 +75,7 @@ import mpicbg.csbd.util.task.InputProcessor;
 import mpicbg.csbd.util.task.OutputProcessor;
 
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Isotropic Reconstruction - Retina", headless = true )
-public class NetIso< T extends RealType< T > > extends CSBDeepCommand< T > implements Command {
+public class NetIso extends CSBDeepCommand implements Command {
 
 	@Parameter( label = "Scale Z", min = "1", max = "15" )
 	protected float scale = 10.2f;

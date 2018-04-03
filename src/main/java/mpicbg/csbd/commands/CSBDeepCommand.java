@@ -81,11 +81,7 @@ import mpicbg.csbd.util.task.DefaultOutputProcessor;
 import mpicbg.csbd.util.task.InputProcessor;
 import mpicbg.csbd.util.task.OutputProcessor;
 
-public abstract class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
-		implements
-		Cancelable,
-		Initializable,
-		Disposable {
+public abstract class CSBDeepCommand implements Cancelable, Initializable, Disposable {
 
 	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
 	public DatasetView datasetView;
@@ -145,13 +141,13 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 	}
 
 	protected void initTaskManager() {
-		taskManager = new TaskForceManager();
-		final TaskForceManager tfm = ( TaskForceManager ) taskManager;
+		final TaskForceManager tfm = new TaskForceManager();
 		tfm.initialize();
 		tfm.createTaskForce("Preprocessing", modelLoader, inputMapper, inputProcessor, inputNormalizer );
 		tfm.createTaskForce("Tiling", inputTiler );
 		tfm.createTaskForce("Execution", modelExecutor );
 		tfm.createTaskForce("Postprocessing", outputTiler, outputProcessor );
+		taskManager = tfm;
 	}
 
 	protected InputMapper initInputMapper() {
@@ -194,11 +190,6 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 		prepareInputAndNetwork();
 		final List< RandomAccessibleInterval< FloatType > > processedInput =
 				inputProcessor.run( getInput() );
-
-		System.out.println("_____input_____");
-		network.getInputNode().printMapping();
-		System.out.println("_____output_____");
-		network.getOutputNode().printMapping();
 
 		final List< RandomAccessibleInterval< FloatType > > normalizedInput =
 				inputNormalizer.run( processedInput );
@@ -335,11 +326,20 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 		dispose();
 	}
 
-	protected static void
+	protected void log(final String msg) {
+		if(taskManager != null) {
+			taskManager.log(msg);
+		}else {
+			System.out.println(msg);
+		}
+	}
+
+	protected void
 			printDim( final String title, final RandomAccessibleInterval< FloatType > img ) {
+		//TODO fix print
 		final long[] dims = new long[ img.numDimensions() ];
 		img.dimensions( dims );
-		System.out.println( title + ": " + Arrays.toString( dims ) );
+		log( title + ": " + Arrays.toString( dims ) );
 	}
 
 }

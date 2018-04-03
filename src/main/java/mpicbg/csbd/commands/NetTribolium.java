@@ -44,9 +44,7 @@ import org.scijava.plugin.Plugin;
 /**
  */
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>3D Denoising - Tribolium", headless = true )
-public class NetTribolium< T extends RealType< T > > extends CSBDeepCommand< T >
-		implements
-		Command {
+public class NetTribolium extends CSBDeepCommand implements Command {
 
 	@Override
 	public void initialize() {

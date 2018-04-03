@@ -46,12 +46,7 @@ import java.io.File;
 /**
  */
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Generic network", headless = true )
-public class GenericNetwork< T extends RealType< T > >  extends CSBDeepCommand< T > implements Command {
-
-//	private static final String OUTPUT_NAME = "output_";
-
-//	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
-//	private Dataset input;
+public class GenericNetwork extends CSBDeepCommand implements Command {
 
 	@Parameter( visibility = ItemVisibility.MESSAGE )
 	protected String normtext = "Normalization";
@@ -74,102 +69,11 @@ public class GenericNetwork< T extends RealType< T > >  extends CSBDeepCommand< 
 	@Parameter( label = "Model name")
 	private String _modelName;
 
-//	private String inputNodeName = "input";
-//	private String outputNodeName = "output";
-
 	@Parameter( label = "Adjust image <-> tensorflow mapping", callback = "openTFMappingDialog" )
 	private Button changeTFMapping;
 
-//	@Parameter( label = "Number of tiles", min = "1" )
-//	protected int nTiles = 1;
-//
-//	@Parameter( label = "Overlap between tiles", min = "0", stepSize = "16" )
-//	protected int overlap = 32;
-
-//	@Parameter
-//	private TensorFlowService tensorFlowService;
-//
-//	@Parameter
-//	private LogService log;
-//
-//	@Parameter
-//	private UIService uiService;
-//
-//	@Parameter
-//	private OpService opService;
-
 	@Parameter
 	private PrefService prefService;
-
-//	@Parameter
-//	private DatasetService datasetService;
-
-//	@Parameter( type = ItemIO.OUTPUT )
-//	protected List< Dataset > resultDatasets;
-
-//	private SavedModelBundle model;
-//	private SignatureDef sig;
-//	private DatasetTensorBridge bridge;
-//	private boolean processedDataset = false;
-//	private boolean useTensorFlowGPU = true;
-//	protected int blockMultiple = 32;
-
-//	CSBDeepProgress progressWindow;
-
-//	ExecutorService pool = Executors.newCachedThreadPool();
-
-//	// Same as the tag used in export_saved_model in the Python code.
-//	private static final String MODEL_TAG = "serve";
-//	// Same as
-//	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
-//	// in Python. Perhaps this should be an exported constant in TensorFlow's Java
-//	// API.
-//	private static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY = "serving_default";
-
-//	@Override
-//	public void initialize() {
-//		try {
-//			System.loadLibrary( "tensorflow_jni" );
-//		} catch ( final UnsatisfiedLinkError e ) {
-//			useTensorFlowGPU = false;
-//			System.out.println(
-//					"Couldn't load tensorflow from library path. Using CPU version from jar file." );
-//		}
-//	}
-
-//	/*
-//	 * model can be imported via savedmodel
-//	 */
-//	protected boolean loadModel() {
-//
-////		System.out.println("loadGraph");
-//
-//		if ( modelFile == null ) {
-//			System.out.println( "Cannot load graph from null File" );
-//			return false;
-//		}
-//
-//		final FileLocation source = new FileLocation( modelFile );
-//		try {
-//			model = tensorFlowService.loadModel( source, source.getName(), MODEL_TAG );
-//		} catch ( TensorFlowException | IOException e ) {
-//			e.printStackTrace();
-//			return false;
-//		}
-//		return true;
-//	}
-
-//	/** Executed whenever the {@link #input} parameter changes. */
-//	protected void processDataset() {
-//
-//		if ( !processedDataset ) {
-//			if ( input != null ) {
-//				bridge = new DatasetTensorBridge( input );
-//				processedDataset = true;
-//			}
-//		}
-//
-//	}
 
 	/** Executed whenever the {@link #modelFile} parameter is initialized. */
 	protected void modelInitialized() {
@@ -206,7 +110,7 @@ public class GenericNetwork< T extends RealType< T > >  extends CSBDeepCommand< 
 	private void checkAndResolveDimensionReduction() {
 		for(AxisType axis : network.getInputNode().getNodeAxes()) {
 			if(!network.getOutputNode().getNodeAxes().contains(axis)){
-				System.out.println("FOUND DIMENSION TO REDUCE: " + axis.getLabel());
+//				log("Network input node axis " + axis.getLabel() + " not present in output node, will be reduced");
 				network.setDoDimensionReduction( true, axis );
 			}
 		}
@@ -239,104 +143,6 @@ public class GenericNetwork< T extends RealType< T > >  extends CSBDeepCommand< 
 //			showError(e.getMessage());
 //		}
 	}
-
-//	@Override
-//	public void run() {
-//
-//		progressWindow = CSBDeepProgress.create( useTensorFlowGPU );
-//
-//		progressWindow.getCancelBtn().addActionListener( this );
-//
-//		progressWindow.setStepStart( CSBDeepProgress.STEP_LOADMODEL );
-//
-//		savePreferences();
-//
-//		progressWindow.addLog( "Loading model " + modelFile.getName() + ".. " );
-//
-//		if ( input == null ) { return; }
-//
-//		if ( model == null ) {
-//			modelChanged();
-//			if ( model == null ) {
-//				progressWindow.setCurrentStepFail();
-//				return;
-//			}
-//		}
-//
-//		progressWindow.setCurrentStepDone();
-//		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
-//
-//		progressWindow.addLog( "Preparing normalization.. " );
-//
-//		normalizeInput = _normalizeInput;
-//		percentileBottom = _percentileBottom;
-//		percentileTop = _percentileTop;
-//		min = _min;
-//		max = _max;
-//		clamp = _clamp;
-//
-//		prepareNormalization( ( IterableInterval ) input.getImgPlus() );
-//
-//		progressWindow.addLog(
-//				"Displaying normalized test image.." );
-//		testNormalization( input, uiService );
-//
-//		progressWindow.addLog(
-//				"Normalize (" + percentileBottom + " - " + percentileTop + " -> " + min + " - " + max + "] .. " );
-//
-//		final RandomAccessibleInterval< FloatType > normalizedInput = normalizeImage(
-//				( RandomAccessibleInterval ) input.getImgPlus() );
-//
-//		executeModel( normalizedInput );
-//
-//		model.dispose();
-//		pool.shutdown();
-//	}
-
-//	private void executeModel( final RandomAccessibleInterval< FloatType > normalizedInput ) {
-//
-//		List< RandomAccessibleInterval< FloatType > > result = null;
-//		try {
-//			result = pool
-//					.submit(
-//							new TiledPrediction( normalizedInput, bridge, model, progressWindow, nTiles, blockMultiple, overlap ) )
-//					.get();
-//		} catch ( final ExecutionException exc ) {
-//			exc.printStackTrace();
-//
-//			// We expect it to be an out of memory exception and
-//			// try it again with more tiles.
-//			nTiles *= 2;
-//			// Check if the number of tiles is to large already
-//			if ( Arrays.stream( Intervals.dimensionsAsLongArray( normalizedInput ) ).max().getAsLong() / nTiles < blockMultiple ) {
-//				progressWindow.setCurrentStepFail();
-//				return;
-//			}
-//			progressWindow.addError( "Out of memory exception occurred. Trying with " + nTiles + " tiles..." );
-//			progressWindow.addRounds( 1 );
-//			progressWindow.setNextRound();
-//			executeModel( normalizedInput );
-//			return;
-//
-//		} catch ( final InterruptedException exc ) {
-//			progressWindow.addError( "Process canceled." );
-//			progressWindow.setCurrentStepFail();
-//		}
-//		resultDatasets = new ArrayList<>();
-//		if ( result != null ) {
-//			// TODO Remove i < 2 when the project network isn't expanded in the channel dimension anymore
-//			for ( int i = 0; i < result.size() && i < 2; i++ ) {
-//				progressWindow.addLog( "Displaying result image " + i + ".." );
-//				resultDatasets.add( wrapIntoDataset( OUTPUT_NAME + i, result.get( i ) ) );
-//			}
-//		}
-//		if ( !resultDatasets.isEmpty() ) {
-//			progressWindow.addLog( "All done!" );
-//			progressWindow.setCurrentStepDone();
-//		} else {
-//			progressWindow.setCurrentStepFail();
-//		}
-//	}
 
 	private void savePreferences() {
 		prefService.put( modelFileKey, modelFile.getAbsolutePath() );
@@ -375,45 +181,4 @@ public class GenericNetwork< T extends RealType< T > >  extends CSBDeepCommand< 
 
 	}
 
-//	public void showError( final String errorMsg ) {
-//		JOptionPane.showMessageDialog(
-//				null,
-//				errorMsg,
-//				"Error",
-//				JOptionPane.ERROR_MESSAGE );
-//	}
-//
-//	@Override
-//	public boolean isCanceled() {
-//		return false;
-//	}
-//
-//	@Override
-//	public void cancel( final String reason ) {}
-//
-//	@Override
-//	public String getCancelReason() {
-//		return null;
-//	}
-//
-//	@Override
-//	public void actionPerformed( final ActionEvent e ) {
-//		if ( e.getSource().equals( progressWindow.getCancelBtn() ) ) {
-//			pool.shutdownNow();
-//			progressWindow.setCurrentStepFail();
-//		}
-//	}
-//
-//	/** TODO remove: copy from CSBDeepCommand */
-//	protected < U extends RealType< U > & NativeType< U > > Dataset wrapIntoDataset( final String name, final RandomAccessibleInterval< U > img ) {
-//
-//		//TODO convert back to original format to be able to save and load it (float 32 bit does not load in Fiji)
-//
-//		final Dataset dataset = datasetService.create( new ImgPlus<>( ImgView.wrap( img, new ArrayImgFactory<>() ) ) );
-//		dataset.setName( name );
-//		for ( int i = 0; i < dataset.numDimensions(); i++ ) {
-//			dataset.setAxis( input.axis( bridge.getOutputDimByInputDim( i ) ), i );
-//		}
-//		return dataset;
-//	}
 }
