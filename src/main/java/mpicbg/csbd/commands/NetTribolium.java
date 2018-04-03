@@ -59,6 +59,7 @@ public class NetTribolium extends CSBDeepCommand implements Command {
 	@Override
 	public void run() {
 		try {
+			tryToInitialize();
 			validateInput(
 					getInput(),
 					"3D grayscale image with dimension order X-Y-Z",

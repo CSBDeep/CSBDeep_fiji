@@ -164,6 +164,7 @@ public class NetIso extends CSBDeepCommand implements Command {
 	public void run() {
 //		network.setDoDimensionReduction( true, Axes.CHANNEL );
 		try {
+			tryToInitialize();
 			validateInput(
 					datasetView.getData(),
 					"4D image with dimension order X-Y-C-Z and two channels",

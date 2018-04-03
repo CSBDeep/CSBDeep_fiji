@@ -59,6 +59,7 @@ public class NetProject extends CSBDeepCommand implements Command {
 	public void run() {
 		network.setDoDimensionReduction( true, Axes.Z );
 		try {
+			tryToInitialize();
 			validateInput(
 					getInput(),
 					"3D grayscale image with dimension order X-Y-Z",

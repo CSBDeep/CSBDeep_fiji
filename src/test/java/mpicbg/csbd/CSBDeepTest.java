@@ -61,7 +61,7 @@ public class CSBDeepTest {
 			runPlugin( final Class< C > pluginClass, final DatasetView datasetView ) {
 		final Future< CommandModule > future = ij.command().run(
 				pluginClass,
-				true,
+				false,
 				"datasetView",
 				datasetView);
 		assertFalse( "Plugin future is null", future == null );

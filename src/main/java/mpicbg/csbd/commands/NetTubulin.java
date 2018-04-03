@@ -81,6 +81,7 @@ public class NetTubulin extends CSBDeepCommand implements Command {
 		Exception prevException = null;
 		try {
 			try {
+				tryToInitialize();
 				validateInput(
 						getInput(),
 						"3D image with dimension order X-Y-T",

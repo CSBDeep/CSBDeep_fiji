@@ -118,10 +118,19 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 	protected OutputTiler outputTiler;
 	protected OutputProcessor outputProcessor;
 
+	private boolean initialized = false;
+
 	@Override
 	public void initialize() {
+		initialized = true;
 		initNetwork();
 		initTasks();
+	}
+
+	protected void tryToInitialize() {
+		if(!initialized) {
+			initialize();
+		}
 	}
 
 	protected void initNetwork() {
@@ -186,6 +195,8 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 
 		if ( noInputData() )
 			return;
+
+		tryToInitialize();
 
 		prepareInputAndNetwork();
 		final List< RandomAccessibleInterval< FloatType > > processedInput =
