@@ -83,7 +83,7 @@ import mpicbg.csbd.util.task.OutputProcessor;
 
 public abstract class CSBDeepCommand implements Cancelable, Initializable, Disposable {
 
-	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
+	@Parameter( type = ItemIO.INPUT, initializer = "processDataset" )
 	public DatasetView datasetView;
 
 	@Parameter
@@ -95,7 +95,7 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 	@Parameter( label = "Overlap between tiles", min = "0", stepSize = "16" )
 	public int overlap = 32;
 
-	@Parameter( type = ItemIO.OUTPUT, label = "result" )
+	@Parameter( type = ItemIO.OUTPUT )
 	protected List< DatasetView > resultDatasets = new ArrayList<>();
 
 	protected String modelFileUrl;
@@ -191,8 +191,14 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 		final List< RandomAccessibleInterval< FloatType > > processedInput =
 				inputProcessor.run( getInput() );
 
-		final List< RandomAccessibleInterval< FloatType > > normalizedInput =
-				inputNormalizer.run( processedInput );
+		final List< RandomAccessibleInterval< FloatType > > normalizedInput;
+		if(doInputNormalization()) {
+			setupNormalizer();
+			normalizedInput = inputNormalizer.run( processedInput );
+		} else {
+			normalizedInput = processedInput;
+		}
+
 		initTiling();
 		final List< AdvancedTiledView< FloatType > > tiledOutput =
 				tryToTileAndRunNetwork( normalizedInput );
@@ -203,6 +209,14 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 
 		dispose();
 
+	}
+
+	protected void setupNormalizer() {
+		//do nothing, use normalizer default values
+	}
+
+	protected boolean doInputNormalization() {
+		return true;
 	}
 
 	protected void prepareInputAndNetwork() {

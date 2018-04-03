@@ -48,9 +48,7 @@ import mpicbg.csbd.tiling.DefaultTiling;
 /**
  */
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Deconvolution - Microtubules", headless = true )
-public class NetTubulin< T extends RealType< T > > extends CSBDeepCommand< T >
-		implements
-		Command {
+public class NetTubulin extends CSBDeepCommand implements Command {
 
 	private static final int BLOCK_MULTIPLE = 4;
 

@@ -37,4 +37,8 @@ public class DefaultInputNormalizer extends DefaultTask implements InputNormaliz
 		return normalizer.normalize( input );
 	}
 
+	public PercentileNormalizer<FloatType> getNormalizer() {
+		return normalizer;
+	}
+
 }

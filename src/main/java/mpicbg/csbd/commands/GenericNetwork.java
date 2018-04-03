@@ -28,12 +28,12 @@
  */
 package mpicbg.csbd.commands;
 
+import mpicbg.csbd.normalize.PercentileNormalizer;
+import mpicbg.csbd.normalize.task.DefaultInputNormalizer;
 import mpicbg.csbd.ui.MappingDialog;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
-import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
-import net.imglib2.type.numeric.RealType;
 import org.scijava.ItemVisibility;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
@@ -51,17 +51,17 @@ public class GenericNetwork extends CSBDeepCommand implements Command {
 	@Parameter( visibility = ItemVisibility.MESSAGE )
 	protected String normtext = "Normalization";
 	@Parameter
-	protected boolean _normalizeInput = true;
+	protected boolean normalizeInput = true;
 	@Parameter
-	protected float _percentileBottom = 0.03f;
+	protected float percentileBottom = 0.03f;
 	@Parameter
-	protected float _percentileTop = 0.998f;
+	protected float percentileTop = 0.998f;
 
-	protected float _min = 0;
-	protected float _max = 1;
+	protected float min = 0;
+	protected float max = 1;
 
 	@Parameter( label = "Clamp normalization" )
-	protected boolean _clamp = false;
+	protected boolean clamp = false;
 
 	@Parameter( label = "Import model (.zip)", callback = "modelChanged", initializer = "modelInitialized", persist = false )
 	private File modelFile;
@@ -100,6 +100,36 @@ public class GenericNetwork extends CSBDeepCommand implements Command {
 	}
 
 	@Override
+	public void run() {
+
+//		prepareInputAndNetwork();
+//		checkAndResolveDimensionReduction();
+
+//		try {
+			// TODO is validation input needed?
+//			validateInput(
+//					getInput(),
+//					"3D grayscale image with dimension order X-Y-Z",
+//					OptionalLong.empty(),
+//					OptionalLong.empty(),
+//					OptionalLong.empty());
+//			super.run();
+//		} catch (final IOException e) {
+//			showError(e.getMessage());
+//		}
+	}
+
+	@Override
+	protected void setupNormalizer() {
+		((DefaultInputNormalizer)inputNormalizer).getNormalizer().setup(percentileBottom, percentileTop, min, max, clamp);
+	}
+
+	@Override
+	protected boolean doInputNormalization() {
+		return normalizeInput;
+	}
+
+	@Override
 	protected void prepareInputAndNetwork() {
 		modelFileUrl = modelFile.getAbsolutePath();
 		modelName = _modelName;
@@ -117,32 +147,6 @@ public class GenericNetwork extends CSBDeepCommand implements Command {
 		network.doDimensionReduction();
 	}
 
-	@Override
-	public void run() {
-
-		normalizeInput = _normalizeInput;
-		percentileBottom = _percentileBottom;
-		percentileTop = _percentileTop;
-		min = _min;
-		max = _max;
-		clamp = _clamp;
-
-		prepareInputAndNetwork();
-		checkAndResolveDimensionReduction();
-
-//		try {
-			// TODO is validation input needed?
-//			validateInput(
-//					getInput(),
-//					"3D grayscale image with dimension order X-Y-Z",
-//					OptionalLong.empty(),
-//					OptionalLong.empty(),
-//					OptionalLong.empty());
-			super.run();
-//		} catch (final IOException e) {
-//			showError(e.getMessage());
-//		}
-	}
 
 	private void savePreferences() {
 		prefService.put( modelFileKey, modelFile.getAbsolutePath() );

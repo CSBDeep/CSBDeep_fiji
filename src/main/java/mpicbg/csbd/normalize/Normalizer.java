@@ -43,8 +43,6 @@ public interface Normalizer< T extends RealType< T > > {
 
 	void testNormalization( Dataset input, UIService uiService );
 
-	boolean isActive();
-
 	float normalize( float val );
 
 	Img< FloatType > normalizeAfterPreparation( RandomAccessibleInterval< T > im );
