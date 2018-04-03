@@ -34,6 +34,40 @@
 
 package mpicbg.csbd.imglib2;
 
+/*
+ * #%L
+ * ImgLib2: a general-purpose, multidimensional image processing library.
+ * %%
+ * Copyright (C) 2009 - 2016 Tobias Pietzsch, Stephan Preibisch, Stephan Saalfeld,
+ * John Bogovic, Albert Cardona, Barry DeZonia, Christian Dietz, Jan Funke,
+ * Aivar Grislis, Jonathan Hale, Grant Harris, Stefan Helfrich, Mark Hiner,
+ * Martin Horn, Steffen Jaensch, Lee Kamentsky, Larry Lindsey, Melissa Linkert,
+ * Mark Longair, Brian Northan, Nick Perry, Curtis Rueden, Johannes Schindelin,
+ * Jean-Yves Tinevez and Michael Zinsmaier.
+ * %%
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ *
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDERS OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ * #L%
+ */
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -47,14 +81,11 @@ import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.View;
 import net.imglib2.util.Util;
-import net.imglib2.view.Views;
 
 /**
- * THIS WILL GO INTO IMGLIB2 THIS IS JUST HERE UNTIL IT IS THERE!
- *
- * Combines an <em>n</em>-dimensional {@link RandomAccessibleInterval} of
- * same-sized <em>n</em>-dimensional {@link RandomAccessibleInterval}s into a
- * single <em>n</em>-dimensional {@link RandomAccessibleInterval}.
+ * Creates a single <em>n</em>-dimensional {@link RandomAccessibleInterval} by
+ * patching together an <em>n</em>-dimensional {@link RandomAccessibleInterval}
+ * of same-sized <em>n</em>-dimensional {@link RandomAccessibleInterval}s.
  *
  * @param <T>
  *            the pixel type
@@ -62,7 +93,7 @@ import net.imglib2.view.Views;
  * @author Marcel Wiedenmann (University of Konstanz)
  * @author Christian Dietz (University of Konstanz)
  */
-public class CombinedView< T > extends AbstractInterval implements RandomAccessibleInterval< T >, IterableInterval< T >, View
+public class GridView< T > extends AbstractInterval implements RandomAccessibleInterval< T >, IterableInterval< T >, View
 {
 	// TODO Implement SubIntervalIterable<T>?
 
@@ -76,7 +107,7 @@ public class CombinedView< T > extends AbstractInterval implements RandomAccessi
 
 	private IterableInterval< ? extends RandomAccessibleInterval< T > > sourceAsIterable;
 
-	public CombinedView( final RandomAccessibleInterval< ? extends RandomAccessibleInterval< T > > source )
+	public GridView( final RandomAccessibleInterval< ? extends RandomAccessibleInterval< T > > source )
 	{
 		super( source.numDimensions() );
 		this.source = source;
@@ -102,13 +133,13 @@ public class CombinedView< T > extends AbstractInterval implements RandomAccessi
 	}
 
 	@Override
-	public CombinedViewRandomAccess< T > randomAccess()
+	public GridViewRandomAccess< T > randomAccess()
 	{
-		return new CombinedViewRandomAccess<>( source, blockSize );
+		return new GridViewRandomAccess<>( source, blockSize );
 	}
 
 	@Override
-	public CombinedViewRandomAccess< T > randomAccess( final Interval interval )
+	public GridViewRandomAccess< T > randomAccess( final Interval interval )
 	{
 		return randomAccess();
 	}
@@ -132,28 +163,28 @@ public class CombinedView< T > extends AbstractInterval implements RandomAccessi
 	}
 
 	@Override
-	public CombinedViewCursor< T > iterator()
+	public GridViewCursor< T > iterator()
 	{
 		return cursor();
 	}
 
 	@Override
-	public CombinedViewCursor< T > cursor()
+	public GridViewCursor< T > cursor()
 	{
 		if ( sourceAsIterable == null )
 		{
 			sourceAsIterable = Views.iterable( source );
 		}
-		return new CombinedViewCursor<>( sourceAsIterable, blockSize, blockNumElements );
+		return new GridViewCursor<>( sourceAsIterable, blockSize, blockNumElements );
 	}
 
 	@Override
-	public CombinedViewCursor< T > localizingCursor()
+	public GridViewCursor< T > localizingCursor()
 	{
 		return cursor();
 	}
 
-	public static class CombinedViewRandomAccess< T > extends Point implements RandomAccess< T >
+	public static class GridViewRandomAccess< T > extends Point implements RandomAccess< T >
 	{
 		private final RandomAccessibleInterval< ? extends RandomAccessibleInterval< T > > source;
 
@@ -171,7 +202,7 @@ public class CombinedView< T > extends AbstractInterval implements RandomAccessi
 
 		private RandomAccess< T > tempBlockAccess;
 
-		public CombinedViewRandomAccess( final RandomAccessibleInterval< ? extends RandomAccessibleInterval< T > > source, final long[] blockSize )
+		public GridViewRandomAccess( final RandomAccessibleInterval< ? extends RandomAccessibleInterval< T > > source, final long[] blockSize )
 		{
 			super( source.numDimensions() );
 			this.source = source;
@@ -182,7 +213,7 @@ public class CombinedView< T > extends AbstractInterval implements RandomAccessi
 			tempOffset = new long[ n ];
 		}
 
-		private CombinedViewRandomAccess( final CombinedViewRandomAccess< T > ra )
+		private GridViewRandomAccess( final GridViewRandomAccess< T > ra )
 		{
 			super( ra.position, true );
 			source = ra.source;
@@ -208,36 +239,34 @@ public class CombinedView< T > extends AbstractInterval implements RandomAccessi
 				tempOffset[ d ] = normalizedPosition % blockSize[ d ];
 				flatIndex = flatIndex * source.dimension( d ) + tempIndex[ d ];
 			}
-			tempBlockAccess = blockAccesses.get( flatIndex );
-			if ( tempBlockAccess == null )
-			{
+
+			tempBlockAccess = blockAccesses.computeIfAbsent( flatIndex, idx -> {
 				sourceAccess.setPosition( tempIndex );
 				// TODO: [Review] There are more efficient ways than creating a
 				// new view each time. E.g, we could wrap the block's random
 				// access in an own random access that deals with translation
 				// (unfortunately, net.imglib2.view.TranslationRandomAccess has
 				// no public constructor).
-				tempBlockAccess = Views.zeroMin( sourceAccess.get() ).randomAccess();
-				blockAccesses.put( flatIndex, tempBlockAccess );
-			}
+				return Views.zeroMin( sourceAccess.get() ).randomAccess();
+			} );
 			tempBlockAccess.setPosition( tempOffset );
 			return tempBlockAccess.get();
 		}
 
 		@Override
-		public CombinedViewRandomAccess< T > copy()
+		public GridViewRandomAccess< T > copy()
 		{
-			return new CombinedViewRandomAccess<>( this );
+			return new GridViewRandomAccess<>( this );
 		}
 
 		@Override
-		public CombinedViewRandomAccess< T > copyRandomAccess()
+		public GridViewRandomAccess< T > copyRandomAccess()
 		{
 			return copy();
 		}
 	}
 
-	public static class CombinedViewCursor< T > extends AbstractCursor< T >
+	public static class GridViewCursor< T > extends AbstractCursor< T >
 	{
 		private final IterableInterval< ? extends RandomAccessibleInterval< T > > source;
 
@@ -251,7 +280,7 @@ public class CombinedView< T > extends AbstractInterval implements RandomAccessi
 
 		private Cursor< T > tempBlockCursor;
 
-		public CombinedViewCursor( final IterableInterval< ? extends RandomAccessibleInterval< T > > source, final long[] blockSize, final long blockNumElements )
+		public GridViewCursor( final IterableInterval< ? extends RandomAccessibleInterval< T > > source, final long[] blockSize, final long blockNumElements )
 		{
 			super( source.numDimensions() );
 			this.source = source;
@@ -261,7 +290,7 @@ public class CombinedView< T > extends AbstractInterval implements RandomAccessi
 			incrementBlock();
 		}
 
-		private CombinedViewCursor( final CombinedViewCursor< T > cursor )
+		private GridViewCursor( final GridViewCursor< T > cursor )
 		{
 			super( cursor.n );
 			source = cursor.source;
@@ -332,13 +361,13 @@ public class CombinedView< T > extends AbstractInterval implements RandomAccessi
 		}
 
 		@Override
-		public CombinedViewCursor< T > copy()
+		public GridViewCursor< T > copy()
 		{
-			return new CombinedViewCursor<>( this );
+			return new GridViewCursor<>( this );
 		}
 
 		@Override
-		public CombinedViewCursor< T > copyCursor()
+		public GridViewCursor< T > copyCursor()
 		{
 			return copy();
 		}

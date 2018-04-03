@@ -2,9 +2,7 @@ package mpicbg.csbd.util.task;
 
 import mpicbg.csbd.network.Network;
 import mpicbg.csbd.task.DefaultTask;
-import net.imagej.Dataset;
-import net.imagej.ImageJ;
-import net.imagej.ImgPlus;
+import net.imagej.*;
 import net.imagej.display.DatasetView;
 import net.imagej.display.DefaultDatasetView;
 import net.imglib2.RandomAccessibleInterval;
@@ -26,11 +24,12 @@ public class DefaultOutputProcessor extends DefaultTask implements OutputProcess
 	public List< DatasetView > run(
 			final List< RandomAccessibleInterval< FloatType > > result,
 			final DatasetView datasetView,
-			final Network network ) {
+			final Network network,
+			final DatasetService datasetService) {
 		setStarted();
 
 		final List< DatasetView > output = new ArrayList<>();
-		result.forEach( image -> output.addAll( _run( image, datasetView, network ) ) );
+		result.forEach( image -> output.addAll( _run( image, datasetView, network, datasetService ) ) );
 
 		setFinished();
 
@@ -38,9 +37,9 @@ public class DefaultOutputProcessor extends DefaultTask implements OutputProcess
 	}
 
 	public List< DatasetView > _run(
-			final RandomAccessibleInterval< FloatType > result,
+			final RandomAccessibleInterval<FloatType> result,
 			final DatasetView datasetView,
-			final Network network ) {
+			final Network network, DatasetService datasetService) {
 
 		final List< RandomAccessibleInterval< FloatType > > splittedResult =
 				splitByLastNodeDim( result, network );
@@ -55,7 +54,8 @@ public class DefaultOutputProcessor extends DefaultTask implements OutputProcess
 								OUTPUT_NAMES[ i ],
 								splittedResult.get( i ),
 								datasetView,
-								network ) );
+								network,
+								datasetService) );
 			}
 			if ( !output.isEmpty() ) {
 				log( "All done!" );
@@ -109,9 +109,10 @@ public class DefaultOutputProcessor extends DefaultTask implements OutputProcess
 			final String name,
 			final RandomAccessibleInterval< U > img,
 			final DatasetView datasetView,
-			final Network network ) {
+			final Network network,
+			final DatasetService datasetService) {
 		final DefaultDatasetView resDatasetView = new DefaultDatasetView();
-		final Dataset d = wrapIntoDataset( name, img, network );
+		final Dataset d = wrapIntoDataset( name, img, network, datasetService );
 		resDatasetView.setContext( d.getContext() );
 		resDatasetView.initialize( d );
 		resDatasetView.rebuild();
@@ -126,14 +127,14 @@ public class DefaultOutputProcessor extends DefaultTask implements OutputProcess
 
 	protected < U extends RealType< U > & NativeType< U > > Dataset wrapIntoDataset(
 			final String name,
-			final RandomAccessibleInterval< U > img,
-			final Network network ) {
+			final RandomAccessibleInterval<U> img,
+			final Network network, DatasetService datasetService) {
 
 		final long[] imgdim = new long[ img.numDimensions() ];
 		img.dimensions( imgdim );
 
 		//TODO convert back to original format to be able to save and load it (float 32 bit does not load in Fiji)
-		final Dataset dataset = new ImageJ().dataset().create(
+		final Dataset dataset = datasetService.create(
 				new ImgPlus<>( ImgView.wrap( img, new ArrayImgFactory<>() ) ) );
 		dataset.setName( name );
 		for ( int i = 0; i < dataset.numDimensions(); i++ ) {

@@ -40,7 +40,9 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.stream.IntStream;
 
+import net.imagej.Data;
 import net.imagej.Dataset;
+import net.imagej.DatasetService;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
@@ -199,7 +201,8 @@ public class NetIso extends CSBDeepCommand implements Command {
 		public List< DatasetView > run(
 				final List< RandomAccessibleInterval< FloatType > > result,
 				final DatasetView datasetView,
-				final Network network ) {
+				final Network network,
+				final DatasetService datasetService) {
 			setStarted();
 
 			final List< DatasetView > output = new ArrayList<>();
@@ -265,7 +268,8 @@ public class NetIso extends CSBDeepCommand implements Command {
 								OUTPUT_NAMES[ i / 2 ],
 								prediction,
 								datasetView,
-								network ) );
+								network,
+								datasetService) );
 			}
 
 			setFinished();

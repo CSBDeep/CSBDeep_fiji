@@ -37,9 +37,11 @@ import java.util.OptionalLong;
 import javax.swing.JOptionPane;
 
 import net.imagej.Dataset;
+import net.imagej.DatasetService;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
 import net.imagej.display.DatasetView;
+import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
@@ -89,6 +91,12 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 	@Parameter
 	protected LogService log;
 
+	@Parameter
+	protected TensorFlowService tensorFlowService;
+
+	@Parameter
+	protected DatasetService datasetService;
+
 	@Parameter( label = "Number of tiles", min = "1" )
 	public int nTiles = 8;
 
@@ -134,7 +142,7 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 	}
 
 	protected void initNetwork() {
-		network = new TensorFlowNetwork();
+		network = new TensorFlowNetwork(tensorFlowService, datasetService);
 		network.loadLibrary();
 	}
 
@@ -216,7 +224,7 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 		final List< RandomAccessibleInterval< FloatType > > output =
 				outputTiler.run( tiledOutput, tiling, getAxesArray( network.getOutputNode() ) );
 		resultDatasets.clear();
-		resultDatasets.addAll( outputProcessor.run( output, datasetView, network ) );
+		resultDatasets.addAll( outputProcessor.run( output, datasetView, network, datasetService ) );
 
 		dispose();
 

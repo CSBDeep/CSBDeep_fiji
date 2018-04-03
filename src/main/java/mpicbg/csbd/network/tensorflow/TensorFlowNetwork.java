@@ -5,6 +5,7 @@ import com.google.protobuf.InvalidProtocolBufferException;
 import java.io.IOException;
 
 import net.imagej.Dataset;
+import net.imagej.DatasetService;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
@@ -29,7 +30,9 @@ public class TensorFlowNetwork extends DefaultNetwork {
 	private SavedModelBundle model;
 	private SignatureDef sig;
 	private final TensorFlowService tensorFlowService;
+	private final DatasetService datasetService;
 	private TensorInfo inputTensorInfo, outputTensorInfo;
+
 
 	// Same as
 	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
@@ -171,7 +174,7 @@ public class TensorFlowNetwork extends DefaultNetwork {
 				j++;
 			}
 		}
-		final Dataset result = new ImageJ().dataset().create( new FloatType(), dims, "", axes );
+		final Dataset result = datasetService.create( new FloatType(), dims, "", axes );
 		return result;
 	}
 
