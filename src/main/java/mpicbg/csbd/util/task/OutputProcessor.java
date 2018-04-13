@@ -1,20 +1,19 @@
 package mpicbg.csbd.util.task;
 
-import java.util.List;
-
+import mpicbg.csbd.network.Network;
 import mpicbg.csbd.task.Task;
+import net.imagej.Dataset;
 import net.imagej.DatasetService;
-import net.imagej.display.DatasetView;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
 
-import mpicbg.csbd.network.Network;
+import java.util.List;
 
 public interface OutputProcessor extends Task {
 
-	public List< DatasetView > run(
+	public List< Dataset > run(
 			final List< RandomAccessibleInterval< FloatType > > result,
-			final DatasetView datasetView,
+			final Dataset datasetView,
 			final Network network,
 			final DatasetService datasetService );
 }

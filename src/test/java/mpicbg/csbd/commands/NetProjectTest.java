@@ -1,9 +1,6 @@
 package mpicbg.csbd.commands;
 
-import static org.junit.Assert.assertTrue;
-
-import java.util.List;
-
+import mpicbg.csbd.CSBDeepTest;
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
@@ -12,11 +9,12 @@ import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.real.FloatType;
-
 import org.junit.Ignore;
 import org.junit.Test;
 
-import mpicbg.csbd.CSBDeepTest;
+import java.util.List;
+
+import static org.junit.Assert.assertTrue;
 
 public class NetProjectTest extends CSBDeepTest {
 
@@ -61,16 +59,11 @@ public class NetProjectTest extends CSBDeepTest {
 
 		launchImageJ();
 		final Dataset input = createDataset( type, dims, axes );
-		final DatasetView datasetView = wrapInDatasetView( input );
-		final List< DatasetView > result = runPlugin( NetProject.class, datasetView );
-		datasetView.dispose();
+		final List< Dataset > result = runPlugin( NetProject.class, input );
 		assertTrue(
 				"result should contain one dataset bis contains " + result.size(),
 				result.size() == 1 );
-		final Dataset output = result.get( 0 ).getData();
-		for(DatasetView obj : result) {
-			obj.dispose();
-		}
+		final Dataset output = result.get( 0 );
 		testResultAxesAndSizeByRemovingAxis( input, output, Axes.Z );
 	}
 

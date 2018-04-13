@@ -31,17 +31,21 @@ public class GenericNetworkTest extends CSBDeepTest {
 	public < T extends RealType< T > & NativeType< T > > void
 			testDataset( final T type, final long[] dims, final AxisType[] axes ) {
 
-		launchImageJ();
 		final Dataset input = createDataset( type, dims, axes );
-		final DatasetView datasetView = wrapInDatasetView( input );
-		final List< DatasetView > result = runPlugin( GenericNetwork.class, datasetView );
-		datasetView.dispose();
-		assertTrue( "result should contain one dataset", result.size() == 1 );
-		final Dataset output = result.get( 0 ).getData();
+		final Future< CommandModule > future = ij.command().run(
+				GenericNetwork.class,
+				false,
+				"input",
+				input,
+				"modelFile",
+				new File("/home/random/Development/imagej/project/CSBDeep/data/Tobias Boothe/models.zip"),
+				"_modelName", "phago_C2_no_transform_model");
+		assertFalse( "Plugin future is null", future == null );
+		final Module module = ij.module().waitFor(future);
+		List<Dataset> result = (List<Dataset>) module.getOutput("resultDatasets");
+		assertEquals( 1, result.size() );
+		final Dataset output = result.get( 0 );
 		testResultAxesAndSize( input, output );
-		for(DatasetView obj : result) {
-			obj.dispose();
-		}
 	}
 
 }

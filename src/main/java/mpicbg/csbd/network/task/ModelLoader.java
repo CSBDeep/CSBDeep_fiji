@@ -1,9 +1,8 @@
 package mpicbg.csbd.network.task;
 
-import mpicbg.csbd.task.Task;
-import net.imagej.display.DatasetView;
-
 import mpicbg.csbd.network.Network;
+import mpicbg.csbd.task.Task;
+import net.imagej.Dataset;
 
 public interface ModelLoader extends Task {
 
@@ -13,6 +12,6 @@ public interface ModelLoader extends Task {
 			String modelFileUrl,
 			String inputNodeName,
 			String outputNodeName,
-			DatasetView input );
+			Dataset input );
 
 }

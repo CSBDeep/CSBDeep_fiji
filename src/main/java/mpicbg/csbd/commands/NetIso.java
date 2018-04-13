@@ -28,30 +28,19 @@
  */
 package mpicbg.csbd.commands;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.OptionalLong;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.stream.IntStream;
-
-import net.imagej.Data;
+import mpicbg.csbd.imglib2.TiledView;
+import mpicbg.csbd.network.Network;
+import mpicbg.csbd.task.DefaultTask;
+import mpicbg.csbd.tiling.BatchedTiling;
+import mpicbg.csbd.util.task.DefaultOutputProcessor;
+import mpicbg.csbd.util.task.InputProcessor;
+import mpicbg.csbd.util.task.OutputProcessor;
 import net.imagej.Dataset;
 import net.imagej.DatasetService;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
-import net.imagej.display.DatasetView;
-import net.imglib2.Cursor;
-import net.imglib2.RandomAccess;
-import net.imglib2.RandomAccessible;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.RealRandomAccessible;
+import net.imglib2.*;
 import net.imglib2.img.array.ArrayImgs;
 import net.imglib2.interpolation.randomaccess.NLinearInterpolatorFactory;
 import net.imglib2.realtransform.AffineGet;
@@ -63,18 +52,21 @@ import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
-
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
-import mpicbg.csbd.imglib2.TiledView;
-import mpicbg.csbd.network.Network;
-import mpicbg.csbd.task.DefaultTask;
-import mpicbg.csbd.tiling.BatchedTiling;
-import mpicbg.csbd.util.task.DefaultOutputProcessor;
-import mpicbg.csbd.util.task.InputProcessor;
-import mpicbg.csbd.util.task.OutputProcessor;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.OptionalLong;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.stream.IntStream;
 
 @Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Isotropic Reconstruction - Retina", headless = true )
 public class NetIso extends CSBDeepCommand implements Command {
@@ -168,7 +160,7 @@ public class NetIso extends CSBDeepCommand implements Command {
 		try {
 			tryToInitialize();
 			validateInput(
-					datasetView.getData(),
+					getInput(),
 					"4D image with dimension order X-Y-C-Z and two channels",
 					OptionalLong.empty(),
 					OptionalLong.empty(),
@@ -198,14 +190,14 @@ public class NetIso extends CSBDeepCommand implements Command {
 	private class IsoOutputProcessor extends DefaultOutputProcessor {
 
 		@Override
-		public List< DatasetView > run(
+		public List< Dataset > run(
 				final List< RandomAccessibleInterval< FloatType > > result,
-				final DatasetView datasetView,
+				final Dataset dataset,
 				final Network network,
 				final DatasetService datasetService) {
 			setStarted();
 
-			final List< DatasetView > output = new ArrayList<>();
+			final List< Dataset > output = new ArrayList<>();
 
 			final RandomAccessibleInterval< FloatType > _result0 = result.get( 0 );
 			final RandomAccessibleInterval< FloatType > _result1 = result.get( 1 );
@@ -240,9 +232,9 @@ public class NetIso extends CSBDeepCommand implements Command {
 				printDim( "res0_pred", res0_pred );
 				printDim( "res1_pred", res1_pred );
 
-				final int dimX = datasetView.getData().dimensionIndex( Axes.X );
-				final int dimY = datasetView.getData().dimensionIndex( Axes.Y );
-				final int dimZ = datasetView.getData().dimensionIndex( Axes.Z );
+				final int dimX = dataset.dimensionIndex( Axes.X );
+				final int dimY = dataset.dimensionIndex( Axes.Y );
+				final int dimZ = dataset.dimensionIndex( Axes.Z );
 
 				// rotate output stacks back
 				res0_pred = Views.permute( res0_pred, dimX, dimZ );
@@ -264,10 +256,9 @@ public class NetIso extends CSBDeepCommand implements Command {
 				printDim( "prediction", prediction );
 
 				output.add(
-						wrapIntoDatasetView(
+						wrapIntoDataset(
 								OUTPUT_NAMES[ i / 2 ],
 								prediction,
-								datasetView,
 								network,
 								datasetService) );
 			}

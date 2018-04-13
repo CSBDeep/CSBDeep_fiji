@@ -1,11 +1,10 @@
 package mpicbg.csbd.network.task;
 
-import java.io.FileNotFoundException;
-
-import net.imagej.display.DatasetView;
-
 import mpicbg.csbd.network.Network;
 import mpicbg.csbd.task.DefaultTask;
+import net.imagej.Dataset;
+
+import java.io.FileNotFoundException;
 
 public class DefaultModelLoader extends DefaultTask implements ModelLoader {
 
@@ -16,7 +15,7 @@ public class DefaultModelLoader extends DefaultTask implements ModelLoader {
 			final String modelFileUrl,
 			final String inputNodeName,
 			final String outputNodeName,
-			final DatasetView input ) {
+			final Dataset input ) {
 
 		setStarted();
 
@@ -41,7 +40,7 @@ public class DefaultModelLoader extends DefaultTask implements ModelLoader {
 			final String modelFileUrl,
 			final String inputNodeName,
 			final String outputNodeName,
-			final DatasetView input ) {
+			final Dataset input ) {
 
 		try {
 
@@ -66,9 +65,9 @@ public class DefaultModelLoader extends DefaultTask implements ModelLoader {
 	protected void initializeNetwork(
 			final Network network,
 			final String inputNodeName,
-			final DatasetView input,
+			final Dataset input,
 			final String outputNodeName ) {
-		network.loadInputNode( inputNodeName, input.getData() );
+		network.loadInputNode( inputNodeName, input );
 		network.loadOutputNode( outputNodeName );
 		network.initMapping();
 	}

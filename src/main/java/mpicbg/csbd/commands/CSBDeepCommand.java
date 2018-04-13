@@ -86,7 +86,7 @@ import mpicbg.csbd.util.task.OutputProcessor;
 public abstract class CSBDeepCommand implements Cancelable, Initializable, Disposable {
 
 	@Parameter( type = ItemIO.INPUT, initializer = "processDataset" )
-	public DatasetView datasetView;
+	public Dataset input;
 
 	@Parameter
 	protected LogService log;
@@ -104,7 +104,7 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 	public int overlap = 32;
 
 	@Parameter( type = ItemIO.OUTPUT )
-	protected List< DatasetView > resultDatasets = new ArrayList<>();
+	protected List< Dataset > resultDatasets = new ArrayList<>();
 
 	protected String modelFileUrl;
 	protected String modelName;
@@ -224,7 +224,7 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 		final List< RandomAccessibleInterval< FloatType > > output =
 				outputTiler.run( tiledOutput, tiling, getAxesArray( network.getOutputNode() ) );
 		resultDatasets.clear();
-		resultDatasets.addAll( outputProcessor.run( output, datasetView, network, datasetService ) );
+		resultDatasets.addAll( outputProcessor.run( output, getInput(), network, datasetService ) );
 
 		dispose();
 
@@ -245,8 +245,8 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 				modelFileUrl,
 				inputNodeName,
 				outputNodeName,
-				datasetView );
-//		inputMapper.run( getInput(), network );
+				getInput() );
+		inputMapper.run( getInput(), network );
 	}
 
 	@Override
@@ -257,7 +257,6 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 		if(network != null) {
 			network.dispose();
 		}
-		datasetView.dispose();
 	}
 
 	private AxisType[] getAxesArray( final ImageTensor outputNode ) {
@@ -333,7 +332,7 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 	}
 
 	public Dataset getInput() {
-		return datasetView.getData();
+		return input;
 	}
 
 	public void validateInput(

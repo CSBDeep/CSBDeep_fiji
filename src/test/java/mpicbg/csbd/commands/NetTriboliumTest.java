@@ -33,14 +33,9 @@ public class NetTriboliumTest extends CSBDeepTest {
 
 		launchImageJ();
 		final Dataset input = createDataset( type, dims, axes );
-		final DatasetView datasetView = wrapInDatasetView( input );
-		final List< DatasetView > result = runPlugin( NetTribolium.class, datasetView );
-		datasetView.dispose();
+		final List< Dataset > result = runPlugin( NetTribolium.class, input );
 		assertTrue( "result should contain one dataset", result.size() == 1 );
-		final Dataset output = result.get( 0 ).getData();
-		for(DatasetView obj : result) {
-			obj.dispose();
-		}
+		final Dataset output = result.get( 0 );
 		testResultAxesAndSize( input, output );
 	}
 

@@ -4,8 +4,6 @@ import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
-import net.imagej.display.DatasetView;
-import net.imagej.display.DefaultDatasetView;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
@@ -49,24 +47,16 @@ public class CSBDeepTest {
 		return ij.dataset().create( type, dims, "", axes );
 	}
 
-	protected DatasetView wrapInDatasetView( final Dataset dataset ) {
-		final DefaultDatasetView datasetView = new DefaultDatasetView();
-		datasetView.setContext( dataset.getContext() );
-		datasetView.initialize( dataset );
-		datasetView.rebuild();
-		return datasetView;
-	}
-
-	protected < C extends Command > List< DatasetView >
-			runPlugin( final Class< C > pluginClass, final DatasetView datasetView ) {
+	protected < C extends Command > List< Dataset>
+			runPlugin( final Class< C > pluginClass, final Dataset dataset ) {
 		final Future< CommandModule > future = ij.command().run(
 				pluginClass,
 				false,
-				"datasetView",
-				datasetView);
+				"input",
+				dataset);
 		assertFalse( "Plugin future is null", future == null );
 		final Module module = ij.module().waitFor(future);
-		return (List<DatasetView>) module.getOutput("resultDatasets");
+		return (List<Dataset>) module.getOutput("resultDatasets");
 	}
 
 	protected void testResultAxesAndSize( final Dataset input, final Dataset output ) {

@@ -2,9 +2,9 @@ package mpicbg.csbd.util.task;
 
 import mpicbg.csbd.network.Network;
 import mpicbg.csbd.task.DefaultTask;
-import net.imagej.*;
-import net.imagej.display.DatasetView;
-import net.imagej.display.DefaultDatasetView;
+import net.imagej.Dataset;
+import net.imagej.DatasetService;
+import net.imagej.ImgPlus;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.ImgView;
 import net.imglib2.img.array.ArrayImgFactory;
@@ -21,39 +21,38 @@ public class DefaultOutputProcessor extends DefaultTask implements OutputProcess
 	public static String[] OUTPUT_NAMES = { "result" };
 
 	@Override
-	public List< DatasetView > run(
+	public List< Dataset > run(
 			final List< RandomAccessibleInterval< FloatType > > result,
-			final DatasetView datasetView,
+			final Dataset dataset,
 			final Network network,
 			final DatasetService datasetService) {
 		setStarted();
 
-		final List< DatasetView > output = new ArrayList<>();
-		result.forEach( image -> output.addAll( _run( image, datasetView, network, datasetService ) ) );
+		final List< Dataset > output = new ArrayList<>();
+		result.forEach( image -> output.addAll( _run( image, dataset, network, datasetService ) ) );
 
 		setFinished();
 
 		return output;
 	}
 
-	public List< DatasetView > _run(
+	public List< Dataset > _run(
 			final RandomAccessibleInterval<FloatType> result,
-			final DatasetView datasetView,
+			final Dataset dataset,
 			final Network network, DatasetService datasetService) {
 
 		final List< RandomAccessibleInterval< FloatType > > splittedResult =
 				splitByLastNodeDim( result, network );
 
-		final List< DatasetView > output = new ArrayList<>();
+		final List< Dataset > output = new ArrayList<>();
 
 		if ( result != null ) {
 			for ( int i = 0; i < splittedResult.size() && i < OUTPUT_NAMES.length; i++ ) {
 				log( "Displaying " + OUTPUT_NAMES[ i ] + " image.." );
 				output.add(
-						wrapIntoDatasetView(
+						wrapIntoDataset(
 								OUTPUT_NAMES[ i ],
 								splittedResult.get( i ),
-								datasetView,
 								network,
 								datasetService) );
 			}
@@ -103,26 +102,6 @@ public class DefaultOutputProcessor extends DefaultTask implements OutputProcess
 		}
 
 		return res;
-	}
-
-	protected < U extends RealType< U > & NativeType< U > > DatasetView wrapIntoDatasetView(
-			final String name,
-			final RandomAccessibleInterval< U > img,
-			final DatasetView datasetView,
-			final Network network,
-			final DatasetService datasetService) {
-		final DefaultDatasetView resDatasetView = new DefaultDatasetView();
-		final Dataset d = wrapIntoDataset( name, img, network, datasetService );
-		resDatasetView.setContext( d.getContext() );
-		resDatasetView.initialize( d );
-		resDatasetView.rebuild();
-
-		for ( int i = 0; i < Math.min(
-				resDatasetView.getColorTables().size(),
-				datasetView.getColorTables().size() ); i++ ) {
-			resDatasetView.setColorTable( datasetView.getColorTables().get( i ), i );
-		}
-		return resDatasetView;
 	}
 
 	protected < U extends RealType< U > & NativeType< U > > Dataset wrapIntoDataset(
