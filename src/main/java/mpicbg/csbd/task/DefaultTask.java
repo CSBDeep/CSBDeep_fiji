@@ -82,6 +82,7 @@ public class DefaultTask implements Task {
 	@Override
 	public void setNumSteps( final int steps ) {
 		this.steps = steps;
+		updateManager();
 	}
 
 	@Override
@@ -113,6 +114,7 @@ public class DefaultTask implements Task {
 	@Override
 	public void setIterations( final int iterations ) {
 		this.iterations = iterations;
+		updateManager();
 	}
 
 	@Override
@@ -147,6 +149,7 @@ public class DefaultTask implements Task {
 	@Override
 	public void setCurrentIteration( final int currentIteration ) {
 		this.currentIteration = currentIteration;
+		updateManager();
 	}
 
 	@Override
@@ -157,6 +160,7 @@ public class DefaultTask implements Task {
 	@Override
 	public void setCurrentStep( final int currentStep ) {
 		this.currentStep = currentStep;
+		updateManager();
 	}
 
 	@Override

@@ -1,5 +1,7 @@
 package mpicbg.csbd.task;
 
+import org.scijava.log.Logger;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,8 +10,8 @@ public class DefaultTaskManager implements TaskManager {
 	private final List< Task > tasks;
 	private final TaskPresenter taskPresenter;
 
-	public DefaultTaskManager() {
-		taskPresenter = new DefaultTaskPresenter( this );
+	public DefaultTaskManager(boolean headless, Logger logger) {
+		taskPresenter = new DefaultTaskPresenter( this, headless, logger);
 		tasks = new ArrayList<>();
 	}
 
@@ -22,7 +24,7 @@ public class DefaultTaskManager implements TaskManager {
 	public void add( final Task task ) {
 		tasks.add( task );
 		task.setManager( this );
-		taskPresenter.addStep( task.getTitle() );
+		taskPresenter.addTask( task.getTitle() );
 	}
 
 	@Override
@@ -43,16 +45,21 @@ public class DefaultTaskManager implements TaskManager {
 	}
 
 	@Override
+	public void finalizeSetup() {
+		taskPresenter.show();
+	}
+
+	@Override
 	public void update( final Task task ) {
 		final int index = tasks.indexOf( task );
 		if ( task.isStarted() ) {
-			taskPresenter.setStepStarted( index );
+			taskPresenter.setTaskStarted( index );
 		}
 		if ( task.isFailed() ) {
-			taskPresenter.setStepFailed( index );
+			taskPresenter.setTaskFailed( index );
 		}
 		if ( task.isFinished() ) {
-			taskPresenter.setStepDone( index );
+			taskPresenter.setTaskDone( index );
 		}
 	}
 

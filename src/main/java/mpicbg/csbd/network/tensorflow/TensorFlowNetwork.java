@@ -1,18 +1,15 @@
 package mpicbg.csbd.network.tensorflow;
 
 import com.google.protobuf.InvalidProtocolBufferException;
-
-import java.io.IOException;
-
+import mpicbg.csbd.network.DefaultNetwork;
+import mpicbg.csbd.task.Task;
 import net.imagej.Dataset;
 import net.imagej.DatasetService;
-import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
 import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
-
 import org.scijava.io.location.Location;
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
@@ -23,7 +20,8 @@ import org.tensorflow.framework.SignatureDef;
 import org.tensorflow.framework.TensorInfo;
 import org.tensorflow.framework.TensorShapeProto;
 
-import mpicbg.csbd.network.DefaultNetwork;
+import java.io.IOException;
+import java.util.Arrays;
 
 public class TensorFlowNetwork extends DefaultNetwork {
 
@@ -41,16 +39,29 @@ public class TensorFlowNetwork extends DefaultNetwork {
 	private static final String MODEL_TAG = "serve";
 	protected static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY = "serving_default";
 
-	public TensorFlowNetwork() {
-		final ImageJ ij = new ImageJ();
-		tensorFlowService = ( TensorFlowService ) ij.get( TensorFlowService.class.getName() );
-		System.out.println("imagej-tensorflow version: " + tensorFlowService.getVersion());
-		System.out.println("tensorflow version: " + TensorFlow.version());
+	public TensorFlowNetwork(TensorFlowService tensorFlowService, DatasetService datasetService, Task associatedTask) {
+		super(associatedTask);
+		this.tensorFlowService = tensorFlowService;
+		this.datasetService = datasetService;
+		//TODO better log system
+		log("imagej-tensorflow version: " + tensorFlowService.getVersion());
+		log("tensorflow version: " + TensorFlow.version());
 	}
 
 	@Override
 	public void loadLibrary() {
-		System.out.println( "The current library path is: LD_LIBRARY_PATH=" + System.getenv( "LD_LIBRARY_PATH" ) );
+		log( "The current library path is: LD_LIBRARY_PATH=" + System.getenv( "LD_LIBRARY_PATH" ) );
+		log( "Loading tensorflow jni from library path..." );
+		try {
+			System.loadLibrary( "tensorflow_jni" );
+		} catch ( final UnsatisfiedLinkError e ) {
+			log(
+					"Couldn't load tensorflow from library path:" );
+			log( e.getMessage() );
+			log( "If the problem is CUDA related. Make sure CUDA and cuDNN are in the LD_LIBRARY_PATH." );
+			log( "The current library path is: LD_LIBRARY_PATH=" + System.getenv( "LD_LIBRARY_PATH" ) );
+			log( "Using CPU version from jar file." );
+		}
 	}
 
 	@Override
@@ -140,9 +151,10 @@ public class TensorFlowNetwork extends DefaultNetwork {
 		inputNode.generateMapping();
 		outputNode.generateMapping();
 
-		System.out.println( "INPUT NODE: " );
+		//TODO fix logging
+		log( "INPUT NODE: " );
 		inputNode.printMapping();
-		System.out.println( "OUTPUT NODE: " );
+		log( "OUTPUT NODE: " );
 		outputNode.printMapping();
 	}
 
@@ -213,14 +225,20 @@ public class TensorFlowNetwork extends DefaultNetwork {
 
 	public void setInputTensor( final TensorInfo tensorInfo ) {
 		inputTensorInfo = tensorInfo;
-		System.out.println(
-				"DatasetTensorBridge::setInputTensorShape: " + tensorInfo.getTensorShape().getDimList() + "]" );
+		logTensorShape("Shape of input tensor", tensorInfo);
+	}
+
+	private void logTensorShape(String title, final TensorInfo tensorInfo){
+		long[] dims = new long[tensorInfo.getTensorShape().getDimCount()];
+		for(int i = 0; i < dims.length; i++) {
+			dims[i] = tensorInfo.getTensorShape().getDimList().get(i).getSize();
+		}
+		log(title + ": " + Arrays.toString(dims));
 	}
 
 	public void setOutputTensor( final TensorInfo tensorInfo ) {
 		outputTensorInfo = tensorInfo;
-		System.out.println(
-				"DatasetTensorBridge::setOutputTensorShape: " + tensorInfo.getTensorShape().getDimList() + "]" );
+		logTensorShape("Shape of output tensor", tensorInfo);
 	}
 
 	public TensorInfo getInputTensorInfo() {

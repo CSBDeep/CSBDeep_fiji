@@ -1,15 +1,8 @@
 package mpicbg.csbd.network;
 
-import java.io.FileNotFoundException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-
+import mpicbg.csbd.imglib2.TiledView;
+import mpicbg.csbd.task.Task;
+import mpicbg.csbd.util.IOHelper;
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
@@ -17,12 +10,13 @@ import net.imglib2.Cursor;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
-
 import org.scijava.io.location.Location;
 
-import mpicbg.csbd.imglib2.TiledView;
-import mpicbg.csbd.task.Task;
-import mpicbg.csbd.util.IOHelper;
+import java.io.FileNotFoundException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.*;
 
 public abstract class DefaultNetwork implements Network {
 
@@ -31,12 +25,15 @@ public abstract class DefaultNetwork implements Network {
 	protected ImageTensor outputNode = new ImageTensor();
 	protected TiledView< FloatType > tiledView;
 	protected boolean supportsGPU = false;
-//	protected CSBDeepProgress progressWindow;
 	protected Integer doneTileCount;
 	protected boolean dropSingletonDims = true;
 	protected boolean doDimensionReduction = false;
 	protected AxisType axisToRemove;
 	ExecutorService pool = Executors.newSingleThreadExecutor();
+
+	public DefaultNetwork(Task associatedTask) {
+		this.status = associatedTask;
+	}
 
 	@Override
 	public void loadLibrary() {}
@@ -64,16 +61,14 @@ public abstract class DefaultNetwork implements Network {
 		return results;
 	}
 
-	protected static void
+	protected void
 			printDim( final String title, final RandomAccessibleInterval< FloatType > input ) {
 		final long[] dims = new long[ input.numDimensions() ];
 		input.dimensions( dims );
-		System.out.println( title + ": " + Arrays.toString( dims ) );
+		log( title + ": " + Arrays.toString( dims ) );
 	}
 
 	private List< RandomAccessibleInterval< FloatType > > runModel() throws ExecutionException {
-
-//		progressWindow.setStepStart( CSBDeepProgress.STEP_RUNMODEL );
 
 		final boolean multithreading = false;
 
@@ -84,17 +79,23 @@ public abstract class DefaultNetwork implements Network {
 		final List< RandomAccessibleInterval< FloatType > > results = new ArrayList<>();
 		final List< Future< RandomAccessibleInterval< FloatType > > > futures = new ArrayList<>();
 
-//		progressWindow.setProgressBarValue( 0 );
+		status.setCurrentStep(0);
 		doneTileCount = 0;
+		int numSteps = 1;
+		for(int i = 0; i < tiledView.numDimensions(); i++) {
+			numSteps *= tiledView.dimension(i);
+		}
+		status.setNumSteps(numSteps);
 
 		while ( cursor.hasNext() ) {
 			final RandomAccessibleInterval< FloatType > tile = cursor.next();
-			printDim( "tile", tile );
+			//TODO fix logging
+//			printDim( "tile", tile );
 			//uiService.show(tile);
 			final Future< RandomAccessibleInterval< FloatType > > future =
 					pool.submit( new TileRunner( tile ) );
 
-			log( "Processing tile " + ( doneTileCount + 1 ) + ".." );
+//			log( "Processing tile " + ( doneTileCount + 1 ) + ".." );
 
 			futures.add( future );
 
@@ -126,7 +127,6 @@ public abstract class DefaultNetwork implements Network {
 			}
 		}
 
-//		progressWindow.setCurrentStepDone();
 		return results;
 	}
 
@@ -171,13 +171,9 @@ public abstract class DefaultNetwork implements Network {
 	@Override
 	public abstract boolean isInitialized();
 
-//	public void setProgressWindow(CSBDeepProgress window) {
-//		this.progressWindow = window;
-//	}
-
 	protected void upTileCount() {
 		doneTileCount++;
-//		progressWindow.setProgressBarValue( doneTileCount );
+		status.setCurrentStep(doneTileCount);
 	}
 
 	@Override
@@ -185,13 +181,14 @@ public abstract class DefaultNetwork implements Network {
 		this.tiledView = tiledView;
 	}
 
-	void log( final String text ) {
-//		progressWindow.addLog( text );
+	protected void log( final String text ) {
+		if(status != null) {
+			status.log(text);
+		}
 	}
 
 	void fail() {
 		status.setFailed();
-//		progressWindow.setCurrentStepFail();
 	}
 
 	@Override

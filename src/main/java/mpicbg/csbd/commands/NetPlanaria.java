@@ -28,18 +28,16 @@
  */
 package mpicbg.csbd.commands;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.OptionalLong;
-
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
-import net.imglib2.type.numeric.RealType;
-
 import org.scijava.command.Command;
 import org.scijava.plugin.Plugin;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.OptionalLong;
 
 /**
  */

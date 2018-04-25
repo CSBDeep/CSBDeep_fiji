@@ -1,5 +1,7 @@
 package mpicbg.csbd.task;
 
+import org.scijava.log.Logger;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,8 +10,8 @@ public class TaskForceManager implements TaskManager {
 	private final List< TaskForce > taskForces;
 	private final TaskPresenter taskPresenter;
 
-	public TaskForceManager() {
-		taskPresenter = new DefaultTaskPresenter( this );
+	public TaskForceManager(boolean headless, Logger logger) {
+		taskPresenter = new DefaultTaskPresenter( this, headless, logger );
 		taskForces = new ArrayList<>();
 	}
 
@@ -39,6 +41,11 @@ public class TaskForceManager implements TaskManager {
 	}
 
 	@Override
+	public void finalizeSetup() {
+		taskPresenter.show();
+	}
+
+	@Override
 	public void update( final Task task ) {
 
 		int index = taskForces.indexOf( task );
@@ -54,17 +61,21 @@ public class TaskForceManager implements TaskManager {
 				}
 			}
 			if ( index < 0 || taskForce == null ) return;
-			taskForce.update();
+			taskForce.update(index);
 		} else {
 			final TaskForce taskForce = taskForces.get( index );
 			if ( taskForce.isStarted() ) {
-				taskPresenter.setStepStarted( index );
+				taskPresenter.setTaskStarted( index );
+				if(task.numSteps() > 1) {
+					taskPresenter.setTaskNumSteps(index, task.numSteps());
+					taskPresenter.setTaskStep(index, task.getCurrentStep());
+				}
 			}
 			if ( taskForce.isFailed() ) {
-				taskPresenter.setStepFailed( index );
+				taskPresenter.setTaskFailed( index );
 			}
 			if ( taskForce.isFinished() ) {
-				taskPresenter.setStepDone( index );
+				taskPresenter.setTaskDone( index );
 			}
 		}
 	}
@@ -78,7 +89,7 @@ public class TaskForceManager implements TaskManager {
 		final TaskForce taskForce = new TaskForce( codeName, tasks );
 		taskForces.add( taskForce );
 		taskForce.setManager( this );
-		taskPresenter.addStep( taskForce.getTitle() );
+		taskPresenter.addTask( taskForce.getTitle() );
 		for ( final Task task : tasks ) {
 			task.setManager( this );
 		}
@@ -93,15 +104,22 @@ public class TaskForceManager implements TaskManager {
 			this.tasks = tasks;
 		}
 
-		public void update() {
+		public void update(int index) {
 			boolean allFinished = true;
 			setIdle();
+			int numSteps = 0;
+			int currentStep = 0;
 			for ( final Task task : tasks ) {
 				if ( !task.isFinished() ) {
 					allFinished = false;
+				}else {
+					numSteps += task.numSteps();
+					currentStep += task.numSteps();
 				}
 				if ( task.isStarted() ) {
 					setStarted();
+					numSteps += task.numSteps();
+					currentStep += task.getCurrentStep();
 				}
 				if ( task.isFailed() ) {
 					setFailed();
@@ -110,6 +128,12 @@ public class TaskForceManager implements TaskManager {
 			}
 			if ( !isFailed() && allFinished ) {
 				setFinished();
+			}
+			setNumSteps(numSteps);
+			setCurrentStep(currentStep);
+			if(numSteps() > 1) {
+				taskPresenter.setTaskNumSteps(index, numSteps());
+				taskPresenter.setTaskStep(index, getCurrentStep());
 			}
 		}
 

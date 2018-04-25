@@ -12,8 +12,9 @@ public interface TaskManager {
 
 	public void logError( String msg );
 
+	public void finalizeSetup();
+
 	public void update( Task task );
 
 	public void close();
-
 }

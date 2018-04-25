@@ -28,19 +28,19 @@
  */
 package mpicbg.csbd.tiling;
 
+import mpicbg.csbd.imglib2.GridView;
+import mpicbg.csbd.task.Task;
+import net.imagej.axis.AxisType;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.img.list.ListImg;
+import net.imglib2.type.numeric.real.FloatType;
+
 import java.util.Arrays;
 import java.util.List;
 
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.type.numeric.real.FloatType;
-
-import mpicbg.csbd.imglib2.ArrangedView;
-import mpicbg.csbd.imglib2.CombinedView;
-import mpicbg.csbd.task.Task;
-
 public class BatchedTiling extends DefaultTiling {
 
-	protected int batchesNum;
+//	protected int batchesNum;
 	protected int batchSize;
 	protected int batchDim;
 	protected int channelDim;
@@ -64,15 +64,20 @@ public class BatchedTiling extends DefaultTiling {
 			final Task parent,
 			final RandomAccessibleInterval< FloatType > dataset,
 			final long[] tileSize,
-			final long[] padding ) {
+			final long[] padding,
+			final AxisType[] types) {
+
+		parent.log( "batchDim  : " + batchDim );
+		parent.log( "channelDim: " + channelDim );
 
 		batchDimSize = tileSize[ batchDim ];
-		System.out.println( "batchDimSize  : " + batchDimSize );
-		batchesNum = ( int ) Math.ceil( ( float ) batchDimSize / ( float ) batchSize );
+
+		parent.log( "batchDimSize: " + batchDimSize );
+
+		long batchesNum = ( int ) Math.ceil( ( float ) batchDimSize / ( float ) batchSize );
+
 		// If a smaller batch size is sufficient for the same amount of batches, we can use it
 		batchSize = ( int ) Math.ceil( ( float ) batchDimSize / ( float ) batchesNum );
-
-		parent.setNumSteps( tilesNum * batchesNum );
 
 		final long expandedBatchDimSize = batchesNum * batchSize;
 		tileSize[ batchDim ] = batchSize;
@@ -80,6 +85,9 @@ public class BatchedTiling extends DefaultTiling {
 				expandDimToSize( dataset, batchDim, expandedBatchDimSize );
 		final AdvancedTiledView< FloatType > tiledView2 =
 				new AdvancedTiledView<>( expandedInput2, tileSize, padding );
+		for( int i = 0; i < types.length; i++) {
+			tiledView2.getOriginalGrid().put( types[i], i == batchDim ? batchesNum : 1);
+		}
 		return tiledView2;
 	}
 
@@ -87,21 +95,21 @@ public class BatchedTiling extends DefaultTiling {
 	protected RandomAccessibleInterval< FloatType >
 			expandToFitBlockSize(
 					final RandomAccessibleInterval< FloatType > dataset,
-					final long blockWidth,
-					final int largestDim ) {
+					final int largestDim,
+					final long largestDimSize
+					 ) {
 
 		// If there is no channel dimension in the input image, we assume that a channel dimension might be added to the end of the image
 		if ( channelDim < 0 ) {
 			channelDim = dataset.numDimensions();
 		}
-		System.out.println( "batchDim  : " + batchDim );
-		System.out.println( "channelDim: " + channelDim );
 
 		RandomAccessibleInterval< FloatType > expandedInput =
-				expandDimToSize( dataset, largestDim, blockWidth * tilesNum );
+				expandDimToSize( dataset, largestDim, largestDimSize );
 
 		long[] imdims = new long[ expandedInput.numDimensions() ];
 		expandedInput.dimensions( imdims );
+		//TODO: get rid of system out
 		System.out.println( "imdims1: " + Arrays.toString( imdims ) );
 
 		// Expand other dimensions to fit blockMultiple
@@ -118,8 +126,9 @@ public class BatchedTiling extends DefaultTiling {
 
 		imdims = new long[ expandedInput.numDimensions() ];
 		expandedInput.dimensions( imdims );
+		//TODO: get rid of system out
 		System.out.println( "imdims2: " + Arrays.toString( imdims ) );
-//			printDim( "After expand", im );
+//			logDim( "After expand", im );
 		return expandedInput;
 	}
 
@@ -127,27 +136,11 @@ public class BatchedTiling extends DefaultTiling {
 	protected RandomAccessibleInterval< FloatType >
 			arrangeAndCombineTiles(
 					final List< RandomAccessibleInterval< FloatType > > results,
-					final int largestDim ) {
-		final long[] grid = new long[ results.get( 0 ).numDimensions() ];
-		for ( int i = 0; i < grid.length; i++ ) {
-			if ( i == largestDim ) {
-				grid[ i ] = tilesNum;
-				continue;
-			}
-			if ( i == batchDim ) {
-				grid[ i ] = batchesNum;
-				continue;
-			}
-			grid[ i ] = 1;
-		}
-		final long[] res0Dimension = new long[ results.get( 0 ).numDimensions() ];
-		results.get( 0 ).dimensions( res0Dimension );
-		System.out.println( "res0 dimensions: " + Arrays.toString( res0Dimension ) );
-		System.out.println( "nBatches: " + batchesNum );
-		System.out.println( "nTiles: " + tilesNum );
+					final long[] grid ) {
+		//TODO get rid of system out
 		System.out.println( "grid: " + Arrays.toString( grid ) );
 		final RandomAccessibleInterval< FloatType > result =
-				new CombinedView<>( new ArrangedView<>( results, grid ) );
+				new GridView<>( new ListImg<>( results, grid ) );
 		return result;
 	}
 

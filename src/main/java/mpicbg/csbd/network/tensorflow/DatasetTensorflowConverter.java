@@ -32,7 +32,6 @@ import net.imagej.tensorflow.Tensors;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
-
 import org.tensorflow.Tensor;
 
 public class DatasetTensorflowConverter {

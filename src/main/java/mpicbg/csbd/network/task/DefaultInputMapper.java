@@ -1,11 +1,10 @@
 package mpicbg.csbd.network.task;
 
-import net.imagej.Dataset;
-import net.imagej.axis.AxisType;
-
 import mpicbg.csbd.network.Network;
 import mpicbg.csbd.task.DefaultTask;
 import mpicbg.csbd.util.DatasetHelper;
+import net.imagej.Dataset;
+import net.imagej.axis.AxisType;
 
 public class DefaultInputMapper extends DefaultTask implements InputMapper {
 

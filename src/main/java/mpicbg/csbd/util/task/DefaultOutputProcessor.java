@@ -2,6 +2,7 @@ package mpicbg.csbd.util.task;
 
 import mpicbg.csbd.network.Network;
 import mpicbg.csbd.task.DefaultTask;
+import mpicbg.csbd.util.DatasetHelper;
 import net.imagej.Dataset;
 import net.imagej.DatasetService;
 import net.imagej.ImgPlus;
@@ -109,8 +110,7 @@ public class DefaultOutputProcessor extends DefaultTask implements OutputProcess
 			final RandomAccessibleInterval<U> img,
 			final Network network, DatasetService datasetService) {
 
-		final long[] imgdim = new long[ img.numDimensions() ];
-		img.dimensions( imgdim );
+		DatasetHelper.logDim(this, "img dim before wrapping into dataset", img);
 
 		//TODO convert back to original format to be able to save and load it (float 32 bit does not load in Fiji)
 		final Dataset dataset = datasetService.create(

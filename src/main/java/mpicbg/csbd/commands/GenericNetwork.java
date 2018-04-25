@@ -28,7 +28,6 @@
  */
 package mpicbg.csbd.commands;
 
-import mpicbg.csbd.normalize.PercentileNormalizer;
 import mpicbg.csbd.normalize.task.DefaultInputNormalizer;
 import mpicbg.csbd.ui.MappingDialog;
 import net.imagej.Dataset;
@@ -36,6 +35,7 @@ import net.imagej.ImageJ;
 import net.imagej.axis.AxisType;
 import org.scijava.ItemVisibility;
 import org.scijava.command.Command;
+import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.prefs.PrefService;
@@ -45,7 +45,7 @@ import java.io.File;
 
 /**
  */
-@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Generic network", headless = true )
+@Plugin( type = Command.class, menuPath = "Plugins>CSBDeep>Generic networks" )
 public class GenericNetwork extends CSBDeepCommand implements Command {
 
 	@Parameter( visibility = ItemVisibility.MESSAGE )
@@ -77,7 +77,7 @@ public class GenericNetwork extends CSBDeepCommand implements Command {
 
 	/** Executed whenever the {@link #modelFile} parameter is initialized. */
 	protected void modelInitialized() {
-		final String p_modelfile = prefService.get( modelFileKey, "" );
+		final String p_modelfile = prefService.get( String.class, modelFileKey, "" );
 		if ( p_modelfile != "" ) {
 			modelFile = new File( p_modelfile );
 		}
@@ -101,22 +101,11 @@ public class GenericNetwork extends CSBDeepCommand implements Command {
 
 	@Override
 	public void run() {
-
-//		prepareInputAndNetwork();
-//		checkAndResolveDimensionReduction();
-
-//		try {
-			// TODO is validation input needed?
-//			validateInput(
-//					getInput(),
-//					"3D grayscale image with dimension order X-Y-Z",
-//					OptionalLong.empty(),
-//					OptionalLong.empty(),
-//					OptionalLong.empty());
-//			super.run();
-//		} catch (final IOException e) {
-//			showError(e.getMessage());
-//		}
+		savePreferences();
+		tryToInitialize();
+		prepareInputAndNetwork();
+		checkAndResolveDimensionReduction();
+		super.run();
 	}
 
 	@Override
@@ -149,7 +138,7 @@ public class GenericNetwork extends CSBDeepCommand implements Command {
 
 
 	private void savePreferences() {
-		prefService.put( modelFileKey, modelFile.getAbsolutePath() );
+		prefService.put( String.class, modelFileKey, modelFile.getAbsolutePath() );
 	}
 
 	/**

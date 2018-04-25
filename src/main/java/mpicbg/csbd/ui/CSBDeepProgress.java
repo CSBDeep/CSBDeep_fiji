@@ -28,15 +28,14 @@
  */
 package mpicbg.csbd.ui;
 
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.Insets;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import javax.swing.*;
+import javax.swing.border.Border;
+import javax.swing.border.EmptyBorder;
+import javax.swing.border.TitledBorder;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.SimpleAttributeSet;
+import javax.swing.text.StyleConstants;
+import java.awt.*;
 import java.beans.PropertyChangeEvent;
 import java.beans.PropertyChangeListener;
 import java.text.DateFormat;
@@ -45,35 +44,19 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-import javax.swing.BorderFactory;
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
-import javax.swing.JProgressBar;
-import javax.swing.JScrollPane;
-import javax.swing.JTextPane;
-import javax.swing.SwingConstants;
-import javax.swing.border.Border;
-import javax.swing.border.EmptyBorder;
-import javax.swing.border.TitledBorder;
-import javax.swing.text.BadLocationException;
-import javax.swing.text.SimpleAttributeSet;
-import javax.swing.text.StyleConstants;
-
 public class CSBDeepProgress extends JPanel
 		implements
 		PropertyChangeListener {
 
-	private class Step {
+	private class GuiTask {
 
 		public JLabel status;
 		public JLabel title;
 		public int numIterations;
 		public int iteration;
-		public boolean stepDone;
+		public int numSteps;
+		public int step;
+		public boolean taskDone;
 	}
 
 	final JButton okButton, cancelButton;
@@ -86,13 +69,12 @@ public class CSBDeepProgress extends JPanel
 	public static final int STATUS_DONE = 1;
 	public static final int STATUS_FAIL = 2;
 
-	List< Step > steps = new ArrayList<>();
-	int currentStep;
-	boolean currentStepFailing;
-	int currentRound = 1;
-	int numRounds = 1;
+	List<GuiTask> tasks = new ArrayList<>();
+	int currentTask;
+	boolean currentTaskFailing;
 
-	final JPanel stepContainer;
+	final JPanel taskContainer;
+	final JFrame frame;
 
 	JLabel noTensorFlow =
 			new JLabel( "<html>Couldn't load tensorflow from library<br />path and will therefore use CPU<br />instead of GPU version.<br />This will affect performance.<br />See wiki for further details.</html>", SwingConstants.RIGHT );
@@ -107,24 +89,26 @@ public class CSBDeepProgress extends JPanel
 		return okButton;
 	}
 
-	public CSBDeepProgress( final boolean usesTF ) {
+	public CSBDeepProgress(JFrame frame, final boolean usesTF) {
 
 		super( new BorderLayout() );
 
+		this.frame = frame;
+
 		StyleConstants.setForeground( red, Color.red );
 
-		stepContainer = new JPanel();
-		stepContainer.setLayout( new BoxLayout( stepContainer, BoxLayout.Y_AXIS ) );
+		taskContainer = new JPanel();
+		taskContainer.setLayout( new BoxLayout(taskContainer, BoxLayout.Y_AXIS ) );
 
-		stepContainer.setBorder( new EmptyBorder( 0, 0, 0, 123 ) );
+		taskContainer.setBorder( new EmptyBorder( 0, 0, 0, 123 ) );
 
 		progressBar = new JProgressBar( 0, 100 );
 		progressBar.setStringPainted( true );
 
 		taskOutput = new JTextPane();
 		taskOutput.setAutoscrolls( true );
-		taskOutput.setMinimumSize( new Dimension( 0, 80 ) );
-		taskOutput.setPreferredSize( new Dimension( 0, 80 ) );
+		taskOutput.setMinimumSize( new Dimension( 200, 80 ) );
+		taskOutput.setPreferredSize( new Dimension( 200, 80 ) );
 		taskOutput.setMargin( new Insets( 5, 5, 5, 5 ) );
 		taskOutput.setEditable( false );
 
@@ -150,7 +134,7 @@ public class CSBDeepProgress extends JPanel
 		notePanel.add( Box.createVerticalGlue() );
 
 		final JPanel topPanel = new JPanel( new BorderLayout() );
-		topPanel.add( stepContainer, BorderLayout.WEST );
+		topPanel.add(taskContainer, BorderLayout.WEST );
 		topPanel.add( notePanel, BorderLayout.EAST );
 
 		add( topPanel, BorderLayout.PAGE_START );
@@ -182,32 +166,46 @@ public class CSBDeepProgress extends JPanel
 
 		add( footer, BorderLayout.SOUTH );
 
+		dispose();
+		repaint();
+
+		getOkBtn().addActionListener( e -> frame.dispose() );
+		setOpaque( true ); //content panes must be opaque
+		frame.setContentPane( this );
+
 	}
 
-	public void addStep( final String title ) {
-		final JPanel steprow = new JPanel( new FlowLayout( FlowLayout.LEFT ) );
+	public void display() {
+		//Display the window.
+		frame.pack();
+		frame.setLocationRelativeTo(null);
+		frame.setVisible( true );
+	}
+
+	public void addTask(final String title ) {
+		final JPanel taskrow = new JPanel( new FlowLayout( FlowLayout.LEFT ) );
 		final JLabel statusLabel = new JLabel( "\u2013", SwingConstants.CENTER );
 		final Font font = statusLabel.getFont();
 		statusLabel.setFont( new Font( font.getName(), Font.BOLD, font.getSize() * 2 ) );
 		statusLabel.setPreferredSize( new Dimension( 50, 30 ) );
 		statusLabel.setMinimumSize( new Dimension( 50, 30 ) );
 		statusLabel.setMaximumSize( new Dimension( 50, 30 ) );
-		final Step step = new Step();
-		step.status = statusLabel;
-		step.title = new JLabel( title );
-		step.stepDone = false;
-		steps.add( step );
-		steprow.add( step.status );
-		steprow.add( step.title );
-		stepContainer.add( steprow );
+		final GuiTask task = new GuiTask();
+		task.status = statusLabel;
+		task.title = new JLabel( title );
+		task.taskDone = false;
+		tasks.add( task );
+		taskrow.add( task.status );
+		taskrow.add( task.title );
+		taskContainer.add( taskrow );
 	}
 
 	private void resetProgress() {
-		for ( final Step step : steps ) {
-			step.stepDone = false;
+		for ( final GuiTask step : tasks) {
+			step.taskDone = false;
 		}
-		currentStep = -1;
-		currentStepFailing = false;
+		currentTask = -1;
+		currentTaskFailing = false;
 		progressBar.setValue( 0 );
 	}
 
@@ -221,65 +219,84 @@ public class CSBDeepProgress extends JPanel
 
 	private void updateGUI() {
 
-		// TODO update progressbar
-//		if ( currentStep != STEP_RUNMODEL ) progressBar.setValue( 0 );
-//		progressBar.setVisible( currentStep == STEP_RUNMODEL );
-//		progressBarSpace.setVisible( currentStep != STEP_RUNMODEL );
+//		// TODO update progressbar
+//		boolean progressVisible = false;
+//		if(currentTask >= 0) {
+//			if(tasks.get(currentTask).numSteps > 1) {
+//				progressVisible = true;
+//
+//			}
+//		}
+//		progressBar.setVisible( progressVisible );
+//		progressBarSpace.setVisible( progressVisible );
 
 		//update OK and CANCEL buttons
 		boolean alldone = true;
-		for ( final Step step : steps ) {
-			if ( !step.stepDone ) alldone = false;
+		for ( final GuiTask task : tasks) {
+			if ( !task.taskDone) alldone = false;
 		}
-		if ( currentRound < numRounds ) alldone = false;
-		okButton.setEnabled( alldone || currentStepFailing );
-		cancelButton.setEnabled( !alldone && !currentStepFailing );
+		okButton.setEnabled( alldone || currentTaskFailing);
+		cancelButton.setEnabled( !alldone && !currentTaskFailing);
+
+		invalidate();
 
 	}
 
-	public void setStepStart( final int step ) {
-		currentStep = step;
-		currentStepFailing = false;
+	public void setTaskStart(final int task ) {
+		currentTask = task;
+		currentTaskFailing = false;
 		setCurrentStepStatus( STATUS_RUNNING );
 		updateGUI();
 	}
 
-	public void setCurrentStepDone() {
-		if ( currentStep >= 0 ) {
-			steps.get( currentStep ).stepDone = true;
-			setCurrentStepStatus( STATUS_DONE );
-		}
-		currentStepFailing = false;
-		currentStep = -1;
+//	public void setCurrentStepDone() {
+//		if ( currentTask >= 0 ) {
+//			tasks.get(currentTask).taskDone = true;
+//			setCurrentStepStatus( STATUS_DONE );
+//		}
+//		currentTaskFailing = false;
+//		currentTask = -1;
+//		updateGUI();
+//	}
+//
+//	public void setCurrentStepFail() {
+//		currentTaskFailing = true;
+//		setCurrentStepStatus( STATUS_FAIL );
+//		updateGUI();
+//	}
+
+	public void setTaskDone(final int task ) {
+		tasks.get(currentTask).taskDone = true;
+		setStepStatus( task, STATUS_DONE );
 		updateGUI();
 	}
 
-	public void setCurrentStepFail() {
-		currentStepFailing = true;
-		setCurrentStepStatus( STATUS_FAIL );
+	public void setTaskFail(final int task ) {
+		currentTaskFailing = true;
+		setStepStatus( task, STATUS_FAIL );
 		updateGUI();
 	}
 
-	public void setStepDone( final int step ) {
-		steps.get( currentStep ).stepDone = true;
-		setStepStatus( step, STATUS_DONE );
+	public void setTaskNumSteps(final int task, final int steps ) {
+		tasks.get(currentTask).numSteps = steps;
+		setProgressBarMax(steps);
 		updateGUI();
 	}
 
-	public void setStepFail( final int step ) {
-		currentStepFailing = true;
-		setStepStatus( step, STATUS_FAIL );
+	public void setTaskCurrentStep(final int task, final int step ) {
+		tasks.get(currentTask).step = step;
+		setProgressBarValue(step);
 		updateGUI();
 	}
 
 	private void setCurrentStepStatus( final int status ) {
-		setStepStatus( currentStep, status );
+		setStepStatus(currentTask, status );
 	}
 
-	private void setStepStatus( final int step, final int status ) {
+	private void setStepStatus( final int task, final int status ) {
 
-		if ( status < steps.size() && step >= 0 ) {
-			final JLabel statuslabel = steps.get( step ).status;
+		if ( status < tasks.size() && task >= 0 ) {
+			final JLabel statuslabel = tasks.get( task ).status;
 			switch ( status ) {
 			case STATUS_IDLE:
 				statuslabel.setText( "\u2013" );
@@ -314,6 +331,8 @@ public class CSBDeepProgress extends JPanel
 					df.format( date ) + " | " + data + "\n",
 					style );
 			taskOutput.setCaretPosition( taskOutput.getDocument().getLength() );
+			taskOutput.invalidate();
+			this.invalidate();
 		} catch ( final BadLocationException exc ) {
 			// TODO Auto-generated catch block
 			exc.printStackTrace();
@@ -344,14 +363,7 @@ public class CSBDeepProgress extends JPanel
 //		frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
 
 		//Create and set up the content pane.
-		final CSBDeepProgress newContentPane = new CSBDeepProgress( usesTF );
-		newContentPane.getOkBtn().addActionListener( e -> frame.dispose() );
-		newContentPane.setOpaque( true ); //content panes must be opaque
-		frame.setContentPane( newContentPane );
-
-		//Display the window.
-		frame.pack();
-		frame.setVisible( true );
+		final CSBDeepProgress newContentPane = new CSBDeepProgress( frame, usesTF );
 
 		return newContentPane;
 	}
@@ -362,6 +374,10 @@ public class CSBDeepProgress extends JPanel
 
 	public boolean getProgressBarStarting() {
 		return progressBar.getValue() == 0;
+	}
+
+	public void dispose() {
+		frame.dispose();
 	}
 
 }

@@ -6,20 +6,25 @@ public interface TaskPresenter {
 
 	public void initializeWithGPUWarning();
 
-	public void addStep( String title );
+	public void addTask(String title );
 
-	public void setStepDone( int index );
+	public void setTaskDone(int index );
 
-	public void setStepFailed( int index );
+	public void setTaskFailed(int index );
 
-	public void setStepStarted( int index );
+	public void setTaskStarted(int index );
 
-	public void setStepInProgress( int index );
+	public void setTaskInProgress(int index );
+
+	public void setTaskNumSteps(final int index, final int numSteps);
+
+	public void setTaskStep(final int index, final int step);
 
 	public void log( String msg );
 
 	public void logError( String msg );
 
-	void close();
+	public void close();
 
+	public void show();
 }

@@ -2,12 +2,17 @@ package mpicbg.csbd.util;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.OptionalLong;
 
+import mpicbg.csbd.task.Task;
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
+import net.imglib2.Interval;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.type.numeric.real.FloatType;
 
 public class DatasetHelper {
 
@@ -59,6 +64,12 @@ public class DatasetHelper {
 						+ " musst be of size " + expectedDims[ i ].getAsLong() 
 						+ ".\nExpected format: " + formatDesc ); }
 		}
+	}
+
+	public static void logDim(final Task task, final String title, final Interval img ) {
+		final long[] dims = new long[ img.numDimensions() ];
+		img.dimensions( dims );
+		task.log( title + ": " + Arrays.toString( dims ) );
 	}
 
 }

@@ -38,8 +38,10 @@ public class CSBDeepTest {
 	}
 
 	protected void launchImageJ() {
-		if(ij == null)
+		if(ij == null) {
 			ij = new ImageJ();
+			ij.ui().setHeadless(true);
+		}
 	}
 
 	protected < T extends RealType< T > & NativeType< T > > Dataset
@@ -56,7 +58,7 @@ public class CSBDeepTest {
 				dataset);
 		assertFalse( "Plugin future is null", future == null );
 		final Module module = ij.module().waitFor(future);
-		return (List<Dataset>) module.getOutput("resultDatasets");
+		return (List<Dataset>) module.getOutput("output");
 	}
 
 	protected void testResultAxesAndSize( final Dataset input, final Dataset output ) {

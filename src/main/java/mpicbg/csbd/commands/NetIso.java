@@ -32,6 +32,7 @@ import mpicbg.csbd.imglib2.TiledView;
 import mpicbg.csbd.network.Network;
 import mpicbg.csbd.task.DefaultTask;
 import mpicbg.csbd.tiling.BatchedTiling;
+import mpicbg.csbd.util.DatasetHelper;
 import mpicbg.csbd.util.task.DefaultOutputProcessor;
 import mpicbg.csbd.util.task.InputProcessor;
 import mpicbg.csbd.util.task.OutputProcessor;
@@ -118,6 +119,8 @@ public class NetIso extends CSBDeepCommand implements Command {
 			final RandomAccessibleInterval< FloatType > inputRai =
 					( RandomAccessibleInterval< FloatType > ) input.getImgPlus();
 
+			DatasetHelper.logDim( this, "Dataset dimensions", inputRai );
+
 			final int dimX = input.dimensionIndex( Axes.X );
 			final int dimY = input.dimensionIndex( Axes.Y );
 			final int dimZ = input.dimensionIndex( Axes.Z );
@@ -125,7 +128,7 @@ public class NetIso extends CSBDeepCommand implements Command {
 			final RandomAccessibleInterval< FloatType > upsampled =
 					upsample( inputRai, dimZ, scale );
 
-			printDim( "upsampled:", upsampled );
+			DatasetHelper.logDim( this, "upsampled:", upsampled );
 
 			final RandomAccessibleInterval< FloatType > rotated0 =
 					Views.permute( upsampled, dimX, dimZ );
@@ -143,8 +146,8 @@ public class NetIso extends CSBDeepCommand implements Command {
 			output.add( rotated0_applied );
 			output.add( rotated1_applied );
 
-			printDim( "rotated0_applied", rotated0_applied );
-			printDim( "rotated1_applied", rotated1_applied );
+			DatasetHelper.logDim( this, "rotated0_applied", rotated0_applied );
+			DatasetHelper.logDim( this, "rotated1_applied", rotated1_applied );
 
 			setFinished();
 
@@ -218,8 +221,8 @@ public class NetIso extends CSBDeepCommand implements Command {
 				RandomAccessibleInterval< FloatType > res1_pred =
 						Views.stack( result1.get( i ), result1.get( i + 1 ) );
 
-				printDim( "res0_pred", res0_pred );
-				printDim( "res1_pred", res1_pred );
+				DatasetHelper.logDim( this, "res0_pred", res0_pred );
+				DatasetHelper.logDim( this, "res1_pred", res1_pred );
 
 				//force the CHANNEL dim back to its original location
 				final int outputChannelDim =
@@ -229,8 +232,8 @@ public class NetIso extends CSBDeepCommand implements Command {
 					res1_pred = Views.permute( res1_pred, dim, dim - 1 );
 				}
 
-				printDim( "res0_pred", res0_pred );
-				printDim( "res1_pred", res1_pred );
+				DatasetHelper.logDim( this, "res0_pred", res0_pred );
+				DatasetHelper.logDim( this, "res1_pred", res1_pred );
 
 				final int dimX = dataset.dimensionIndex( Axes.X );
 				final int dimY = dataset.dimensionIndex( Axes.Y );
@@ -241,8 +244,8 @@ public class NetIso extends CSBDeepCommand implements Command {
 				res1_pred = Views.permute( res1_pred, dimY, dimZ );
 				res1_pred = Views.permute( res1_pred, dimX, dimZ );
 
-				printDim( "res0_pred rotated back", res0_pred );
-				printDim( "res1_pred rotated back", res1_pred );
+				DatasetHelper.logDim( this, "res0_pred rotated back", res0_pred );
+				DatasetHelper.logDim( this, "res1_pred rotated back", res1_pred );
 
 				log( "Merge output stacks.." );
 
@@ -253,7 +256,7 @@ public class NetIso extends CSBDeepCommand implements Command {
 						res0_pred,
 						res1_pred,
 						prediction );
-				printDim( "prediction", prediction );
+				DatasetHelper.logDim( this, "prediction", prediction );
 
 				output.add(
 						wrapIntoDataset(

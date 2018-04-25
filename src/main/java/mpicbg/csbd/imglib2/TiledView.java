@@ -44,6 +44,7 @@ import net.imglib2.view.Views;
 
 /**
  * THIS WILL GO INTO IMGLIB2 THIS IS JUST HERE UNTIL IT IS THERE!
+ * https://github.com/imglib/imglib2/pull/179
  *
  * Subdivides an <em>n</em>-dimensional {@link RandomAccessibleInterval} into
  * <em>n</em>-dimensional blocks of user defined size. Border blocks may have
@@ -75,10 +76,10 @@ public class TiledView< T > extends AbstractInterval implements RandomAccessible
 
 	public TiledView( final RandomAccessibleInterval< T > source, final long... blockSize )
 	{
-		this(source, blockSize, new long[blockSize.length]);
+		this( source, blockSize, new long[ blockSize.length ] );
 	}
 
-	public TiledView( final RandomAccessibleInterval< T > source, final long[] blockSize, final long[] overlap)
+	public TiledView( final RandomAccessibleInterval< T > source, final long[] blockSize, final long[] overlap )
 	{
 		super( source.numDimensions() );
 
@@ -114,7 +115,7 @@ public class TiledView< T > extends AbstractInterval implements RandomAccessible
 	@Override
 	public TiledViewRandomAccess< T > randomAccess()
 	{
-		return new TiledViewRandomAccess<>( source, blockSize, max, overlap);
+		return new TiledViewRandomAccess<>( source, blockSize, max, overlap );
 	}
 
 	@Override
@@ -137,7 +138,7 @@ public class TiledView< T > extends AbstractInterval implements RandomAccessible
 
 		private final long[] tempMax;
 
-		public TiledViewRandomAccess( final RandomAccessibleInterval< T > source, final long[] blockSize, final long[] max, final long[] overlap)
+		public TiledViewRandomAccess( final RandomAccessibleInterval< T > source, final long[] blockSize, final long[] max, final long[] overlap )
 		{
 			super( source.numDimensions() );
 			this.source = source;

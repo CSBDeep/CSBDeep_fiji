@@ -1,16 +1,15 @@
 package mpicbg.csbd.network.task;
 
+import mpicbg.csbd.network.Network;
+import mpicbg.csbd.task.DefaultTask;
+import mpicbg.csbd.tiling.AdvancedTiledView;
+import net.imglib2.type.numeric.real.FloatType;
+
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
-
-import net.imglib2.type.numeric.real.FloatType;
-
-import mpicbg.csbd.network.Network;
-import mpicbg.csbd.task.DefaultTask;
-import mpicbg.csbd.tiling.AdvancedTiledView;
 
 public class DefaultModelExecutor extends DefaultTask implements ModelExecutor {
 
@@ -33,8 +32,6 @@ public class DefaultModelExecutor extends DefaultTask implements ModelExecutor {
 			final AdvancedTiledView< FloatType > input,
 			final Network network ) throws OutOfMemoryError {
 
-		setStarted();
-
 		input.getProcessedTiles().clear();
 
 		try {
@@ -50,7 +47,7 @@ public class DefaultModelExecutor extends DefaultTask implements ModelExecutor {
 			cancel();
 			return null;
 		}
-		setFinished();
+
 		return input;
 	}
 

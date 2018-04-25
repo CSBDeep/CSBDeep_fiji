@@ -1,29 +1,28 @@
 package mpicbg.csbd.commands;
 
-import static org.junit.Assert.assertEquals;
-
-import java.util.List;
-
+import mpicbg.csbd.CSBDeepTest;
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
-import net.imagej.display.DatasetView;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
-
 import org.junit.Test;
 
-import mpicbg.csbd.CSBDeepTest;
+import java.util.List;
+
+import static org.junit.Assert.assertEquals;
 
 public class NetTubulinTest extends CSBDeepTest {
 
 	@Test
 	public void testNetTubulin() {
-		testDataset(
-				new FloatType(),
-				new long[] { 50, 100, 10 },
-				new AxisType[] { Axes.X, Axes.Y, Axes.TIME } );
+		for(int i = 0; i < 1; i++) {
+			testDataset(
+					new FloatType(),
+					new long[]{10, 10, 10},
+					new AxisType[]{Axes.X, Axes.Y, Axes.TIME});
+		}
 //		testDataset(new FloatType(), new long[] {50, 10, 100}, new AxisType[] {Axes.X, Axes.TIME, Axes.Y});
 //		testDataset(new ByteType(), new long[] {100, 50, 10}, new AxisType[] {Axes.X, Axes.Y, Axes.TIME});
 	}

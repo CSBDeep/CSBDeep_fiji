@@ -28,43 +28,10 @@
  */
 package mpicbg.csbd.commands;
 
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.OptionalLong;
-
-import javax.swing.JOptionPane;
-
-import net.imagej.Dataset;
-import net.imagej.DatasetService;
-import net.imagej.axis.Axes;
-import net.imagej.axis.AxisType;
-import net.imagej.display.DatasetView;
-import net.imagej.tensorflow.TensorFlowService;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.util.Intervals;
-
-import org.scijava.Cancelable;
-import org.scijava.Disposable;
-import org.scijava.Initializable;
-import org.scijava.ItemIO;
-import org.scijava.log.LogService;
-import org.scijava.plugin.Parameter;
-
-import mpicbg.csbd.imglib2.TiledView;
 import mpicbg.csbd.network.ImageTensor;
 import mpicbg.csbd.network.Network;
-import mpicbg.csbd.network.task.DefaultInputMapper;
-import mpicbg.csbd.network.task.DefaultModelExecutor;
-import mpicbg.csbd.network.task.DefaultModelLoader;
-import mpicbg.csbd.network.task.InputMapper;
-import mpicbg.csbd.network.task.ModelExecutor;
-import mpicbg.csbd.network.task.ModelLoader;
+import mpicbg.csbd.network.task.*;
 import mpicbg.csbd.network.tensorflow.TensorFlowNetwork;
-import mpicbg.csbd.normalize.PercentileNormalizer;
 import mpicbg.csbd.normalize.task.DefaultInputNormalizer;
 import mpicbg.csbd.normalize.task.InputNormalizer;
 import mpicbg.csbd.task.Task;
@@ -82,6 +49,28 @@ import mpicbg.csbd.util.task.DefaultInputProcessor;
 import mpicbg.csbd.util.task.DefaultOutputProcessor;
 import mpicbg.csbd.util.task.InputProcessor;
 import mpicbg.csbd.util.task.OutputProcessor;
+import net.imagej.Dataset;
+import net.imagej.DatasetService;
+import net.imagej.axis.Axes;
+import net.imagej.axis.AxisType;
+import net.imagej.tensorflow.TensorFlowService;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.type.numeric.real.FloatType;
+import net.imglib2.util.Intervals;
+import org.scijava.Cancelable;
+import org.scijava.Disposable;
+import org.scijava.Initializable;
+import org.scijava.ItemIO;
+import org.scijava.log.LogService;
+import org.scijava.plugin.Parameter;
+import org.scijava.ui.UIService;
+
+import javax.swing.*;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.OptionalLong;
 
 public abstract class CSBDeepCommand implements Cancelable, Initializable, Disposable {
 
@@ -97,14 +86,17 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 	@Parameter
 	protected DatasetService datasetService;
 
+	@Parameter
+	protected UIService uiService;
+
 	@Parameter( label = "Number of tiles", min = "1" )
-	public int nTiles = 8;
+	protected int nTiles = 8;
 
 	@Parameter( label = "Overlap between tiles", min = "0", stepSize = "16" )
-	public int overlap = 32;
+	protected int overlap = 32;
 
 	@Parameter( type = ItemIO.OUTPUT )
-	protected List< Dataset > resultDatasets = new ArrayList<>();
+	protected List< Dataset > output = new ArrayList<>();
 
 	protected String modelFileUrl;
 	protected String modelName;
@@ -131,8 +123,9 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 	@Override
 	public void initialize() {
 		initialized = true;
-		initNetwork();
 		initTasks();
+		initTaskManager();
+		initNetwork();
 	}
 
 	protected void tryToInitialize() {
@@ -142,7 +135,7 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 	}
 
 	protected void initNetwork() {
-		network = new TensorFlowNetwork(tensorFlowService, datasetService);
+		network = new TensorFlowNetwork(tensorFlowService, datasetService, modelExecutor);
 		network.loadLibrary();
 	}
 
@@ -158,7 +151,7 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 	}
 
 	protected void initTaskManager() {
-		final TaskForceManager tfm = new TaskForceManager();
+		final TaskForceManager tfm = new TaskForceManager(isHeadless(), log);
 		tfm.initialize();
 		tfm.createTaskForce("Preprocessing", modelLoader, inputMapper, inputProcessor, inputNormalizer );
 		tfm.createTaskForce("Tiling", inputTiler );
@@ -206,6 +199,8 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 
 		tryToInitialize();
 
+		taskManager.finalizeSetup();
+
 		prepareInputAndNetwork();
 		final List< RandomAccessibleInterval< FloatType > > processedInput =
 				inputProcessor.run( getInput() );
@@ -223,8 +218,12 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 				tryToTileAndRunNetwork( normalizedInput );
 		final List< RandomAccessibleInterval< FloatType > > output =
 				outputTiler.run( tiledOutput, tiling, getAxesArray( network.getOutputNode() ) );
-		resultDatasets.clear();
-		resultDatasets.addAll( outputProcessor.run( output, getInput(), network, datasetService ) );
+		for(AdvancedTiledView obj : tiledOutput) {
+			//TODO check if this is needed
+			obj.dispose();
+		}
+		this.output.clear();
+		this.output.addAll( outputProcessor.run( output, getInput(), network, datasetService ) );
 
 		dispose();
 
@@ -366,12 +365,8 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 		}
 	}
 
-	protected void
-			printDim( final String title, final RandomAccessibleInterval< FloatType > img ) {
-		//TODO fix print
-		final long[] dims = new long[ img.numDimensions() ];
-		img.dimensions( dims );
-		log( title + ": " + Arrays.toString( dims ) );
+	protected boolean isHeadless() {
+		return uiService.isHeadless();
 	}
 
 }

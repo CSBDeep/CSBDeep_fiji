@@ -1,13 +1,13 @@
 package mpicbg.csbd.util.task;
 
-import java.util.ArrayList;
-import java.util.List;
-
+import mpicbg.csbd.task.DefaultTask;
+import mpicbg.csbd.util.DatasetHelper;
 import net.imagej.Dataset;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
 
-import mpicbg.csbd.task.DefaultTask;
+import java.util.ArrayList;
+import java.util.List;
 
 public class DefaultInputProcessor extends DefaultTask implements InputProcessor {
 
@@ -18,7 +18,11 @@ public class DefaultInputProcessor extends DefaultTask implements InputProcessor
 
 		setStarted();
 
-		output.add( ( RandomAccessibleInterval< FloatType > ) input.getImgPlus() );
+		RandomAccessibleInterval<FloatType> rai = (RandomAccessibleInterval<FloatType>) input.getImgPlus();
+
+		DatasetHelper.logDim( this, "Dataset dimensions", rai );
+
+		output.add( rai );
 
 		setFinished();
 

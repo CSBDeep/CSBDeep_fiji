@@ -47,7 +47,7 @@
 //	int overlap = 32;
 //	
 //	Dataset dataset = null;
-//	List<DatasetView> resultDatasets = new ArrayList<>();
+//	List<DatasetView> output = new ArrayList<>();
 //	
 //	@Test
 //	public void run() {
@@ -69,8 +69,8 @@
 //		tiling = new DefaultTiling( nTiles, blockMultiple, overlap );
 //		List< AdvancedTiledView< FloatType > > tiledOutput = tryToTileAndRunNetwork( normalizedInput );
 //		List< RandomAccessibleInterval< FloatType > > output = outputTiler.run( tiledOutput, tiling, axes );
-//		resultDatasets.clear();
-//		resultDatasets.addAll( outputProcessor.run(output, datasetView, network) );
+//		output.clear();
+//		output.addAll( outputProcessor.run(output, datasetView, network) );
 //	}
 //	
 //	private List< AdvancedTiledView< FloatType > > tryToTileAndRunNetwork(List< RandomAccessibleInterval< FloatType > > normalizedInput) {

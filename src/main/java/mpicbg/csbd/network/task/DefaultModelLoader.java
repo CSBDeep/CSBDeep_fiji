@@ -1,5 +1,6 @@
 package mpicbg.csbd.network.task;
 
+import mpicbg.csbd.network.ImageTensor;
 import mpicbg.csbd.network.Network;
 import mpicbg.csbd.task.DefaultTask;
 import net.imagej.Dataset;

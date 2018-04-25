@@ -2,6 +2,7 @@ package mpicbg.csbd.tasks;
 
 import java.io.FileNotFoundException;
 
+import mpicbg.csbd.task.Task;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
@@ -18,7 +19,9 @@ public class PseudoNetwork extends DefaultNetwork {
 	private long[] inputShape;
 	private boolean initialized = false;
 
-	public PseudoNetwork() {}
+	public PseudoNetwork(Task associatedTask) {
+		super(associatedTask);
+	}
 
 	@Override
 	public boolean loadModel(

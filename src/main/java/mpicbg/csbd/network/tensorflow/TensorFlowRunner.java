@@ -28,13 +28,12 @@
  */
 package mpicbg.csbd.network.tensorflow;
 
-import java.util.Arrays;
-
-import javax.swing.JOptionPane;
-
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
 import org.tensorflow.framework.TensorInfo;
+
+import javax.swing.*;
+import java.util.Arrays;
 
 public class TensorFlowRunner {
 
@@ -48,8 +47,8 @@ public class TensorFlowRunner {
 			final TensorInfo inputTensorInfo,
 			final TensorInfo outputTensorInfo ) throws Exception {
 
-		System.out.println(
-				"executeInceptionGraph with input shape " + Arrays.toString( image.shape() ) );
+//		System.out.println(
+//				"executeInceptionGraph with input shape " + Arrays.toString( image.shape() ) );
 
 		final Tensor output_t = model.session().runner() //
 				.feed( opName( inputTensorInfo ), image ) //

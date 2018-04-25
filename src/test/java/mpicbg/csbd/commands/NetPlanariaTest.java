@@ -1,34 +1,37 @@
 package mpicbg.csbd.commands;
 
-import static org.junit.Assert.assertTrue;
-
-import java.util.List;
-
+import mpicbg.csbd.CSBDeepTest;
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
-import net.imagej.display.DatasetView;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.integer.ByteType;
 import net.imglib2.type.numeric.real.FloatType;
-
+import org.junit.Ignore;
 import org.junit.Test;
 
-import mpicbg.csbd.CSBDeepTest;
+import java.util.List;
+
+import static org.junit.Assert.assertTrue;
 
 public class NetPlanariaTest extends CSBDeepTest {
 
 	@Test
-	public void testNetPlanaria() {
+	public void testPlanariaFloatType() {
 		testDataset(
 				new FloatType(),
 				new long[] { 50, 100, 10 },
 				new AxisType[] { Axes.X, Axes.Y, Axes.Z } );
 		testDataset(
 				new FloatType(),
-				new long[] { 50, 10, 100 },
+				new long[] { 10, 10, 10 },
 				new AxisType[] { Axes.X, Axes.Z, Axes.Y } );
+	}
+
+	@Test
+	@Ignore
+	public void testNetPlanariaByteType() {
 		testDataset(
 				new ByteType(),
 				new long[] { 100, 50, 10 },

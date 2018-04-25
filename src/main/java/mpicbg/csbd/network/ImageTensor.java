@@ -33,7 +33,6 @@ public class ImageTensor {
 		this.dataset = dataset;
 		final long[] dims = new long[ dataset.numDimensions() ];
 		dataset.dimensions( dims );
-		System.out.println( "Dataset dimensions: " + Arrays.toString( dims ) );
 	}
 
 	public AxisType[] getAvailableAxes() {
@@ -117,7 +116,6 @@ public class ImageTensor {
 	}
 
 	public void setMappingDefaults() {
-		System.out.println( "setmappingdefaults" );
 		setMappingInitialized( true );
 		final int tensorDimCount = nodeShape.length;
 		if ( tensorDimCount == 5 ) {
@@ -148,7 +146,7 @@ public class ImageTensor {
 				}
 			}
 		}
-		printMapping();
+//		printMapping();
 	}
 
 	public void resetMapping() {

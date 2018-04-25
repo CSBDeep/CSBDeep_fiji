@@ -81,6 +81,7 @@ import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.View;
 import net.imglib2.util.Util;
+import net.imglib2.view.Views;
 
 /**
  * Creates a single <em>n</em>-dimensional {@link RandomAccessibleInterval} by
