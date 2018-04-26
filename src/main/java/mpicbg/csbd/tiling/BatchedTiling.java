@@ -84,10 +84,7 @@ public class BatchedTiling extends DefaultTiling {
 		final RandomAccessibleInterval< FloatType > expandedInput2 =
 				expandDimToSize( dataset, batchDim, expandedBatchDimSize );
 		final AdvancedTiledView< FloatType > tiledView2 =
-				new AdvancedTiledView<>( expandedInput2, tileSize, padding );
-		for( int i = 0; i < types.length; i++) {
-			tiledView2.getOriginalGrid().put( types[i], i == batchDim ? batchesNum : 1);
-		}
+				new AdvancedTiledView<>( expandedInput2, tileSize, padding, types );
 		return tiledView2;
 	}
 

@@ -28,13 +28,11 @@
  */
 package mpicbg.csbd.tiling;
 
-import io.scif.img.converters.RandomAccessConverter;
 import mpicbg.csbd.imglib2.GridView;
 import mpicbg.csbd.task.Task;
 import mpicbg.csbd.util.DatasetHelper;
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
-import net.imagej.axis.Axis;
 import net.imagej.axis.AxisType;
 import net.imglib2.FinalInterval;
 import net.imglib2.RandomAccessibleInterval;
@@ -111,16 +109,13 @@ public class DefaultTiling implements Tiling {
 			for( int i = 0; i < input.numDimensions(); i++) {
 				tiledView.getOriginalDims().put( dataset.axis( i ).type(), input.dimension( i ));
 			}
-			tiledView.getOriginalGrid().put( dataset.axis( largestDimIndex ).type(), (long)nTiles);
 			tiledView.setLargestDim( largestDimIndex );
-
-			parent.log("grid: " + tiledView.getOriginalGrid().values().toString());
 			
 			DatasetHelper.logDim(parent, "tiledView", tiledView);
 
 			int steps = 1;
-			for(long i : tiledView.getOriginalGrid().values()) {
-				steps *= i;
+			for(int i = 0; i < tiledView.numDimensions(); i++) {
+				steps *= tiledView.dimension(i);
 			}
 
 			parent.setNumSteps( steps );
@@ -180,12 +175,7 @@ public class DefaultTiling implements Tiling {
 	}
 	
 	protected AdvancedTiledView< FloatType > createTiledView(Task parent, RandomAccessibleInterval< FloatType > input, long[] tileSize, long[] padding, AxisType[] types) {
-		AdvancedTiledView<FloatType> atv = new AdvancedTiledView<>( input, tileSize, padding );
-		for( int i = 0; i < input.numDimensions(); i++) {
-			atv.getOriginalGrid().put( types[i], (long)1);
-		}
-		return atv;
-
+		return new AdvancedTiledView<>( input, tileSize, padding, types );
 	}
 
 	@Override
@@ -201,16 +191,18 @@ public class DefaultTiling implements Tiling {
 
 			RandomAccessibleInterval<FloatType> firstResult = resultData.get(0);
 
-			parent.log("original grid: " + results.getOriginalGrid().values().toString());
+			parent.log("output axes: " + Arrays.toString(axisTypes));
 
 			DatasetHelper.logDim(parent, "result 0 before padding removement", firstResult);
 
-			long[] grid = new long[firstResult.numDimensions()];
-			for(int i = 0; i < firstResult.numDimensions(); i++) {
-				if(results.getOriginalGrid().containsKey(axisTypes[i])) {
-					grid[i] = results.getOriginalGrid().get(axisTypes[i]);
-				}else {
-					grid[i] = 1;
+			long[] grid = new long[axisTypes.length];
+			Arrays.fill(grid, 1);
+			for(int i = 0; i < grid.length; i++) {
+				for(int j = 0; j < results.getOriginalAxes().length; j++) {
+					if(results.getOriginalAxes()[j].equals(axisTypes[i])) {
+						grid[i] = results.dimension(j);
+						break;
+					}
 				}
 			}
 			for(int i = 0; i < resultData.size(); i++) {
@@ -284,6 +276,7 @@ public class DefaultTiling implements Tiling {
 //        // undo Expand other dimensions to fit blockMultiple
         for ( int i = 0; i < result.numDimensions(); i++ ) {
         	AxisType axis = outputAxes[i];
+        	//TODO check this
         	if(axis != Axes.CHANNEL) {
         		long originalSize = originalDims.get( axis );
 				fittedResult = expandDimToSize( fittedResult == null ? result : fittedResult, i, originalSize );

@@ -13,7 +13,7 @@ import java.util.Map;
 public class AdvancedTiledView< T > extends TiledView< T > {
 
 	private final Map< AxisType, Long > originalDims;
-	private final Map< AxisType, Long > originalGrid;
+	private final AxisType[] originalAxes;
 	private List< RandomAccessibleInterval< FloatType > > processedTiles;
 //	protected int blockMultiple;
 //	protected long blockWidth;
@@ -22,19 +22,16 @@ public class AdvancedTiledView< T > extends TiledView< T > {
 	public AdvancedTiledView(
 			final RandomAccessibleInterval< T > source,
 			final long[] blockSize,
-			final long[] overlap ) {
+			final long[] overlap,
+			final AxisType[] axes) {
 		super( source, blockSize, overlap );
 		processedTiles = new ArrayList<>();
 		originalDims = new HashMap<>();
-		originalGrid = new HashMap<>();
+		this.originalAxes = axes;
 	}
 
 	public Map< AxisType, Long > getOriginalDims() {
 		return originalDims;
-	}
-
-	public Map< AxisType, Long > getOriginalGrid() {
-		return originalGrid;
 	}
 
 	public List< RandomAccessibleInterval< FloatType > > getProcessedTiles() {
@@ -48,6 +45,10 @@ public class AdvancedTiledView< T > extends TiledView< T > {
 	public int getLargestDim() {
 		// TODO Auto-generated method stub
 		return largestDim;
+	}
+
+	public AxisType[] getOriginalAxes() {
+		return originalAxes;
 	}
 
 	public void dispose() {

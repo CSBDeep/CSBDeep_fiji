@@ -259,11 +259,20 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 	}
 
 	private AxisType[] getAxesArray( final ImageTensor outputNode ) {
-		final AxisType[] res = new AxisType[ outputNode.numDimensions() + 1 ];
-		for ( int i = 0; i < outputNode.numDimensions(); i++ ) {
-			res[ i ] = outputNode.getAxisByDatasetDim( i );
+		int numDim = outputNode.numDimensions();
+		boolean addChannel = false;
+		if(numDim < outputNode.getNodeShape().length
+				&& outputNode.getNodeShape()[outputNode.getNodeShape().length-1] > 1) {
+			addChannel = true;
+			numDim++;
 		}
-		res[ res.length - 1 ] = Axes.CHANNEL;
+		final AxisType[] res = new AxisType[ numDim ];
+		for ( int i = 0; i < outputNode.numDimensions(); i++ ) {
+			res[i] = outputNode.getAxisByDatasetDim(i);
+		}
+		if(addChannel) {
+			res[ res.length - 1 ] = Axes.CHANNEL;
+		}
 		return res;
 	}
 
