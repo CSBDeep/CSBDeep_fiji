@@ -2,15 +2,15 @@ package mpicbg.csbd.task;
 
 public class DefaultTask implements Task {
 
-	private boolean started = false;
-	private boolean finished = false;
-	private boolean failed = false;
-	private TaskManager manager;
-	private int steps = 1;
-	private int iterations = 1;
-	private int currentIteration = 0;
-	private int currentStep = 0;
-	private String title;
+	protected boolean started = false;
+	protected boolean finished = false;
+	protected boolean failed = false;
+	protected TaskManager manager;
+	protected int steps = 1;
+	protected int iterations = 1;
+	protected int currentIteration = 0;
+	protected int currentStep = 0;
+	protected String title;
 
 	@Override
 	public void setManager( final TaskManager manager ) {
@@ -42,6 +42,7 @@ public class DefaultTask implements Task {
 	public void setStarted() {
 		started = true;
 		failed = false;
+		log(getClassName() + " started");
 		updateManager();
 	}
 
@@ -49,17 +50,21 @@ public class DefaultTask implements Task {
 	public void setIdle() {
 		started = false;
 		failed = false;
+		log(getClassName() + " idle");
+
 		updateManager();
 	}
 
 	@Override
 	public void setFailed() {
 		failed = true;
+		log(getClassName() + " failed");
 		updateManager();
 	}
 
 	@Override
 	public void setFinished() {
+		log(getClassName() + " finished");
 		setFinished( true );
 	}
 
@@ -170,7 +175,12 @@ public class DefaultTask implements Task {
 
 	@Override
 	public String getTitle() {
+		if(title == null) return this.getClass().getSimpleName();
 		return title;
+	}
+
+	private String getClassName() {
+		return this.getClass().toString();
 	}
 
 	@Override

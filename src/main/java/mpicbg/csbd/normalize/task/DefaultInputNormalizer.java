@@ -11,7 +11,7 @@ import mpicbg.csbd.task.DefaultTask;
 
 public class DefaultInputNormalizer extends DefaultTask implements InputNormalizer {
 
-	PercentileNormalizer< FloatType > normalizer = new PercentileNormalizer<>();
+	private PercentileNormalizer< FloatType > normalizer = new PercentileNormalizer<>();
 
 	@Override
 	public List< RandomAccessibleInterval< FloatType > >

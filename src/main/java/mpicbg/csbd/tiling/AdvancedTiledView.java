@@ -17,7 +17,6 @@ public class AdvancedTiledView< T > extends TiledView< T > {
 	private List< RandomAccessibleInterval< FloatType > > processedTiles;
 //	protected int blockMultiple;
 //	protected long blockWidth;
-	protected int largestDim;
 
 	public AdvancedTiledView(
 			final RandomAccessibleInterval< T > source,
@@ -36,15 +35,6 @@ public class AdvancedTiledView< T > extends TiledView< T > {
 
 	public List< RandomAccessibleInterval< FloatType > > getProcessedTiles() {
 		return processedTiles;
-	}
-
-	public void setLargestDim( final int largestDimIndex ) {
-		this.largestDim = largestDimIndex;
-	}
-
-	public int getLargestDim() {
-		// TODO Auto-generated method stub
-		return largestDim;
 	}
 
 	public AxisType[] getOriginalAxes() {

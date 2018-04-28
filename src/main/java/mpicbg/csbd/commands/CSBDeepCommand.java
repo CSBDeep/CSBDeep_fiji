@@ -214,16 +214,21 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 		}
 
 		initTiling();
-		final List< AdvancedTiledView< FloatType > > tiledOutput =
-				tryToTileAndRunNetwork( normalizedInput );
-		final List< RandomAccessibleInterval< FloatType > > output =
-				outputTiler.run( tiledOutput, tiling, getAxesArray( network.getOutputNode() ) );
-		for(AdvancedTiledView obj : tiledOutput) {
-			//TODO check if this is needed
-			obj.dispose();
+		try {
+			final List< AdvancedTiledView< FloatType > > tiledOutput =
+					tryToTileAndRunNetwork( normalizedInput );
+			final List< RandomAccessibleInterval< FloatType > > output =
+					outputTiler.run( tiledOutput, tiling, getAxesArray( network.getOutputNode() ) );
+			for(AdvancedTiledView obj : tiledOutput) {
+				//TODO check if this is needed
+				obj.dispose();
+			}
+			this.output.clear();
+			this.output.addAll( outputProcessor.run( output, getInput(), network, datasetService ) );
 		}
-		this.output.clear();
-		this.output.addAll( outputProcessor.run( output, getInput(), network, datasetService ) );
+		catch(OutOfMemoryError e) {
+			e.printStackTrace();
+		}
 
 		dispose();
 
@@ -281,7 +286,7 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 	}
 
 	private List< AdvancedTiledView< FloatType > > tryToTileAndRunNetwork(
-			final List< RandomAccessibleInterval< FloatType > > normalizedInput ) {
+			final List< RandomAccessibleInterval< FloatType > > normalizedInput ) throws OutOfMemoryError {
 		List< AdvancedTiledView< FloatType > > tiledOutput = null;
 		boolean isOutOfMemory = true;
 		boolean canHandleOutOfMemory = true;
@@ -296,6 +301,8 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 				canHandleOutOfMemory = tryHandleOutOfMemoryError();
 			}
 		}
+		if(isOutOfMemory)
+			throw new OutOfMemoryError("Out of memory exception occurred. Plugin exit.");
 		return tiledOutput;
 	}
 
@@ -310,13 +317,14 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 	private boolean tryHandleOutOfMemoryError() {
 		// We expect it to be an out of memory exception and
 		// try it again with more tiles.
-		final Task modelExecutorTask = ( Task ) modelExecutor;
+		final Task modelExecutorTask = modelExecutor;
 		if ( !handleOutOfMemoryError() ) {
 			modelExecutorTask.setFailed();
 			return false;
 		}
 		modelExecutorTask.logError(
-				"Out of memory exception occurred. Trying with " + nTiles + " tiles..." );
+				"Out of memory exception occurred. Trying with " + nTiles + " tiles and overlap " + overlap + "..." );
+		initTiling();
 		modelExecutorTask.startNewIteration();
 		( ( Task ) inputTiler ).addIteration();
 		return true;
@@ -327,7 +335,11 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 		// Check if the number of tiles is too large already
 		if ( Arrays.stream(
 				Intervals.dimensionsAsLongArray(
-						getInput() ) ).max().getAsLong() / nTiles < blockMultiple ) { return false; }
+						getInput() ) ).max().getAsLong() / nTiles < blockMultiple ) {
+			if(overlap == 0) return false;
+			overlap *= 0.5;
+			if(overlap < 2) overlap = 0;
+		}
 		return true;
 	}
 

@@ -72,55 +72,46 @@ public class DefaultTiling implements Tiling {
 
 	@Override
 	public AdvancedTiledView< FloatType > preprocess(RandomAccessibleInterval< FloatType > input, Dataset dataset, Task parent) {
-		
-		parent.log( "PREPROCESSING---------------------------------------" );
 
 		if ( input != null ) {
 
 			DatasetHelper.logDim(parent, "Image dimensions: ", input );
-			parent.log( "Calculate mapping between image and tensor.." );
-			
-//			final long largestSize = network.getInputNode().getLargestDimSize();
-			final int largestDimIndex = getLargestDimIndex(dataset);
-			final long largestSize = input.dimension( largestDimIndex );
 
-			long[] padding = getPadding(input, largestDimIndex);
+//			final int largestDimIndex = getLargestDimIndex(dataset);
+//			final long largestSize = input.dimension( largestDimIndex );
 
-			parent.log( "padding: " + Arrays.toString( padding ) );
-
-			parent.log( "Divide image into " + tilesNum + " tile(s).." );
-
-			final double blockwidthIdeal = largestSize / ( double ) tilesNum;
-			final long blockWidth =
-					( long ) ( Math.ceil( blockwidthIdeal / blockMultiple ) * blockMultiple );
-			final int nTiles = ( int ) Math.ceil( ( float ) largestSize / blockWidth );
-			parent.log( "blockwidthIdeal: " + blockwidthIdeal );
-			parent.log( "blockwidth: " + blockWidth );
-			parent.log( "blockMultiple: " + blockMultiple );
-			parent.log( "nTiles: " + nTiles );
-			RandomAccessibleInterval< FloatType > expandedInput = expandToFitBlockSize(input, largestDimIndex, blockWidth*nTiles);
-			long[] tileSize = calculateTileSize(expandedInput, blockWidth, largestDimIndex);
-			parent.log( "tilesize: " + Arrays.toString( tileSize ) );
-			AxisType[] types = new AxisType[dataset.numDimensions()];
-			for(int i = 0; i < dataset.numDimensions(); i++) {
-				types[i] = dataset.axis(i).type();
+			AxisType[] axes = new AxisType[input.numDimensions()];
+			for(int i = 0; i < axes.length; i++) {
+				axes[i] = dataset.axis(i).type();
 			}
-			final AdvancedTiledView< FloatType > tiledView = createTiledView(parent, expandedInput, tileSize, padding, types);
+
+			long[] tiling = new long[input.numDimensions()];
+			Arrays.fill(tiling, 1);
+			computeTiling(input, axes, tiling, tilesNum, blockMultiple);
+
+			long[] padding = getPadding(tiling);
+
+			parent.log( "Dividing image into " + arrayProduct(tiling) + " tile(s).." );
+
+			RandomAccessibleInterval< FloatType > expandedInput = expandToFitBlockSize(input, tiling, blockMultiple);
+			long[] tileSize = calculateTileSize(expandedInput, tiling);
+
+			parent.log( "Size of single image tile: " + Arrays.toString( tileSize ) );
+
+			final AdvancedTiledView< FloatType > tiledView = createTiledView(parent, expandedInput, tileSize, padding, axes);
 			for( int i = 0; i < input.numDimensions(); i++) {
 				tiledView.getOriginalDims().put( dataset.axis( i ).type(), input.dimension( i ));
 			}
-			tiledView.setLargestDim( largestDimIndex );
 			
-			DatasetHelper.logDim(parent, "tiledView", tiledView);
+			DatasetHelper.logDim(parent, "Final image tiling", tiledView);
+			parent.log( "Final tile padding: " + Arrays.toString( padding ) );
 
 			int steps = 1;
 			for(int i = 0; i < tiledView.numDimensions(); i++) {
 				steps *= tiledView.dimension(i);
 			}
 
-			parent.setNumSteps( steps );
-
-			parent.setFinished();
+//			parent.setNumSteps( steps );
 
 			return tiledView;
 
@@ -128,6 +119,41 @@ public class DefaultTiling implements Tiling {
 
 		return null;
 
+	}
+
+	public static long arrayProduct(long[] array) {
+		long rtn = 1;
+		for (long i : array) {
+			rtn *= i;
+		}
+		return rtn;
+	}
+
+	protected long[] computeTiling(RandomAccessibleInterval< FloatType > input, AxisType[] axes, long[] tiling, int nTiles, int blockSize) {
+		int currentTiles = 1;
+		for(long tiles : tiling) {
+			currentTiles *= tiles;
+		}
+		if(currentTiles >= nTiles) {
+			return tiling;
+		}else {
+			long[] singleTile = new long[input.numDimensions()];
+			int maxDim = -1;
+			for(int i = 0; i < singleTile.length; i++) {
+				if(axes[i].isSpatial()) {
+					singleTile[i] = (long) Math.ceil((input.dimension(i) / tiling[i] + blockSize) / blockSize) * blockSize;
+					if(singleTile[i] > blockSize && (maxDim < 0 || singleTile[i] > singleTile[maxDim])) {
+						maxDim = i;
+					}
+				}
+			}
+			if(maxDim >= 0) {
+				tiling[maxDim] += 1;
+				return computeTiling(input, axes, tiling, nTiles, blockSize);
+			}else {
+				return tiling;
+			}
+		}
 	}
 	
 	protected static int getLargestDimIndex(Dataset dataset) {
@@ -144,33 +170,28 @@ public class DefaultTiling implements Tiling {
 		return largestDim;
 	}
 	
-	protected long[] getPadding(RandomAccessibleInterval< FloatType > input, int largestDimIndex) {
-		long[] padding = new long[ input.numDimensions() ];
-		int largestDim = largestDimIndex;
-		padding[ largestDim ] = overlap;
+	protected long[] getPadding(long[] tiling) {
+		long[] padding = new long[ tiling.length ];
+		for(int i = 0; i < padding.length; i++) {
+			if(tiling[i] > 1) padding[ i ] = overlap;
+		}
 		return padding;
 	}
 
 	protected RandomAccessibleInterval< FloatType >
-			expandToFitBlockSize( RandomAccessibleInterval< FloatType > dataset, int largestDim, long largestDimSize ) {
-		RandomAccessibleInterval< FloatType > expandedInput = expandDimToSize( dataset, largestDim, largestDimSize );
-		// Expand other dimensions to fit blockMultiple
-		for ( int i = 0; i < expandedInput.numDimensions(); i++ ) {
-//			if ( bridge.getDimTypeByDatasetDim( i ).isXY() ) {
-			expandedInput = i == largestDim ? expandedInput : expandDimToSize(
-					expandedInput,
-					i,
-					( long ) Math.ceil(
-							expandedInput.dimension(
-									i ) / ( double ) blockMultiple ) * blockMultiple );
-//			}
+			expandToFitBlockSize(RandomAccessibleInterval< FloatType > dataset, long[] tiling, long BlockSize ) {
+		for ( int i = 0; i < dataset.numDimensions(); i++ ) {
+			dataset = expandDimToSize(
+					dataset, i, ( long ) Math.ceil( dataset.dimension( i )/ tiling[i] / ( double ) blockMultiple ) * blockMultiple * tiling[i] );
 		}
-		return expandedInput;
+		return dataset;
 	}
 
-	protected long[] calculateTileSize(RandomAccessibleInterval< FloatType > dataset, long blockWidth, int largestDim) {
+	protected long[] calculateTileSize(RandomAccessibleInterval< FloatType > dataset, long[] tiling) {
 		final long[] tileSize = Intervals.dimensionsAsLongArray( dataset );
-		tileSize[ largestDim ] = blockWidth;
+		for(int i = 0; i < tileSize.length; i++) {
+			tileSize[i] /= tiling[i];
+		}
 		return tileSize;
 	}
 	
@@ -206,7 +227,7 @@ public class DefaultTiling implements Tiling {
 				}
 			}
 			for(int i = 0; i < resultData.size(); i++) {
-				resultData.set( i, removePadding(resultData.get( i ), results.getOverlap(), results.getLargestDim()));
+				resultData.set( i, removePadding(resultData.get( i ), results.getOverlap(), results.getOriginalAxes(), axisTypes));
 			}
 
 			//TODO log padding / test padding
@@ -241,22 +262,17 @@ public class DefaultTiling implements Tiling {
 		return null;
 	}
 	
-	protected RandomAccessibleInterval<FloatType> removePadding( RandomAccessibleInterval< FloatType > result, long[] padding, int largestDim ) {
+	protected RandomAccessibleInterval<FloatType> removePadding( RandomAccessibleInterval< FloatType > result, long[] padding, AxisType[] oldAxes, AxisType[] newAxes ) {
 
-		//TODO check wtf is happening here
-
-		// Set padding to negative to remove it later
-		final long[] negPadding = padding.clone();
-		negPadding[ largestDim ] = -padding[ largestDim ];
-		
-		long[] dims = new long[result.numDimensions()];
-		result.dimensions( dims );
-
-		final long[] negPaddingPlus = new long[ result.numDimensions() ];
+		final long[] negPadding = new long[ result.numDimensions() ];
 		for ( int i = 0; i < negPadding.length; i++ ) {
-			negPaddingPlus[ i ] = negPadding[ i ];
+			for(int j = 0; j < oldAxes.length; j++) {
+				if(newAxes[i] == oldAxes[j]) {
+					negPadding[i] = -padding[j];
+				}
+			}
 		}
-		return Views.zeroMin( Views.expandZero( result, negPaddingPlus ) );
+		return Views.zeroMin( Views.expandZero( result, negPadding ) );
 		
 	}
 

@@ -35,7 +35,6 @@ import net.imagej.ImageJ;
 import net.imagej.axis.AxisType;
 import org.scijava.ItemVisibility;
 import org.scijava.command.Command;
-import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.prefs.PrefService;

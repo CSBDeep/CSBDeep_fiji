@@ -3,6 +3,7 @@ package mpicbg.csbd.network.task;
 import mpicbg.csbd.network.Network;
 import mpicbg.csbd.task.DefaultTask;
 import mpicbg.csbd.tiling.AdvancedTiledView;
+import mpicbg.csbd.util.DatasetHelper;
 import net.imglib2.type.numeric.real.FloatType;
 
 import java.util.List;
@@ -20,10 +21,16 @@ public class DefaultModelExecutor extends DefaultTask implements ModelExecutor {
 	public List< AdvancedTiledView< FloatType > >
 			run( final List< AdvancedTiledView< FloatType > > input, final Network network ) {
 		setStarted();
+		if(input.size() > 0) {
+			DatasetHelper.logDim(this, "Network input size", input.get(0).randomAccess().get());
+		}
 		pool = Executors.newSingleThreadExecutor();
 		final List< AdvancedTiledView< FloatType > > output =
 				input.stream().map( tile -> run( tile, network ) ).collect( Collectors.toList() );
 		pool.shutdown();
+		if(output.size() > 0) {
+			DatasetHelper.logDim(this, "Network output size", output.get(0).getProcessedTiles().get(0));
+		}
 		setFinished();
 		return output;
 	}

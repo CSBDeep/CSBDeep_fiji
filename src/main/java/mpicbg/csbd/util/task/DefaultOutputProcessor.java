@@ -58,7 +58,6 @@ public class DefaultOutputProcessor extends DefaultTask implements OutputProcess
 								datasetService) );
 			}
 			if ( !output.isEmpty() ) {
-				log( "All done!" );
 				return output;
 			}
 		}

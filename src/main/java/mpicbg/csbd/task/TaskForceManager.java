@@ -147,6 +147,30 @@ public class TaskForceManager implements TaskManager {
 				task.cancel();
 			}
 		}
+
+		@Override
+		public void setStarted() {
+			started = true;
+			failed = false;
+			updateManager();
+		}
+
+		@Override
+		public void setIdle() {
+			started = false;
+			failed = false;
+			updateManager();
+		}
+
+		@Override
+		public void setFailed() {
+			updateManager();
+		}
+
+		@Override
+		public void setFinished() {
+			setFinished( true );
+		}
 	}
 
 }

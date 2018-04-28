@@ -90,43 +90,20 @@ public class BatchedTiling extends DefaultTiling {
 
 	@Override
 	protected RandomAccessibleInterval< FloatType >
-			expandToFitBlockSize(
-					final RandomAccessibleInterval< FloatType > dataset,
-					final int largestDim,
-					final long largestDimSize
-					 ) {
+			expandToFitBlockSize( RandomAccessibleInterval< FloatType > dataset, long[] tiling, long BlockSize ) {
 
 		// If there is no channel dimension in the input image, we assume that a channel dimension might be added to the end of the image
 		if ( channelDim < 0 ) {
 			channelDim = dataset.numDimensions();
 		}
 
-		RandomAccessibleInterval< FloatType > expandedInput =
-				expandDimToSize( dataset, largestDim, largestDimSize );
-
-		long[] imdims = new long[ expandedInput.numDimensions() ];
-		expandedInput.dimensions( imdims );
-		//TODO: get rid of system out
-		System.out.println( "imdims1: " + Arrays.toString( imdims ) );
-
-		// Expand other dimensions to fit blockMultiple
-		for ( int i = 0; i < expandedInput.numDimensions(); i++ ) {
-			if ( i != largestDim && i != batchDim && i != channelDim ) {
-				expandedInput = expandDimToSize(
-						expandedInput,
-						i,
-						( long ) Math.ceil(
-								expandedInput.dimension(
-										i ) / ( double ) blockMultiple ) * blockMultiple );
+		for ( int i = 0; i < dataset.numDimensions(); i++ ) {
+			if ( i != batchDim && i != channelDim ) {
+				dataset = expandDimToSize(
+						dataset, i, ( long ) Math.ceil( dataset.dimension( i )/ tiling[i] / ( double ) blockMultiple ) * blockMultiple * tiling[i] );
 			}
 		}
-
-		imdims = new long[ expandedInput.numDimensions() ];
-		expandedInput.dimensions( imdims );
-		//TODO: get rid of system out
-		System.out.println( "imdims2: " + Arrays.toString( imdims ) );
-//			logDim( "After expand", im );
-		return expandedInput;
+		return dataset;
 	}
 
 	@Override
