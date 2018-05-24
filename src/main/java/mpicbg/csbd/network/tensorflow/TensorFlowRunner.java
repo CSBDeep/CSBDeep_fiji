@@ -47,9 +47,6 @@ public class TensorFlowRunner {
 			final TensorInfo inputTensorInfo,
 			final TensorInfo outputTensorInfo ) throws Exception {
 
-//		System.out.println(
-//				"executeInceptionGraph with input shape " + Arrays.toString( image.shape() ) );
-
 		final Tensor output_t = model.session().runner() //
 				.feed( opName( inputTensorInfo ), image ) //
 				.fetch( opName( outputTensorInfo ) ) //
@@ -59,12 +56,12 @@ public class TensorFlowRunner {
 
 			if ( output_t.numDimensions() == 0 ) {
 				showError( "Output tensor has no dimensions" );
-				return null;
+				throw new Exception("Output tensor has no dimensions");
 			}
-
-			return output_t;
+		} else {
+			throw new NullPointerException("Output tensor is null");
 		}
-		return null;
+		return output_t;
 	}
 
 	/**

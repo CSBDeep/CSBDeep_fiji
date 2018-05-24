@@ -67,9 +67,21 @@ public class DatasetHelper {
 	}
 
 	public static void logDim(final Task task, final String title, final Interval img ) {
+		logDim(task, title, img, false);
+	}
+
+	public static void debugDim(final Task task, final String title, final Interval img ) {
+		logDim(task, title, img, true);
+	}
+
+	private static void logDim(final Task task, final String title, final Interval img, boolean debug ) {
 		final long[] dims = new long[ img.numDimensions() ];
 		img.dimensions( dims );
-		task.log( title + ": " + Arrays.toString( dims ) );
+		if(debug) {
+			task.debug( title + ": " + Arrays.toString( dims ) );
+		} else {
+			task.log( title + ": " + Arrays.toString( dims ) );
+		}
 	}
 
 }

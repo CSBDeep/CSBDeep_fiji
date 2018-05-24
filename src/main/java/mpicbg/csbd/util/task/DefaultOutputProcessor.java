@@ -80,7 +80,7 @@ public class DefaultOutputProcessor extends DefaultTask implements OutputProcess
 		if ( network.getOutputNode().numDimensions() < fittedResult.numDimensions() ) {
 			dim = fittedResult.numDimensions() - 1;
 		} else {
-			dim = network.getOutputNode().getDatasetDimensionIndex(
+			dim = network.getOutputNode().getDataset().dimensionIndex(
 					network.getOutputNode().getNodeAxis(
 							network.getOutputNode().getNodeShape().length - 1 ) );
 		}

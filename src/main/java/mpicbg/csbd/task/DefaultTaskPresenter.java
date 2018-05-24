@@ -108,6 +108,14 @@ public class DefaultTaskPresenter implements TaskPresenter, ActionListener {
 	}
 
 	@Override
+	public void debug( final String msg ) {
+		if(inUse()) {
+			progressWindow.addLog( msg );
+		}
+		logger.debug( msg );
+	}
+
+	@Override
 	public void log( final String msg ) {
 		if(inUse()) {
 			progressWindow.addLog( msg );

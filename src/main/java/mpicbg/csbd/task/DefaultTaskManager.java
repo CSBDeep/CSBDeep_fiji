@@ -8,7 +8,7 @@ import java.util.List;
 public class DefaultTaskManager implements TaskManager {
 
 	private final List< Task > tasks;
-	private final TaskPresenter taskPresenter;
+	protected final TaskPresenter taskPresenter;
 
 	public DefaultTaskManager(boolean headless, Logger logger) {
 		taskPresenter = new DefaultTaskPresenter( this, headless, logger);
@@ -32,6 +32,11 @@ public class DefaultTaskManager implements TaskManager {
 		for ( final Task task : tasks ) {
 			task.cancel();
 		}
+	}
+
+	@Override
+	public void debug( final String msg ) {
+		taskPresenter.debug( msg );
 	}
 
 	@Override

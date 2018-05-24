@@ -46,6 +46,7 @@ public abstract class DefaultNetwork implements Network {
 			final String modelName ) throws FileNotFoundException {
 
 		final Location source = IOHelper.loadFileOrURL( pathOrURL );
+		status.log("loading model " + modelName + " from source " + source.getURI());
 		return loadModel( source, modelName );
 
 	}
@@ -89,9 +90,7 @@ public abstract class DefaultNetwork implements Network {
 
 		while ( cursor.hasNext() ) {
 			final RandomAccessibleInterval< FloatType > tile = cursor.next();
-			//TODO fix logging
-//			printDim( "tile", tile );
-			//uiService.show(tile);
+
 			final Future< RandomAccessibleInterval< FloatType > > future =
 					pool.submit( new TileRunner( tile ) );
 

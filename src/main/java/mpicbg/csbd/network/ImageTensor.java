@@ -35,10 +35,6 @@ public class ImageTensor {
 		dataset.dimensions( dims );
 	}
 
-	public AxisType[] getAvailableAxes() {
-		return availableAxes;
-	}
-
 	public void setNodeShape( final long[] shape ) {
 
 		nodeShape = shape;
@@ -94,20 +90,6 @@ public class ImageTensor {
 	public Dataset getDataset() {
 		return dataset;
 	}
-
-//	public AxisType getLargestDatasetDim() {
-//		// Get the largest dimension and its size
-//		AxisType largestDim = null;
-//		long largestSize = 0;
-//		for ( int d = 0; d < getDataset().numDimensions(); d++ ) {
-//			final long dimSize = getDataset().dimension( d );
-//			if ( getDimType( d ).isXY() && dimSize > largestSize ) {
-//				largestSize = dimSize;
-//				largestDim = getDimType( d );
-//			}
-//		}
-//		return largestDim;
-//	}
 
 	public void initMapping() {
 		if ( !isMappingInitialized() ) {
@@ -185,13 +167,6 @@ public class ImageTensor {
 		return reducedZ;
 	}
 
-	public void permuteInputAxes( final int dim1, final int dim2 ) {
-		final CalibratedAxis a1 = dataset.axis( dim1 );
-		final CalibratedAxis a2 = dataset.axis( dim2 );
-		dataset.setAxis( a1, dim2 );
-		dataset.setAxis( a2, dim1 );
-	}
-
 	public void setMappingInitialized( final boolean mappingInitialized ) {
 		this.mappingInitialized = mappingInitialized;
 	}
@@ -215,7 +190,7 @@ public class ImageTensor {
 
 	public Long getDatasetDimSizeByNodeDim(final int nodeDim ) {
 		final Integer index = getDatasetDimIndexByTFIndex( nodeDim );
-		if ( index != null ) { return ( long ) index; }
+		if ( index != null ) { return dataset.dimension(index); }
 		return ( long ) 1;
 	}
 
@@ -235,11 +210,6 @@ public class ImageTensor {
 	public Integer getNodeDimByDatasetDim( final int datasetDim ) {
 		if ( dataset.numDimensions() > datasetDim ) { return nodeAxes.indexOf(
 				dataset.axis( datasetDim ).type() ); }
-		return -1;
-	}
-
-	public Integer getNodeDimByAxis( final AxisType type ) {
-		if ( nodeAxes.contains( type ) ) { return nodeAxes.indexOf( type ); }
 		return -1;
 	}
 
@@ -276,32 +246,6 @@ public class ImageTensor {
 
 	public List< AxisType > getNodeAxes() {
 		return nodeAxes;
-	}
-
-	public long getLargestDimSize() {
-		return dataset.dimension( getLargestDimIndex() );
-	}
-
-	public int getLargestDimIndex() {
-		// Get the largest dimension and its size
-		int largestDim = -1;
-		long largestSize = 0;
-		for ( int i = 0; i < dataset.numDimensions(); i++ ) {
-			final long dimSize = getDataset().dimension( i );
-			if ( dataset.axis( i ).type().isXY() && dimSize > largestSize ) {
-				largestSize = dimSize;
-				largestDim = i;
-			}
-		}
-		return largestDim;
-	}
-
-	public long getDatasetDimension( final int index ) {
-		return dataset.dimension( index );
-	}
-
-	public int getDatasetDimensionIndex( final AxisType axisType ) {
-		return dataset.dimensionIndex( axisType );
 	}
 
 }

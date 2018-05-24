@@ -40,6 +40,8 @@ public interface Task {
 
 	public void nextIteration();
 
+	public void debug( String msg );
+
 	public void log( String msg );
 
 	public void logError( String msg );

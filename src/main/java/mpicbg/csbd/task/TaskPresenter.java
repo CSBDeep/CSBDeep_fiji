@@ -20,6 +20,8 @@ public interface TaskPresenter {
 
 	public void setTaskStep(final int index, final int step);
 
+	public void debug( String msg );
+
 	public void log( String msg );
 
 	public void logError( String msg );

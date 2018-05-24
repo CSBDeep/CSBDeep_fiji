@@ -42,7 +42,7 @@ public class DefaultTask implements Task {
 	public void setStarted() {
 		started = true;
 		failed = false;
-		log(getClassName() + " started");
+		debug(getClassName() + " started");
 		updateManager();
 	}
 
@@ -50,7 +50,7 @@ public class DefaultTask implements Task {
 	public void setIdle() {
 		started = false;
 		failed = false;
-		log(getClassName() + " idle");
+		debug(getClassName() + " idle");
 
 		updateManager();
 	}
@@ -58,13 +58,13 @@ public class DefaultTask implements Task {
 	@Override
 	public void setFailed() {
 		failed = true;
-		log(getClassName() + " failed");
+		debug(getClassName() + " failed");
 		updateManager();
 	}
 
 	@Override
 	public void setFinished() {
-		log(getClassName() + " finished");
+		debug(getClassName() + " finished");
 		setFinished( true );
 	}
 
@@ -126,6 +126,15 @@ public class DefaultTask implements Task {
 	public void nextIteration() {
 		currentIteration++;
 		setFinished( false );
+	}
+
+	@Override
+	public void debug( final String msg ) {
+		if ( manager != null ) {
+			manager.debug( msg );
+		} else {
+			System.out.println( msg );
+		}
 	}
 
 	@Override

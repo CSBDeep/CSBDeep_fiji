@@ -93,7 +93,7 @@ public class NetIso extends CSBDeepCommand implements Command {
 	@Override
 	protected void initTiling() {
 		final int batchDim = network.getInputNode().getDatasetDimIndexByTFIndex( 0 );
-		final int channelDim = network.getInputNode().getDatasetDimensionIndex( Axes.CHANNEL );
+		final int channelDim = network.getInputNode().getDataset().dimensionIndex( Axes.CHANNEL );
 		tiling = new BatchedTiling( nTiles, 4, overlap, batchSize, batchDim, channelDim );
 	}
 
@@ -226,7 +226,7 @@ public class NetIso extends CSBDeepCommand implements Command {
 
 				//force the CHANNEL dim back to its original location
 				final int outputChannelDim =
-						network.getOutputNode().getDatasetDimensionIndex( Axes.CHANNEL );
+						network.getOutputNode().getDataset().dimensionIndex( Axes.CHANNEL );
 				for ( int dim = outputChannelDim + 1; dim < res1_pred.numDimensions(); dim++ ) {
 					res0_pred = Views.permute( res0_pred, dim, dim - 1 );
 					res1_pred = Views.permute( res1_pred, dim, dim - 1 );

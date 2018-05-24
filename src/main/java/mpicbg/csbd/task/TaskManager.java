@@ -8,6 +8,8 @@ public interface TaskManager {
 
 	public void cancel();
 
+	public void debug( String msg );
+
 	public void log( String msg );
 
 	public void logError( String msg );

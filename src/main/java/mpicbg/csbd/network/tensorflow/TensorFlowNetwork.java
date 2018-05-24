@@ -43,7 +43,6 @@ public class TensorFlowNetwork extends DefaultNetwork {
 		super(associatedTask);
 		this.tensorFlowService = tensorFlowService;
 		this.datasetService = datasetService;
-		//TODO better log system
 		log("imagej-tensorflow version: " + tensorFlowService.getVersion());
 		log("tensorflow version: " + TensorFlow.version());
 	}

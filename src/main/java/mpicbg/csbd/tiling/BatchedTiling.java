@@ -40,7 +40,6 @@ import java.util.List;
 
 public class BatchedTiling extends DefaultTiling {
 
-//	protected int batchesNum;
 	protected int batchSize;
 	protected int batchDim;
 	protected int channelDim;
@@ -67,12 +66,12 @@ public class BatchedTiling extends DefaultTiling {
 			final long[] padding,
 			final AxisType[] types) {
 
-		parent.log( "batchDim  : " + batchDim );
-		parent.log( "channelDim: " + channelDim );
+		parent.debug( "batchDim  : " + batchDim );
+		parent.debug( "channelDim: " + channelDim );
 
 		batchDimSize = tileSize[ batchDim ];
 
-		parent.log( "batchDimSize: " + batchDimSize );
+		parent.debug( "batchDimSize: " + batchDimSize );
 
 		long batchesNum = ( int ) Math.ceil( ( float ) batchDimSize / ( float ) batchSize );
 
@@ -111,8 +110,7 @@ public class BatchedTiling extends DefaultTiling {
 			arrangeAndCombineTiles(
 					final List< RandomAccessibleInterval< FloatType > > results,
 					final long[] grid ) {
-		//TODO get rid of system out
-		System.out.println( "grid: " + Arrays.toString( grid ) );
+		status.debug( "grid: " + Arrays.toString(grid) );
 		final RandomAccessibleInterval< FloatType > result =
 				new GridView<>( new ListImg<>( results, grid ) );
 		return result;

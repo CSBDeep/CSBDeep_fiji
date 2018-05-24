@@ -37,16 +37,13 @@ import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 import java.awt.*;
 import java.beans.PropertyChangeEvent;
-import java.beans.PropertyChangeListener;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
-public class CSBDeepProgress extends JPanel
-		implements
-		PropertyChangeListener {
+public class CSBDeepProgress extends JPanel {
 
 	private class GuiTask {
 
@@ -152,9 +149,6 @@ public class CSBDeepProgress extends JPanel
 		okButton = new JButton( "Ok" );
 		okButton.setEnabled( false );
 		cancelButton = new JButton( "Cancel" );
-		cancelButton.addActionListener(e -> {
-			//TODO
-		});
 
 		resetProgress();
 
@@ -219,18 +213,6 @@ public class CSBDeepProgress extends JPanel
 
 	private void updateGUI() {
 
-//		// TODO update progressbar
-//		boolean progressVisible = false;
-//		if(currentTask >= 0) {
-//			if(tasks.get(currentTask).numSteps > 1) {
-//				progressVisible = true;
-//
-//			}
-//		}
-//		progressBar.setVisible( progressVisible );
-//		progressBarSpace.setVisible( progressVisible );
-
-		//update OK and CANCEL buttons
 		boolean alldone = true;
 		for ( final GuiTask task : tasks) {
 			if ( !task.taskDone) alldone = false;
@@ -248,22 +230,6 @@ public class CSBDeepProgress extends JPanel
 		setCurrentStepStatus( STATUS_RUNNING );
 		updateGUI();
 	}
-
-//	public void setCurrentStepDone() {
-//		if ( currentTask >= 0 ) {
-//			tasks.get(currentTask).taskDone = true;
-//			setCurrentStepStatus( STATUS_DONE );
-//		}
-//		currentTaskFailing = false;
-//		currentTask = -1;
-//		updateGUI();
-//	}
-//
-//	public void setCurrentStepFail() {
-//		currentTaskFailing = true;
-//		setCurrentStepStatus( STATUS_FAIL );
-//		updateGUI();
-//	}
 
 	public void setTaskDone(final int task ) {
 		tasks.get(currentTask).taskDone = true;
@@ -334,19 +300,12 @@ public class CSBDeepProgress extends JPanel
 			taskOutput.invalidate();
 			this.invalidate();
 		} catch ( final BadLocationException exc ) {
-			// TODO Auto-generated catch block
 			exc.printStackTrace();
 		}
 	}
 
 	public void addError( final String data ) {
 		addLog( data, red );
-	}
-
-	@Override
-	public void propertyChange( final PropertyChangeEvent evt ) {
-		// TODO Auto-generated method stub
-
 	}
 
 	public static CSBDeepProgress create() {
@@ -366,14 +325,6 @@ public class CSBDeepProgress extends JPanel
 		final CSBDeepProgress newContentPane = new CSBDeepProgress( frame, usesTF );
 
 		return newContentPane;
-	}
-
-	public boolean getProgressBarDone() {
-		return progressBar.getValue() == progressBar.getMaximum();
-	}
-
-	public boolean getProgressBarStarting() {
-		return progressBar.getValue() == 0;
 	}
 
 	public void dispose() {

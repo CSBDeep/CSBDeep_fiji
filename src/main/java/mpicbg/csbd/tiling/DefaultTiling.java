@@ -47,15 +47,10 @@ import java.util.Map;
 
 public class DefaultTiling implements Tiling {
 
-//	protected RandomAccessibleInterval< FloatType > input;
-	
-//	protected Network network;
-
 	protected final int tilesNum;
 	protected int blockMultiple;
-//	protected long blockWidth;
 	protected int overlap;
-//	protected long largestSize;
+	protected Task status;
 
 	public DefaultTiling(
 			final int tilesNum,
@@ -66,19 +61,16 @@ public class DefaultTiling implements Tiling {
 		this.blockMultiple = blockMultiple;
 		this.overlap = overlap;
 
-//		this.network = network;
-
 	}
 
 	@Override
 	public AdvancedTiledView< FloatType > preprocess(RandomAccessibleInterval< FloatType > input, Dataset dataset, Task parent) {
 
+	    this.status = parent;
+
 		if ( input != null ) {
 
 			DatasetHelper.logDim(parent, "Image dimensions: ", input );
-
-//			final int largestDimIndex = getLargestDimIndex(dataset);
-//			final long largestSize = input.dimension( largestDimIndex );
 
 			AxisType[] axes = new AxisType[input.numDimensions()];
 			for(int i = 0; i < axes.length; i++) {
@@ -104,14 +96,12 @@ public class DefaultTiling implements Tiling {
 			}
 			
 			DatasetHelper.logDim(parent, "Final image tiling", tiledView);
-			parent.log( "Final tile padding: " + Arrays.toString( padding ) );
+			parent.debug( "Final tile padding: " + Arrays.toString( padding ) );
 
 			int steps = 1;
 			for(int i = 0; i < tiledView.numDimensions(); i++) {
 				steps *= tiledView.dimension(i);
 			}
-
-//			parent.setNumSteps( steps );
 
 			return tiledView;
 
@@ -156,20 +146,6 @@ public class DefaultTiling implements Tiling {
 		}
 	}
 	
-	protected static int getLargestDimIndex(Dataset dataset) {
-		// Get the largest dimension and its size
-		int largestDim = -1;
-		long largestSize = 0;
-		for ( int i = 0; i < dataset.numDimensions(); i++) {
-			final long dimSize = dataset.dimension( i );
-			if (dataset.axis( i ).type().isXY() && dimSize > largestSize ) {
-				largestSize = dimSize;
-				largestDim = i;
-			}
-		}
-		return largestDim;
-	}
-	
 	protected long[] getPadding(long[] tiling) {
 		long[] padding = new long[ tiling.length ];
 		for(int i = 0; i < padding.length; i++) {
@@ -202,19 +178,17 @@ public class DefaultTiling implements Tiling {
 	@Override
 	public RandomAccessibleInterval< FloatType > postprocess( Task parent, final AdvancedTiledView< FloatType > results, AxisType[] axisTypes ) {
 
-		parent.log( "POSTPROCESSING---------------------------------------" );
+		parent.log( "POSTPROCESSING" );
 		
 		List< RandomAccessibleInterval<FloatType> > resultData = results.getProcessedTiles();
 
 		if ( resultData != null && resultData.size() > 0 ) {
 
-			parent.setStarted();
-
 			RandomAccessibleInterval<FloatType> firstResult = resultData.get(0);
 
 			parent.log("output axes: " + Arrays.toString(axisTypes));
 
-			DatasetHelper.logDim(parent, "result 0 before padding removement", firstResult);
+			DatasetHelper.debugDim(parent, "result 0 before padding removement", firstResult);
 
 			long[] grid = new long[axisTypes.length];
 			Arrays.fill(grid, 1);
@@ -231,30 +205,20 @@ public class DefaultTiling implements Tiling {
 			}
 
 			//TODO log padding / test padding
-			DatasetHelper.logDim(parent, "result 0 after padding removement", firstResult);
+			DatasetHelper.debugDim(parent, "result 0 after padding removement", firstResult);
 
 			parent.log( "Merging tiles.." );
 
-			parent.log( "grid: " + Arrays.toString(grid) );
-
 			final RandomAccessibleInterval< FloatType > mergedResult = arrangeAndCombineTiles(resultData, grid);
 
-			DatasetHelper.logDim(parent, "merge", mergedResult);
-
+			DatasetHelper.debugDim(parent, "merge", mergedResult);
 			parent.log( "Crop to original size.." );
-
-			parent.log( "Output axes: " + Arrays.toString( axisTypes ) );
 
 			RandomAccessibleInterval< FloatType > fittedResult = undoExpansion(mergedResult, results.getOriginalDims(), axisTypes);
 
-			DatasetHelper.logDim(parent, "fittedResult dimensions", fittedResult );
+            parent.log( "Output axes: " + Arrays.toString( axisTypes ) );
+			DatasetHelper.debugDim(parent, "fittedResult dimensions", fittedResult );
 
-//			ImageJ ij = new ImageJ();
-//			ij.ui().show( "result", result );
-//			ij.ui().show( "fittedresult", fittedResult );
-//			ij.ui().show( "_expandedresult", expandedresult );
-
-//			parent.log( "Split result channels.." );
 			return fittedResult;
 		}
 
@@ -278,6 +242,7 @@ public class DefaultTiling implements Tiling {
 
 	protected RandomAccessibleInterval< FloatType >
 			arrangeAndCombineTiles( List< RandomAccessibleInterval< FloatType > > results, long[] grid ) {
+        status.debug( "grid: " + Arrays.toString(grid) );
 		// Arrange and combine the tiles again
 		final RandomAccessibleInterval< FloatType > result =
 				new GridView<>( new ListImg<>( results, grid ) );
@@ -286,13 +251,10 @@ public class DefaultTiling implements Tiling {
 	
 	protected RandomAccessibleInterval< FloatType >
 	undoExpansion( RandomAccessibleInterval< FloatType > result, Map< AxisType, Long > originalDims, AxisType[] outputAxes ) {
-//        int largestDim = network.getOutputNode().getLargestDimIndex();
-        RandomAccessibleInterval< FloatType > fittedResult = null; 
-//        		expandDimToSize( result, largestDim, largestSize );
-//        // undo Expand other dimensions to fit blockMultiple
+        RandomAccessibleInterval< FloatType > fittedResult = null;
         for ( int i = 0; i < result.numDimensions(); i++ ) {
         	AxisType axis = outputAxes[i];
-        	//TODO check this
+        	//TODO maybe implement this in a more dynamic way
         	if(axis != Axes.CHANNEL) {
         		long originalSize = originalDims.get( axis );
 				fittedResult = expandDimToSize( fittedResult == null ? result : fittedResult, i, originalSize );

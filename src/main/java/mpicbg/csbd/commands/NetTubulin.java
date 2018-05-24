@@ -66,7 +66,7 @@ public class NetTubulin extends CSBDeepCommand implements Command {
 	protected void initTiling() {
 		if ( getInput().numDimensions() == 3 ) {
 			final int batchDim = network.getInputNode().getDatasetDimIndexByTFIndex( 0 );
-			final int channelDim = network.getInputNode().getDatasetDimensionIndex( Axes.TIME );
+			final int channelDim = network.getInputNode().getDataset().dimensionIndex( Axes.TIME );
 			tiling = new BatchedTiling( nTiles, BLOCK_MULTIPLE, overlap, batchSize, batchDim, channelDim );
 		} else {
 			tiling = new DefaultTiling( nTiles, BLOCK_MULTIPLE, overlap );
@@ -117,7 +117,7 @@ public class NetTubulin extends CSBDeepCommand implements Command {
 		// ask the user for a file to open
 //		final File file = ij.ui().chooseFile( null, "open" );
 		final File file =
-				new File( "/home/random/Development/imagej/plugins/CSBDeep-data/net_tubulin/input2.tif" );
+				new File( "/home/random/Development/imagej/plugins/CSBDeep-data/net_tubulin/input.tif" );
 
 		if ( file != null && file.exists() ) {
 			// load the dataset
