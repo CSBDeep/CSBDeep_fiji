@@ -149,12 +149,6 @@ public class TensorFlowNetwork extends DefaultNetwork {
 	private void generateMapping() {
 		inputNode.generateMapping();
 		outputNode.generateMapping();
-
-		//TODO fix logging
-		log( "INPUT NODE: " );
-		inputNode.printMapping();
-		log( "OUTPUT NODE: " );
-		outputNode.printMapping();
 	}
 
 	private void handleDimensionReduction() {

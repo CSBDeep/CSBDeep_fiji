@@ -20,8 +20,6 @@ public class DefaultModelLoader extends DefaultTask implements ModelLoader {
 
 		setStarted();
 
-		log( "Loading model " + modelName + ".. " );
-
 		if ( !network.isInitialized() ) {
 			loadNetwork( modelName, network, modelFileUrl, inputNodeName, outputNodeName, input );
 			if ( !network.isInitialized() ) {

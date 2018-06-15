@@ -128,7 +128,7 @@ public class NetIso extends CSBDeepCommand implements Command {
 			final RandomAccessibleInterval< FloatType > upsampled =
 					upsample( inputRai, dimZ, scale );
 
-			DatasetHelper.logDim( this, "upsampled:", upsampled );
+			DatasetHelper.logDim( this, "Upsampled", upsampled );
 
 			final RandomAccessibleInterval< FloatType > rotated0 =
 					Views.permute( upsampled, dimX, dimZ );
@@ -146,8 +146,8 @@ public class NetIso extends CSBDeepCommand implements Command {
 			output.add( rotated0_applied );
 			output.add( rotated1_applied );
 
-			DatasetHelper.logDim( this, "rotated0_applied", rotated0_applied );
-			DatasetHelper.logDim( this, "rotated1_applied", rotated1_applied );
+			DatasetHelper.logDim( this, "Input #1 (Z-X rotated)", rotated0_applied );
+			DatasetHelper.logDim( this, "Input #2 (Z-X and Z-Y rotated)", rotated1_applied );
 
 			setFinished();
 
@@ -221,8 +221,8 @@ public class NetIso extends CSBDeepCommand implements Command {
 				RandomAccessibleInterval< FloatType > res1_pred =
 						Views.stack( result1.get( i ), result1.get( i + 1 ) );
 
-				DatasetHelper.logDim( this, "res0_pred", res0_pred );
-				DatasetHelper.logDim( this, "res1_pred", res1_pred );
+				DatasetHelper.logDim( this, "Output #1", res0_pred );
+				DatasetHelper.logDim( this, "Output #2", res1_pred );
 
 				//force the CHANNEL dim back to its original location
 				final int outputChannelDim =
@@ -231,9 +231,6 @@ public class NetIso extends CSBDeepCommand implements Command {
 					res0_pred = Views.permute( res0_pred, dim, dim - 1 );
 					res1_pred = Views.permute( res1_pred, dim, dim - 1 );
 				}
-
-				DatasetHelper.logDim( this, "res0_pred", res0_pred );
-				DatasetHelper.logDim( this, "res1_pred", res1_pred );
 
 				final int dimX = dataset.dimensionIndex( Axes.X );
 				final int dimY = dataset.dimensionIndex( Axes.Y );
@@ -244,8 +241,8 @@ public class NetIso extends CSBDeepCommand implements Command {
 				res1_pred = Views.permute( res1_pred, dimY, dimZ );
 				res1_pred = Views.permute( res1_pred, dimX, dimZ );
 
-				DatasetHelper.logDim( this, "res0_pred rotated back", res0_pred );
-				DatasetHelper.logDim( this, "res1_pred rotated back", res1_pred );
+				DatasetHelper.logDim( this, "Output #1 (original rotation)", res0_pred );
+				DatasetHelper.logDim( this, "Output #2 (original rotation)", res1_pred );
 
 				log( "Merge output stacks.." );
 
@@ -256,7 +253,7 @@ public class NetIso extends CSBDeepCommand implements Command {
 						res0_pred,
 						res1_pred,
 						prediction );
-				DatasetHelper.logDim( this, "prediction", prediction );
+				DatasetHelper.logDim( this, "Merged output", prediction );
 
 				output.add(
 						wrapIntoDataset(

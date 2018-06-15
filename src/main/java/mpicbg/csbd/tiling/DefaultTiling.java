@@ -70,8 +70,6 @@ public class DefaultTiling implements Tiling {
 
 		if ( input != null ) {
 
-			DatasetHelper.logDim(parent, "Image dimensions: ", input );
-
 			AxisType[] axes = new AxisType[input.numDimensions()];
 			for(int i = 0; i < axes.length; i++) {
 				axes[i] = dataset.axis(i).type();

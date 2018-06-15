@@ -240,7 +240,6 @@ public class ImageTensor {
 		for ( int i = 0; i < newmapping.length; i++ ) {
 			nodeAxes.add( newmapping[ i ] );
 		}
-		System.out.println( "Setting manual mapping:" );
 		printMapping();
 	}
 
