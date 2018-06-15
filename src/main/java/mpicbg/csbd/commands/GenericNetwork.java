@@ -109,7 +109,7 @@ public class GenericNetwork extends CSBDeepCommand implements Command {
 
 	@Override
 	protected void setupNormalizer() {
-		((DefaultInputNormalizer)inputNormalizer).getNormalizer().setup(percentileBottom, percentileTop, min, max, clamp);
+		((DefaultInputNormalizer)inputNormalizer).getNormalizer().setup(new float[]{percentileBottom, percentileTop}, new float[]{min, max}, clamp);
 	}
 
 	@Override

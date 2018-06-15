@@ -51,10 +51,12 @@ import mpicbg.csbd.util.task.InputProcessor;
 import mpicbg.csbd.util.task.OutputProcessor;
 import net.imagej.Dataset;
 import net.imagej.DatasetService;
+import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
 import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
 import org.scijava.Cancelable;
@@ -89,6 +91,9 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 	@Parameter
 	protected UIService uiService;
 
+	@Parameter
+	protected ImageJ ij;
+
 	@Parameter( label = "Number of tiles", min = "1" )
 	protected int nTiles = 8;
 
@@ -102,7 +107,7 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 	protected String modelName;
 	protected String inputNodeName = "input";
 	protected String outputNodeName = "output";
-	protected int blockMultiple = 32;
+	protected int blockMultiple = 8;
 
 	protected TaskManager taskManager;
 
@@ -208,10 +213,15 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 		final List< RandomAccessibleInterval< FloatType > > normalizedInput;
 		if(doInputNormalization()) {
 			setupNormalizer();
-			normalizedInput = inputNormalizer.run( processedInput );
+			normalizedInput = inputNormalizer.run( processedInput, ij );
 		} else {
 			normalizedInput = processedInput;
 		}
+
+		log( "INPUT NODE: " );
+		network.getInputNode().printMapping();
+		log( "OUTPUT NODE: " );
+		network.getOutputNode().printMapping();
 
 		initTiling();
 		try {
@@ -220,7 +230,6 @@ public abstract class CSBDeepCommand implements Cancelable, Initializable, Dispo
 			final List< RandomAccessibleInterval< FloatType > > output =
 					outputTiler.run( tiledOutput, tiling, getAxesArray( network.getOutputNode() ) );
 			for(AdvancedTiledView obj : tiledOutput) {
-				//TODO check if this is needed
 				obj.dispose();
 			}
 			this.output.clear();

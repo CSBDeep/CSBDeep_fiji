@@ -3,6 +3,7 @@ package mpicbg.csbd.normalize.task;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import net.imagej.ImageJ;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
 
@@ -15,12 +16,12 @@ public class DefaultInputNormalizer extends DefaultTask implements InputNormaliz
 
 	@Override
 	public List< RandomAccessibleInterval< FloatType > >
-			run( final List< RandomAccessibleInterval< FloatType > > input ) {
+			run( final List< RandomAccessibleInterval< FloatType > > input, ImageJ ij ) {
 
 		setStarted();
 
 		final List< RandomAccessibleInterval< FloatType > > output =
-				input.stream().map( image -> normalizeInput( image ) ).collect(
+				input.stream().map( image -> normalizeInput( image, ij ) ).collect(
 						Collectors.toList() );
 
 		setFinished();
@@ -30,11 +31,11 @@ public class DefaultInputNormalizer extends DefaultTask implements InputNormaliz
 	}
 
 	protected RandomAccessibleInterval< FloatType >
-			normalizeInput( final RandomAccessibleInterval< FloatType > input ) {
+			normalizeInput( final RandomAccessibleInterval< FloatType > input, ImageJ ij ) {
 
 		log( "Normalize [" + normalizer.getInputParameterInfo() + "] .. " );
 
-		return normalizer.normalize( input );
+		return normalizer.normalize( input, ij );
 	}
 
 	public PercentileNormalizer<FloatType> getNormalizer() {

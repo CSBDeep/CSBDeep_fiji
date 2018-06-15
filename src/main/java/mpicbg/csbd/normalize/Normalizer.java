@@ -28,24 +28,17 @@
  */
 package mpicbg.csbd.normalize;
 
-import net.imagej.Dataset;
+import net.imagej.ImageJ;
 import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 
-import org.scijava.ui.UIService;
-
 public interface Normalizer< T extends RealType< T > > {
 
-	void prepareNormalization( IterableInterval< T > input );
+	T normalize(T val);
 
-	void testNormalization( Dataset input, UIService uiService );
+	Img<FloatType> normalize(final RandomAccessibleInterval<T> im, ImageJ ij);
 
-	float normalize( float val );
-
-	Img< FloatType > normalizeAfterPreparation( RandomAccessibleInterval< T > im );
-
-	Img< FloatType > normalize( RandomAccessibleInterval< T > im );
 }

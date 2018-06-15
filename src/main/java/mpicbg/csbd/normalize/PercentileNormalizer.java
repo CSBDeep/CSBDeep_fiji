@@ -29,6 +29,7 @@
 package mpicbg.csbd.normalize;
 
 import net.imagej.Dataset;
+import net.imagej.ImageJ;
 import net.imglib2.Cursor;
 import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccess;
@@ -36,132 +37,105 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.img.Img;
 import net.imglib2.img.ImgFactory;
 import net.imglib2.img.array.ArrayImgFactory;
+import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Util;
 
+import net.imglib2.view.Views;
+import org.apache.commons.math3.stat.descriptive.rank.Percentile;
 import org.scijava.ui.UIService;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class PercentileNormalizer< T extends RealType< T > > implements Normalizer< T > {
 
-	protected float percentileBottom = 0.03f;
+	protected float[] percentiles;
+	protected float[] destValues;
+	protected boolean clamp;
 
-	protected float percentileTop = 0.998f;
+	private T min;
+	private T max;
+	private T percentileBottomVal, percentileTopVal;
+	private T factor;
 
+	private static < T extends RealType< T > > List<T>
+			percentiles( final IterableInterval< T > d, final float[] percentiles, ImageJ ij ) {
 
-	protected float min = 0;
+//		Percentile percentile = new Percentile();
 
-	protected float max = 1;
-
-	protected boolean clamp = false;
-
-	protected float percentileBottomVal, percentileTopVal;
-
-	protected float factor;
-
-	@Override
-	public void testNormalization( final Dataset input, final UIService uiService ) {
-		final Dataset dcopy = ( Dataset ) input.copy();
-		final Cursor< RealType< ? > > cursor = dcopy.cursor();
-		//		System.out.println( "percentiles: " + percentileBottomVal + " -> " + percentileTopVal );
-		factor = ( max - min ) / ( percentileTopVal - percentileBottomVal );
-		if ( clamp ) {
-			while ( cursor.hasNext() ) {
-				final float val = cursor.next().getRealFloat();
-				cursor.get().setReal(
-						Math.max(
-								min,
-								Math.min(
-										max,
-										( val - percentileBottomVal ) * factor + min ) ) );
-			}
-		} else {
-			while ( cursor.hasNext() ) {
-				final float val = cursor.next().getRealFloat();
-				cursor.get().setReal(
-						Math.max( 0, ( val - percentileBottomVal ) * factor + min ) );
-			}
-		}
-		dcopy.setName( "normalized_" + input.getName() );
-		uiService.show( dcopy );
-	}
-
-	@Override
-	public void prepareNormalization( final IterableInterval< T > input ) {
-		final float[] ps =
-				percentiles( input, new float[] { percentileBottom, percentileTop } );
-		percentileBottomVal = ps[ 0 ];
-		percentileTopVal = ps[ 1 ];
-		factor = ( max - min ) / ( percentileTopVal - percentileBottomVal );
-	}
-
-	protected static < T extends RealType< T > > float[]
-			percentiles( final IterableInterval< T > d, final float[] percentiles ) {
-		final Cursor< T > cursor = d.cursor();
-		int items = 1;
-		int i = 0;
-		for ( ; i < d.numDimensions(); i++ ) {
-			items *= d.dimension( i );
-		}
-		final float[] values = new float[ items ];
-		i = 0;
-		while ( cursor.hasNext() ) {
-			cursor.fwd();
-			values[ i ] = cursor.get().getRealFloat();
-			i++;
-		}
-
-		Util.quicksort( values );
-
-		final float[] res = new float[ percentiles.length ];
-		for ( i = 0; i < percentiles.length; i++ ) {
-			res[ i ] = values[ Math.min(
-					values.length - 1,
-					Math.max( 0, Math.round( ( values.length - 1 ) * percentiles[ i ] ) ) ) ];
+		final List<T> res = new ArrayList<>();
+		for ( int i = 0; i < percentiles.length; i++ ) {
+			T resi = d.firstElement().copy();
+			ij.op().stats().percentile(resi, d, (double)percentiles[i]);
+			res.add(resi);
 		}
 
 		return res;
 	}
 
 	@Override
-	public float normalize( final float val ) {
-		if ( clamp ) { return Math.max(
-				min,
-				Math.min( max, ( val - percentileBottomVal ) * factor + min ) ); }
-		return Math.max( 0, ( val - percentileBottomVal ) * factor + min );
+	public T normalize( final T val ) {
+		if(clamp) {
+			if(val.compareTo(min) < 0) {
+				return min.copy();
+			}
+			if(val.compareTo(max) > 0) {
+				return max.copy();
+			}
+		}
+		T res = val.copy();
+		res.sub(percentileBottomVal);
+		res.mul(factor);
+		res.add(min);
+		return res;
 	}
 
 	@Override
-	public Img< FloatType > normalizeAfterPreparation( final RandomAccessibleInterval< T > im ) {
-		final ImgFactory< FloatType > factory = new ArrayImgFactory<>();
-		final Img< FloatType > output = factory.create( im, new FloatType() );
+	public Img< FloatType > normalize( final RandomAccessibleInterval< T > im, ImageJ ij ) {
 
-		final RandomAccess< T > in = im.randomAccess();
-		final Cursor< FloatType > out = output.localizingCursor();
-		while ( out.hasNext() ) {
-			out.fwd();
-			in.setPosition( out );
-			out.get().set( normalize( in.get().getRealFloat() ) );
-		}
+		IterableInterval<T> iterable = ( IterableInterval< T > ) im;
+		Cursor<T> cursor = Views.flatIterable(im).cursor();
+		cursor.fwd();
+		min = cursor.get().copy();
+		min.setReal(destValues[0]);
+		max = min.copy();
+		max.setReal(destValues[1]);
 
+//		final List<T> ps =
+//				percentiles( iterable, percentiles, ij );
+//		percentileBottomVal = ps.get(0);
+//		percentileTopVal = ps.get(1);
+//		T resDiff = max.copy();
+//		resDiff.sub(min);
+//		T srcDiff = percentileTopVal.copy();
+//		srcDiff.sub(percentileBottomVal);
+//		factor = resDiff.copy();
+//		factor.div(srcDiff);
+
+		final Img< FloatType > output = new ArrayImgFactory<>(new FloatType()).create( im );
+
+//		final RandomAccess< T > in = im.randomAccess();
+//		final Cursor< FloatType > out = output.localizingCursor();
+//		while ( out.hasNext() ) {
+//			out.fwd();
+//			in.setPosition( out );
+//			out.get().set( normalize( in.get() ).getRealFloat() );
+//		}
 		return output;
 	}
 
-	@Override
-	public Img< FloatType > normalize( final RandomAccessibleInterval< T > im ) {
-		prepareNormalization( ( IterableInterval< T > ) im );
-		return normalizeAfterPreparation( im );
-	}
-
 	public String getInputParameterInfo() {
-		return percentileBottom + " - " + percentileTop + " -> " + min + " - " + max;
+		return percentiles[0] + " - " + percentiles[1] + " -> " + destValues[0] + " - " + destValues[1];
 	}
 
-	public void setup(float percentileBottom, float percentileTop, float min, float max, boolean clamp) {
-		this.percentileBottom = percentileBottom;
-		this.percentileTop = percentileTop;
-		this.min = min;
-		this.max = max;
+	public void setup(final float[] percentiles, final float[] destValues, boolean clamp) {
+		assert(percentiles.length == 2);
+		assert(destValues.length == 2);
+		this.percentiles = percentiles;
+		this.destValues = destValues;
 		this.clamp = clamp;
 	}
+
 }
