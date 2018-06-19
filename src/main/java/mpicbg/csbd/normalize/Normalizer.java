@@ -39,6 +39,6 @@ public interface Normalizer< T extends RealType< T > > {
 
 	T normalize(T val);
 
-	Img<FloatType> normalize(final RandomAccessibleInterval<T> im, ImageJ ij);
+	Img<T> normalize(final RandomAccessibleInterval<T> im, ImageJ ij);
 
 }

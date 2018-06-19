@@ -52,9 +52,9 @@ public class GenericNetwork extends CSBDeepCommand implements Command {
 	@Parameter
 	protected boolean normalizeInput = true;
 	@Parameter
-	protected float percentileBottom = 0.03f;
+	protected double percentileBottom = 0.03f;
 	@Parameter
-	protected float percentileTop = 0.998f;
+	protected double percentileTop = 0.998f;
 
 	protected float min = 0;
 	protected float max = 1;
@@ -109,7 +109,7 @@ public class GenericNetwork extends CSBDeepCommand implements Command {
 
 	@Override
 	protected void setupNormalizer() {
-		((DefaultInputNormalizer)inputNormalizer).getNormalizer().setup(new float[]{percentileBottom, percentileTop}, new float[]{min, max}, clamp);
+		((DefaultInputNormalizer)inputNormalizer).getNormalizer().setup(new double[]{percentileBottom, percentileTop}, new float[]{min, max}, clamp);
 	}
 
 	@Override
