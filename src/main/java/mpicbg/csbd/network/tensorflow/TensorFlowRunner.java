@@ -26,11 +26,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package mpicbg.csbd.tensorflow;
 
-import java.util.Arrays;
+package mpicbg.csbd.network.tensorflow;
 
-import javax.swing.JOptionPane;
+import javax.swing.*;
 
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
@@ -42,33 +41,27 @@ public class TensorFlowRunner {
 	 * runs graph on input tensor
 	 * converts result tensor to dataset
 	 */
-	public static Tensor executeGraph(
-			final SavedModelBundle model,
-			final Tensor image,
-			final TensorInfo inputTensorInfo,
-			final TensorInfo outputTensorInfo ) throws Exception {
+	public static Tensor executeGraph(final SavedModelBundle model,
+		final Tensor image, final TensorInfo inputTensorInfo,
+		final TensorInfo outputTensorInfo) throws Exception
+	{
 
-		System.out.println(
-				"executeInceptionGraph with input shape " + Arrays.toString( image.shape() ) );
+		final Tensor output_t = model.session().runner() //
+			.feed(opName(inputTensorInfo), image) //
+			.fetch(opName(outputTensorInfo)) //
+			.run().get(0);
 
-		final Tensor output_t = model
-				.session()
-				.runner() //
-				.feed( opName( inputTensorInfo ), image ) //
-				.fetch( opName( outputTensorInfo ) ) //
-				.run()
-				.get( 0 );
+		if (output_t != null) {
 
-		if ( output_t != null ) {
-
-			if ( output_t.numDimensions() == 0 ) {
-				showError( "Output tensor has no dimensions" );
-				return null;
+			if (output_t.numDimensions() == 0) {
+				showError("Output tensor has no dimensions");
+				throw new Exception("Output tensor has no dimensions");
 			}
-
-			return output_t;
 		}
-		return null;
+		else {
+			throw new NullPointerException("Output tensor is null");
+		}
+		return output_t;
 	}
 
 	/**
@@ -77,18 +70,17 @@ public class TensorFlowRunner {
 	 * {@code <output_index>} is always 0. This function trims the {@code :0}
 	 * suffix to get the operation name.
 	 */
-	private static String opName( final TensorInfo t ) {
+	private static String opName(final TensorInfo t) {
 		final String n = t.getName();
-		if ( n.endsWith( ":0" ) ) { return n.substring( 0, n.lastIndexOf( ":0" ) ); }
+		if (n.endsWith(":0")) {
+			return n.substring(0, n.lastIndexOf(":0"));
+		}
 		return n;
 	}
 
-	public static void showError( final String errorMsg ) {
-		JOptionPane.showMessageDialog(
-				null,
-				errorMsg,
-				"Error",
-				JOptionPane.ERROR_MESSAGE );
+	public static void showError(final String errorMsg) {
+		JOptionPane.showMessageDialog(null, errorMsg, "Error",
+			JOptionPane.ERROR_MESSAGE);
 	}
 
 }

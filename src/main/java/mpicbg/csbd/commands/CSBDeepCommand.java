@@ -26,16 +26,10 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
+
 package mpicbg.csbd.commands;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.io.File;
 import java.io.IOException;
-import java.net.MalformedURLException;
-import java.net.URISyntaxException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -43,335 +37,399 @@ import java.util.OptionalLong;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
-import javax.swing.JOptionPane;
+import javax.swing.*;
 
+import org.scijava.*;
+import org.scijava.log.LogService;
+import org.scijava.plugin.Parameter;
+import org.scijava.ui.UIService;
+
+import mpicbg.csbd.network.ImageTensor;
+import mpicbg.csbd.network.Network;
+import mpicbg.csbd.network.task.*;
+import mpicbg.csbd.network.tensorflow.TensorFlowNetwork;
+import mpicbg.csbd.normalize.task.DefaultInputNormalizer;
+import mpicbg.csbd.normalize.task.InputNormalizer;
+import mpicbg.csbd.task.Task;
+import mpicbg.csbd.task.TaskForceManager;
+import mpicbg.csbd.task.TaskManager;
+import mpicbg.csbd.tiling.AdvancedTiledView;
+import mpicbg.csbd.tiling.DefaultTiling;
+import mpicbg.csbd.tiling.Tiling;
+import mpicbg.csbd.tiling.task.DefaultInputTiler;
+import mpicbg.csbd.tiling.task.DefaultOutputTiler;
+import mpicbg.csbd.tiling.task.InputTiler;
+import mpicbg.csbd.tiling.task.OutputTiler;
+import mpicbg.csbd.util.DatasetHelper;
+import mpicbg.csbd.util.task.DefaultInputProcessor;
+import mpicbg.csbd.util.task.DefaultOutputProcessor;
+import mpicbg.csbd.util.task.InputProcessor;
+import mpicbg.csbd.util.task.OutputProcessor;
 import net.imagej.Dataset;
 import net.imagej.DatasetService;
-import net.imagej.ImgPlus;
+import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
-import net.imagej.display.DatasetView;
-import net.imagej.display.DefaultDatasetView;
+import net.imagej.ops.OpService;
 import net.imagej.tensorflow.TensorFlowService;
-import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.img.ImgView;
-import net.imglib2.img.array.ArrayImgFactory;
-import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.util.Intervals;
 
-import org.scijava.Cancelable;
-import org.scijava.Initializable;
-import org.scijava.ItemIO;
-import org.scijava.io.http.HTTPLocation;
-import org.scijava.io.location.FileLocation;
-import org.scijava.io.location.Location;
-import org.scijava.log.LogService;
-import org.scijava.plugin.Parameter;
-import org.scijava.ui.UIService;
-import org.tensorflow.SavedModelBundle;
-import org.tensorflow.TensorFlowException;
-import org.tensorflow.framework.MetaGraphDef;
-import org.tensorflow.framework.SignatureDef;
+public abstract class CSBDeepCommand<T extends RealType<T>> implements
+	Cancelable, Initializable, Disposable
+{
 
-import mpicbg.csbd.normalize.PercentileNormalizer;
-import mpicbg.csbd.tensorflow.DatasetTensorBridge;
-import mpicbg.csbd.ui.CSBDeepProgress;
-
-public abstract class CSBDeepCommand< T extends RealType< T > > extends PercentileNormalizer< T >
-		implements
-		Cancelable,
-		Initializable,
-		ActionListener {
-
-	protected static String[] OUTPUT_NAMES = { "result" };
-
-	/* extracted from the dataset view */
-	protected Dataset input;
-
-	@Parameter( label = "input data", type = ItemIO.INPUT, initializer = "processDataset" )
-	protected DatasetView datasetView;
-
-	@Parameter
-	protected TensorFlowService tensorFlowService;
+	@Parameter(type = ItemIO.INPUT, initializer = "processDataset")
+	public Dataset input;
 
 	@Parameter
 	protected LogService log;
 
 	@Parameter
-	protected UIService uiService;
+	protected TensorFlowService tensorFlowService;
 
 	@Parameter
 	protected DatasetService datasetService;
 
-	@Parameter( label = "Number of tiles", min = "1" )
+	@Parameter
+	protected UIService uiService;
+
+	@Parameter
+	protected OpService opService;
+
+	@Parameter(label = "Number of tiles", min = "1")
 	protected int nTiles = 8;
 
-	@Parameter( label = "Overlap between tiles", min = "0", stepSize = "16" )
+	@Parameter(label = "Overlap between tiles", min = "0", stepSize = "16")
 	protected int overlap = 32;
 
-	@Parameter( type = ItemIO.OUTPUT, label = "result" )
-	protected List< DatasetView > resultDatasets;
+	@Parameter(type = ItemIO.OUTPUT)
+	protected List<Dataset> output = new ArrayList<>();
 
 	protected String modelFileUrl;
 	protected String modelName;
 	protected String inputNodeName = "input";
 	protected String outputNodeName = "output";
-	protected int blockMultiple = 32;
+	protected int blockMultiple = 8;
 
-	protected SignatureDef sig;
+	protected TaskManager taskManager;
 
-	protected SavedModelBundle model;
-	protected DatasetTensorBridge bridge;
-	protected boolean processedDataset = false;
-	private boolean useTensorFlowGPU = true;
+	protected Network network;
+	protected Tiling tiling;
 
-	protected CSBDeepProgress progressWindow;
+	protected InputProcessor inputProcessor;
+	protected InputMapper inputMapper;
+	protected InputNormalizer inputNormalizer;
+	protected InputTiler inputTiler;
+	protected ModelLoader modelLoader;
+	protected ModelExecutor modelExecutor;
+	protected OutputTiler outputTiler;
+	protected OutputProcessor outputProcessor;
 
-	protected ExecutorService pool = Executors.newSingleThreadExecutor();
-	protected List< TiledPrediction > predictions = new ArrayList<>();
+	protected boolean initialized = false;
 
-	private AxisType[] mapping;
-
-	private static final String MODEL_TAG = "serve";
-	// Same as
-	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
-	// in Python. Perhaps this should be an exported constant in TensorFlow's Java
-	// API.
-	protected static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY = "serving_default";
+	private ExecutorService pool = null;
+	private Future<?> future;
 
 	@Override
 	public void initialize() {
-		System.out.println( "Loading tensorflow jni from library path..." );
-		try {
-			System.loadLibrary( "tensorflow_jni" );
-		} catch ( final UnsatisfiedLinkError e ) {
-			useTensorFlowGPU = false;
-			System.out.println(
-					"Couldn't load tensorflow from library path:" );
-			System.out.println( e.getMessage() );
-			System.out.println( "If the problem is CUDA related. Make sure CUDA and cuDNN are in the LD_LIBRARY_PATH." );
-			System.out.println( "The current library path is: LD_LIBRARY_PATH=" + System.getenv( "LD_LIBRARY_PATH" ) );
-			System.out.println( "Using CPU version from jar file." );
+		initialized = true;
+		initTasks();
+		initTaskManager();
+		initNetwork();
+	}
+
+	protected void tryToInitialize() {
+		if (!initialized) {
+			initialize();
 		}
 	}
 
-	/** Executed whenever the {@link #input} parameter changes. */
-	protected void processDataset() {
-		input = datasetView.getData();
-		if ( !processedDataset ) {
-			if ( input != null ) {
-				bridge = new DatasetTensorBridge( input );
-				processedDataset = true;
-			}
-		}
-
-	}
-
-	/*
-	 * model can be imported via savedmodel
-	 */
-	protected boolean loadModel() throws MalformedURLException, URISyntaxException {
-
-//		System.out.println("loadGraph");
-
-		final File file = new File( modelFileUrl );
-		Location source;
-		if ( !file.exists() ) {
-			source = new HTTPLocation( modelFileUrl );
-		} else {
-			source = new FileLocation( file );
-		}
-		try {
-			model = tensorFlowService.loadModel( source, modelName, MODEL_TAG );
-		} catch ( TensorFlowException | IOException e ) {
-			e.printStackTrace();
+	protected boolean initNetwork() {
+		network = new TensorFlowNetwork(tensorFlowService, datasetService,
+			modelExecutor);
+		if(network.libraryLoaded()) {
+			network.testGPUSupport();
+			if(!network.supportsGPU()) taskManager.noGPUFound();
+		}else {
 			return false;
 		}
 		return true;
 	}
 
-	protected void modelChanged() {
+	protected void initTasks() {
+		inputMapper = initInputMapper();
+		inputProcessor = initInputProcessor();
+		inputNormalizer = initInputNormalizer();
+		inputTiler = initInputTiler();
+		modelLoader = initModelLoader();
+		modelExecutor = initModelExecutor();
+		outputTiler = initOutputTiler();
+		outputProcessor = initOutputProcessor();
+	}
 
-//		System.out.println("modelChanged");
+	protected void initTaskManager() {
+		final TaskForceManager tfm = new TaskForceManager(isHeadless(), log);
+		tfm.initialize();
+		tfm.createTaskForce("Preprocessing", modelLoader, inputMapper,
+			inputProcessor, inputNormalizer);
+		tfm.createTaskForce("Tiling", inputTiler);
+		tfm.createTaskForce("Execution", modelExecutor);
+		tfm.createTaskForce("Postprocessing", outputTiler, outputProcessor);
+		taskManager = tfm;
+	}
 
-		processDataset();
+	protected InputMapper initInputMapper() {
+		return new DefaultInputMapper();
+	}
 
-		if ( input == null ) { return; }
+	protected InputProcessor initInputProcessor() {
+		return new DefaultInputProcessor();
+	}
 
-		try {
-			if ( loadModel() ) {
+	protected InputNormalizer initInputNormalizer() {
+		return new DefaultInputNormalizer();
+	}
 
-				// Extract names from the model signature.
-				// The strings "input", "probabilities" and "patches" are meant to be
-				// in sync with the model exporter (export_saved_model()) in Python.
-				try {
-					sig = MetaGraphDef.parseFrom( model.metaGraphDef() ).getSignatureDefOrThrow(
-							DEFAULT_SERVING_SIGNATURE_DEF_KEY );
-				} catch ( final InvalidProtocolBufferException e ) {
-//					e.printStackTrace();
-				}
-				if ( sig != null && sig.isInitialized() ) {
-					if ( sig.getInputsCount() > 0 ) {
-						inputNodeName = sig.getInputsMap().keySet().iterator().next();
-						if ( bridge != null ) {
-							bridge.setInputTensor( sig.getInputsOrThrow( inputNodeName ) );
-						}
-					}
-					if ( sig.getOutputsCount() > 0 ) {
-						outputNodeName = sig.getOutputsMap().keySet().iterator().next();
-						if ( bridge != null ) {
-							bridge.setOutputTensor( sig.getOutputsOrThrow( outputNodeName ) );
-						}
-					}
-					if ( bridge != null && !bridge.isMappingInitialized() ) {
-						bridge.setMappingDefaults();
-					}
-				}
+	protected InputTiler initInputTiler() {
+		return new DefaultInputTiler();
+	}
 
-			}
-		} catch ( MalformedURLException | URISyntaxException exc ) {
-			exc.printStackTrace();
-		}
+	protected ModelLoader initModelLoader() {
+		return new DefaultModelLoader();
+	}
+
+	protected ModelExecutor initModelExecutor() {
+		return new DefaultModelExecutor();
+	}
+
+	protected OutputTiler initOutputTiler() {
+		return new DefaultOutputTiler();
+	}
+
+	protected OutputProcessor initOutputProcessor() {
+		return new DefaultOutputProcessor();
 	}
 
 	public void run() {
-		runInternal();
-		freeResources();
-	}
 
-	/**
-	 * Executes the model on the given input.
-	 * Override this method if running the model requires some special pre- and/or
-	 * postprocessing.
-	 */
-	protected void runInternal() {
-		if ( input == null ) { return; }
-		modelChanged();
-		updateBridge();
-		initGui();
-		initModel();
-		progressWindow.setStepStart( CSBDeepProgress.STEP_PREPROCRESSING );
-		executeModel( normalizeInput() );
-	}
+		if (noInputData()) return;
 
-	protected void setMapping( final AxisType[] mapping ) {
-		this.mapping = mapping;
-	}
+		pool = Executors.newSingleThreadExecutor();
 
-	public void updateBridge() {
-		if ( mapping != null && bridge != null ) {
-			if ( bridge.getInputTensorInfo() != null ) {
-				bridge.resetMapping();
-				for ( int i = 0; i < mapping.length; i++ ) {
-					bridge.setTFMapping( i, mapping[ i ] );
+		future = pool.submit(() -> {
+			tryToInitialize();
+
+			taskManager.finalizeSetup();
+
+			prepareInputAndNetwork();
+
+			final Dataset normalizedInput;
+			if (doInputNormalization()) {
+				setupNormalizer();
+				normalizedInput = inputNormalizer.run(getInput(), opService,
+						datasetService);
+			} else {
+				normalizedInput = getInput();
+			}
+
+			final List<RandomAccessibleInterval<T>> processedInput = inputProcessor.run(
+					normalizedInput);
+
+			log("INPUT NODE: ");
+			network.getInputNode().printMapping();
+			log("OUTPUT NODE: ");
+			network.getOutputNode().printMapping();
+
+			initTiling();
+			try {
+				final List<AdvancedTiledView<FloatType>> tiledOutput =
+						tryToTileAndRunNetwork(processedInput);
+				if(tiledOutput != null) {
+					final List<RandomAccessibleInterval<FloatType>> output = outputTiler.run(
+							tiledOutput, tiling, getAxesArray(network.getOutputNode()));
+					for (AdvancedTiledView obj : tiledOutput) {
+						obj.dispose();
+					}
+					this.output.clear();
+					this.output.addAll(outputProcessor.run(output, getInput(), network,
+							datasetService));
 				}
-				bridge.printMapping();
+			} catch (OutOfMemoryError e) {
+				e.printStackTrace();
 			}
-		}
-	}
 
-	protected void initGui() {
-		progressWindow = CSBDeepProgress.create( useTensorFlowGPU );
-		progressWindow.getCancelBtn().addActionListener( this );
+		});
 
-	}
-
-	protected void initModel() {
-		progressWindow.setStepStart( CSBDeepProgress.STEP_LOADMODEL );
-
-		progressWindow.addLog( "Loading model " + modelName + ".. " );
-
-		if ( input == null ) { return; }
-
-		if ( model == null ) {
-			modelChanged();
-			if ( model == null ) {
-				progressWindow.setCurrentStepFail();
-				return;
-			}
-		}
-
-		progressWindow.setCurrentStepDone();
-
-	}
-
-	protected RandomAccessibleInterval< FloatType > normalizeInput() {
-		progressWindow.addLog( "Preparing normalization.. " );
-		prepareNormalization( ( IterableInterval ) input.getImgPlus() );
-
-		progressWindow.addLog(
-				"Normalize (" + percentileBottom + " - " + percentileTop + " -> " + min + " - " + max + "] .. " );
-
-		final RandomAccessibleInterval< FloatType > normalizedInput = normalizeImage(
-				( RandomAccessibleInterval ) input.getImgPlus() );
-
-		return normalizedInput;
-
-	}
-
-	protected void executeModel( final RandomAccessibleInterval< FloatType > modelInput ) {
-
-		List< RandomAccessibleInterval< FloatType > > result = null;
 		try {
-			final TiledPrediction prediction =
-					new TiledPrediction( modelInput, bridge, model, progressWindow, nTiles, blockMultiple, overlap );
-			predictions.add( prediction );
-			result = pool.submit( prediction ).get();
-		} catch ( final ExecutionException exc ) {
-			exc.printStackTrace();
+			if(future != null) future.get();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			e.printStackTrace();
+		}
 
-			// We expect it to be an out of memory exception and
-			// try it again with more tiles.
-			nTiles *= 2;
-			// Check if the number of tiles is to large already
-			if ( Arrays.stream( Intervals.dimensionsAsLongArray( modelInput ) ).max().getAsLong() / nTiles < blockMultiple ) {
-				progressWindow.setCurrentStepFail();
-				return;
+		dispose();
+
+	}
+
+	protected void setupNormalizer() {
+		// do nothing, use normalizer default values
+	}
+
+	protected boolean doInputNormalization() {
+		return true;
+	}
+
+	protected void prepareInputAndNetwork() {
+		modelLoader.run(modelName, network, modelFileUrl, inputNodeName,
+			outputNodeName, getInput());
+		inputMapper.run(getInput(), network);
+	}
+
+	@Override
+	public void dispose() {
+		if (taskManager != null) {
+			taskManager.close();
+		}
+		if (network != null) {
+			network.dispose();
+		}
+		if(pool != null) {
+			pool.shutdown();
+		}
+		pool = null;
+	}
+
+	private AxisType[] getAxesArray(final ImageTensor outputNode) {
+		int numDim = outputNode.numDimensions();
+		boolean addChannel = false;
+		if (numDim < outputNode.getNodeShape().length && outputNode
+			.getNodeShape()[outputNode.getNodeShape().length - 1] > 1)
+		{
+			addChannel = true;
+			numDim++;
+		}
+		final AxisType[] res = new AxisType[numDim];
+		for (int i = 0; i < outputNode.numDimensions(); i++) {
+			res[i] = outputNode.getAxisByDatasetDim(i);
+		}
+		if (addChannel) {
+			res[res.length - 1] = Axes.CHANNEL;
+		}
+		return res;
+	}
+
+	protected void initTiling() {
+		tiling = new DefaultTiling(nTiles, 1, blockMultiple, overlap);
+	}
+
+	private List<AdvancedTiledView<FloatType>> tryToTileAndRunNetwork(
+		final List<RandomAccessibleInterval<T>> normalizedInput)
+		throws OutOfMemoryError
+	{
+		List<AdvancedTiledView<FloatType>> tiledOutput = null;
+
+		boolean isOutOfMemory = true;
+		boolean canHandleOutOfMemory = true;
+
+		while (isOutOfMemory && canHandleOutOfMemory) {
+			try {
+				final List<AdvancedTiledView<T>> tiledInput = inputTiler.run(
+					normalizedInput, getAxesArray(getInput()), tiling, getTilingActions());
+				if(tiledInput != null) {
+					tiledOutput = modelExecutor.run(tiledInput, network);
+				}
+				isOutOfMemory = false;
+
 			}
-			progressWindow.addError( "Out of memory exception occurred. Trying with " + nTiles + " tiles..." );
-			progressWindow.addRounds( 1 );
-			progressWindow.setNextRound();
-			executeModel( modelInput );
-			return;
-
-		} catch ( final InterruptedException exc ) {
-			progressWindow.addError( "Process canceled." );
-			progressWindow.setCurrentStepFail();
+			catch (final OutOfMemoryError e) {
+				isOutOfMemory = true;
+				canHandleOutOfMemory = tryHandleOutOfMemoryError();
+			}
 		}
 
-		resultDatasets = new ArrayList<>();
-		for ( int i = 0; i < result.size() && i < OUTPUT_NAMES.length; i++ ) {
-			progressWindow.addLog( "Displaying " + OUTPUT_NAMES[ i ] + " image.." );
-			resultDatasets.add( wrapIntoDatasetView( OUTPUT_NAMES[ i ], result.get( i ) ) );
+		if (isOutOfMemory) throw new OutOfMemoryError(
+			"Out of memory exception occurred. Plugin exit.");
+
+		return tiledOutput;
+	}
+
+	private AxisType[] getAxesArray(Dataset input) {
+		AxisType[] res = new AxisType[input.numDimensions()];
+		for (int i = 0; i < input.numDimensions(); i++) {
+			res[i] = input.axis(i).type();
 		}
-		if ( !resultDatasets.isEmpty() ) {
-			progressWindow.addLog( "All done!" );
-			progressWindow.setCurrentStepDone();
-		} else {
-			progressWindow.setCurrentStepFail();
+		return res;
+	}
+
+	protected Tiling.TilingAction[] getTilingActions() {
+		Tiling.TilingAction[] actions = new Tiling.TilingAction[getInput()
+			.numDimensions()];
+		Arrays.fill(actions, Tiling.TilingAction.NO_TILING);
+		for (int i = 0; i < actions.length; i++) {
+			AxisType type = getInput().axis(i).type();
+			if (type.isSpatial()) {
+				actions[i] = Tiling.TilingAction.TILE_WITH_PADDING;
+			}
 		}
-		model.close();
+		return actions;
 	}
 
-	public void showError( final String errorMsg ) {
-		JOptionPane.showMessageDialog(
-				null,
-				errorMsg,
-				"Error",
-				JOptionPane.ERROR_MESSAGE );
+	public void setMapping(final AxisType[] mapping) {
+		inputMapper.setMapping(mapping);
 	}
 
-	@Override
-	public boolean isCanceled() {
-		return false;
+	private boolean noInputData() {
+		return getInput() == null;
 	}
 
-	@Override
-	public void cancel( final String reason ) {
-		freeResources();
+	private boolean tryHandleOutOfMemoryError() {
+		// We expect it to be an out of memory exception and
+		// try it again with more tiles.
+		final Task modelExecutorTask = modelExecutor;
+		if (!handleOutOfMemoryError()) {
+			modelExecutorTask.setFailed();
+			return false;
+		}
+		modelExecutorTask.logError(
+			"Out of memory exception occurred. Trying with " + nTiles +
+				" tiles and overlap " + overlap + "...");
+		initTiling();
+		modelExecutorTask.startNewIteration();
+		((Task) inputTiler).addIteration();
+		return true;
+	}
+
+	protected boolean handleOutOfMemoryError() {
+		nTiles *= 2;
+		// Check if the number of tiles is too large already
+		if (Arrays.stream(Intervals.dimensionsAsLongArray(getInput())).max()
+			.getAsLong() / nTiles < blockMultiple)
+		{
+			if (overlap == 0) return false;
+			overlap *= 0.5;
+			if (overlap < 2) overlap = 0;
+		}
+		return true;
+	}
+
+	protected static void showError(final String errorMsg) {
+		JOptionPane.showMessageDialog(null, errorMsg, "Error",
+			JOptionPane.ERROR_MESSAGE);
+	}
+
+	public Dataset getInput() {
+		return input;
+	}
+
+	public void validateInput(final Dataset dataset, final String formatDesc,
+		final OptionalLong... expectedDims) throws IOException
+	{
+		DatasetHelper.validate(dataset, formatDesc, expectedDims);
 	}
 
 	@Override
@@ -380,68 +438,32 @@ public abstract class CSBDeepCommand< T extends RealType< T > > extends Percenti
 	}
 
 	@Override
-	public void actionPerformed( final ActionEvent e ) {
-		if ( e.getSource().equals( progressWindow.getCancelBtn() ) ) {
+	public boolean isCanceled() {
+		return false;
+	}
 
-			//TODO this is not yet fully working. The tile that is currently computed does not stop.
-			freeResources();
-			progressWindow.addError( "Process canceled." );
-			progressWindow.setCurrentStepFail();
+	@Override
+	public void cancel(final String reason) {
+		if(future != null) {
+			future.cancel(true);
+		}
+		if(pool != null) {
+			pool.shutdownNow();
+		}
+		dispose();
+	}
+
+	protected void log(final String msg) {
+		if (taskManager != null) {
+			taskManager.log(msg);
+		}
+		else {
+			System.out.println(msg);
 		}
 	}
 
-	protected static void printDim( final String title, final RandomAccessibleInterval< FloatType > img ) {
-		final long[] dims = new long[ img.numDimensions() ];
-		img.dimensions( dims );
-		System.out.println( title + ": " + Arrays.toString( dims ) );
+	protected boolean isHeadless() {
+		return uiService.isHeadless();
 	}
 
-	protected < U extends RealType< U > & NativeType< U > > DatasetView wrapIntoDatasetView(
-			final String name,
-			final RandomAccessibleInterval< U > img ) {
-		final DefaultDatasetView resDatasetView = new DefaultDatasetView();
-		final Dataset d = wrapIntoDataset( name, img );
-		resDatasetView.setContext( d.getContext() );
-		resDatasetView.initialize( d );
-		resDatasetView.rebuild();
-
-		// Set LOT
-		for ( int i = 0; i < datasetView.getColorTables().size(); i++ ) {
-			resDatasetView.setColorTable( datasetView.getColorTables().get( i ), i );
-		}
-		return resDatasetView;
-	}
-
-	protected < U extends RealType< U > & NativeType< U > > Dataset wrapIntoDataset( final String name, final RandomAccessibleInterval< U > img ) {
-
-		//TODO convert back to original format to be able to save and load it (float 32 bit does not load in Fiji)
-		final Dataset dataset = datasetService.create( new ImgPlus<>( ImgView.wrap( img, new ArrayImgFactory<>() ) ) );
-		dataset.setName( name );
-		for ( int i = 0; i < dataset.numDimensions(); i++ ) {
-			dataset.setAxis( input.axis( bridge.getOutputDimByInputDim( i ) ), i );
-		}
-		// NB: Doesn't work somehow
-//		int compositeChannelCount = input.getCompositeChannelCount();
-//		dataset.setCompositeChannelCount( compositeChannelCount );
-		return dataset;
-	}
-
-	protected static void validateInput(
-			final Dataset dataset,
-			final String formatDesc,
-			final OptionalLong... expectedDims ) throws IOException {
-		if ( dataset.numDimensions() != expectedDims.length ) { throw new IOException( "Can not process " + dataset
-				.numDimensions() + "D images.\nExpected format: " + formatDesc ); }
-		for ( int i = 0; i < expectedDims.length; i++ ) {
-			if ( expectedDims[ i ].isPresent() && expectedDims[ i ].getAsLong() != dataset
-					.dimension( i ) ) { throw new IOException( "Can not process image. Dimension " + i + " musst be of size " + expectedDims[ i ]
-							.getAsLong() + ".\nExpected format: " + formatDesc ); }
-		}
-	}
-
-	private void freeResources() {
-		model.close();
-		pool.shutdownNow();
-		progressWindow.getCancelBtn().removeActionListener( this );
-	}
 }

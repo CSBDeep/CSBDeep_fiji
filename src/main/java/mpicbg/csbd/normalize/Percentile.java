@@ -26,34 +26,16 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
-package mpicbg.csbd.tensorflow;
 
-import net.imagej.tensorflow.Tensors;
+package mpicbg.csbd.normalize;
+
+import net.imagej.ops.OpService;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.view.Views;
+import net.imglib2.type.numeric.RealType;
 
-import org.tensorflow.Tensor;
+public interface Percentile<T extends RealType<T>> {
 
-public class DatasetConverter {
-
-	public static RandomAccessibleInterval< FloatType > tensorToDataset( final Tensor tensor, final int[] mapping, final boolean dropSingletonDims ) {
-
-		final RandomAccessibleInterval< FloatType > outImg = Tensors.imgFloat( tensor, mapping );
-		return dropSingletonDims ? Views.dropSingletonDimensions( outImg ) : outImg;
-	}
-
-	public static Tensor datasetToTensor(
-			RandomAccessibleInterval< FloatType > image,
-			final int[] mapping ) {
-
-		// Add dimensions until it fits the input tensor
-		while ( image.numDimensions() < mapping.length ) {
-			image = Views.addDimension( image, 0, 0 );
-		}
-
-		// Create the tensor
-		return Tensors.tensor( image, mapping );
-	}
+	float[] computePercentiles(final RandomAccessibleInterval<T> im,
+		final float[] percentiles, OpService opService);
 
 }

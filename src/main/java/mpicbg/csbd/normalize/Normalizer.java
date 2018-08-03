@@ -26,26 +26,17 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
+
 package mpicbg.csbd.normalize;
 
 import net.imagej.Dataset;
-import net.imglib2.IterableInterval;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.img.Img;
-import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
+import net.imagej.DatasetService;
+import net.imagej.ops.OpService;
 
-import org.scijava.ui.UIService;
+public interface Normalizer {
 
-public interface Normalizer< T extends RealType< T > > {
+	Dataset normalize(Dataset im, OpService opService,
+		DatasetService datasetService);
 
-	void prepareNormalization( IterableInterval< T > input );
-
-	void testNormalization( Dataset input, UIService uiService );
-
-	boolean isActive();
-
-	float normalize( float val );
-
-	Img< FloatType > normalizeImage( RandomAccessibleInterval< T > im );
+	void setup(float[] percentiles, float[] destValues, boolean clip);
 }

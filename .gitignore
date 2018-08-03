@@ -6,5 +6,10 @@
 /.classpath
 /.settings/
 
+# IntelliJ
+/.idea/
+/*.iml
+
 # Custom
 /models/
+/bin/

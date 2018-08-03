@@ -26,137 +26,86 @@
  * POSSIBILITY OF SUCH DAMAGE.
  * #L%
  */
+
 package mpicbg.csbd.normalize;
 
 import net.imagej.Dataset;
+import net.imagej.DatasetService;
+import net.imagej.axis.AxisType;
+import net.imagej.ops.OpService;
 import net.imglib2.Cursor;
-import net.imglib2.IterableInterval;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.img.Img;
-import net.imglib2.img.ImgFactory;
-import net.imglib2.img.array.ArrayImgFactory;
+import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
-import net.imglib2.util.Util;
 
-import org.scijava.ui.UIService;
+public class PercentileNormalizer<T extends RealType<T> & NativeType<T>>
+	implements Normalizer
+{
 
-public class PercentileNormalizer< T extends RealType< T > > implements Normalizer< T > {
+	private float[] percentiles = new float[] { 3, 99.7f };
+	private float[] destValues = new float[] { 0, 1 };
+	private float[] resValues;
+	private boolean clip = false;
 
-//	@Parameter( visibility = ItemVisibility.MESSAGE )
-//	protected String normtext = "Normalization";
-//    @Parameter(label = "Normalize image")
-	protected boolean normalizeInput = true;
-//	@Parameter
-	protected float percentileBottom = 0.03f;
-//	@Parameter
-	protected float percentileTop = 0.998f;
-//	@Parameter
-	protected float min = 0;
-//	@Parameter
-	protected float max = 1;
-//	@Parameter( label = "Clamp normalization" )
-	protected boolean clamp = false;
-
-	protected float percentileBottomVal, percentileTopVal;
-
+	protected float min;
+	protected float max;
 	protected float factor;
 
-	@Override
-	public void testNormalization( final Dataset input, final UIService uiService ) {
-		if ( normalizeInput ) {
-			final Dataset dcopy = ( Dataset ) input.copy();
-			final Cursor< RealType< ? > > cursor = dcopy.cursor();
-			//		System.out.println( "percentiles: " + percentileBottomVal + " -> " + percentileTopVal );
-			factor = ( max - min ) / ( percentileTopVal - percentileBottomVal );
-			if ( clamp ) {
-				while ( cursor.hasNext() ) {
-					final float val = cursor.next().getRealFloat();
-					cursor.get().setReal(
-							Math.max(
-									min,
-									Math.min(
-											max,
-											( val - percentileBottomVal ) * factor + min ) ) );
-				}
-			} else {
-				while ( cursor.hasNext() ) {
-					final float val = cursor.next().getRealFloat();
-					cursor.get().setReal(
-							Math.max( 0, ( val - percentileBottomVal ) * factor + min ) );
-				}
-			}
-			dcopy.setName( "normalized_" + input.getName() );
-			uiService.show( dcopy );
-		}
-	}
-
-	@Override
-	public void prepareNormalization( final IterableInterval< T > input ) {
-		if ( normalizeInput ) {
-			final float[] ps =
-					percentiles( input, new float[] { percentileBottom, percentileTop } );
-			percentileBottomVal = ps[ 0 ];
-			percentileTopVal = ps[ 1 ];
-			factor = ( max - min ) / ( percentileTopVal - percentileBottomVal );
-		}
-	}
-
-	protected static < T extends RealType< T > > float[] percentiles( final IterableInterval< T > d, final float[] percentiles ) {
-		final Cursor< T > cursor = d.cursor();
-		int items = 1;
-		int i = 0;
-		for ( ; i < d.numDimensions(); i++ ) {
-			items *= d.dimension( i );
-		}
-		final float[] values = new float[ items ];
-		i = 0;
-		while ( cursor.hasNext() ) {
-			cursor.fwd();
-			values[ i ] = cursor.get().getRealFloat();
-			i++;
-		}
-
-		Util.quicksort( values );
-
-		final float[] res = new float[ percentiles.length ];
-		for ( i = 0; i < percentiles.length; i++ ) {
-			res[ i ] = values[ Math.min(
-					values.length - 1,
-					Math.max( 0, Math.round( ( values.length - 1 ) * percentiles[ i ] ) ) ) ];
-		}
-
-		return res;
-	}
-
-	@Override
-	public boolean isActive() {
-		return normalizeInput;
-	}
-
-	@Override
-	public float normalize( final float val ) {
-		if ( clamp ) { return Math.max(
+	public float normalize( final T val ) {
+		if ( clip ) { return Math.max(
 				min,
-				Math.min( max, ( val - percentileBottomVal ) * factor + min ) ); }
-		return Math.max( 0, ( val - percentileBottomVal ) * factor + min );
+				Math.min( max, ( val.getRealFloat() - resValues[0] ) * factor + min ) ); }
+		return Math.max( 0, ( val.getRealFloat() - resValues[0] ) * factor + min );
 	}
 
 	@Override
-	public Img< FloatType > normalizeImage( final RandomAccessibleInterval< T > im ) {
-		final ImgFactory< FloatType > factory = new ArrayImgFactory<>();
-		final Img< FloatType > output = factory.create( im, new FloatType() );
+	public Dataset normalize(final Dataset im, OpService opService,
+		DatasetService datasetService)
+	{
+		HistogramPercentile<T> percentile = new HistogramPercentile<>();
+		resValues = percentile.computePercentiles((RandomAccessibleInterval<T>) im
+			.getImgPlus(), percentiles, opService);
+		min = destValues[0];
+		max = destValues[1];
+		factor = (destValues[1] - destValues[0]) / (resValues[1] - resValues[0]);
 
-		final RandomAccess< T > in = im.randomAccess();
-		final Cursor< FloatType > out = output.localizingCursor();
-		while ( out.hasNext() ) {
+		long[] dims = new long[im.numDimensions()];
+		im.dimensions(dims);
+		AxisType[] axes = new AxisType[im.numDimensions()];
+		for (int i = 0; i < axes.length; i++) {
+			axes[i] = im.axis(i).type();
+		}
+
+		final Dataset output = datasetService.create(new FloatType(), dims,
+			"normalized input", axes);
+
+		final RandomAccess<T> in = (RandomAccess<T>) im.getImgPlus().randomAccess();
+		final Cursor<FloatType> out = (Cursor<FloatType>) output.getImgPlus()
+			.localizingCursor();
+		while (out.hasNext()) {
 			out.fwd();
-			in.setPosition( out );
-			out.get().set( normalize( in.get().getRealFloat() ) );
+			in.setPosition(out);
+			out.get().set(normalize(in.get()));
 		}
 
 		return output;
+	}
+
+	@Override
+	public void setup(final float[] percentiles, final float[] destValues,
+		boolean clip)
+	{
+		assert (percentiles.length == 2);
+		assert (destValues.length == 2);
+		this.percentiles = percentiles;
+		this.destValues = destValues;
+		this.clip = clip;
+	}
+
+	public float[] getResValues() {
+		return resValues;
 	}
 
 }
