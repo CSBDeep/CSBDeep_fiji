@@ -147,21 +147,28 @@ public class ImageTensor {
 		return dataset.numDimensions();
 	}
 
-	public long getDatasetDimSize(final int knownAxesIndex) {
-		if (availableAxes.length > knownAxesIndex) {
-			return dataset.dimension(dataset.dimensionIndex(
-				availableAxes[knownAxesIndex]));
-		}
-		return 1;
-	}
+//	public long getDatasetDimSize(final int knownAxesIndex) {
+//		if (availableAxes.length > knownAxesIndex) {
+//			return dataset.dimension(dataset.dimensionIndex(
+//				availableAxes[knownAxesIndex]));
+//		}
+//		return 1;
+//	}
 
 	public String getDatasetDimName(final AxisType axis) {
 		return axis.getLabel().substring(0, 1);
 	}
 
-	public String getDatasetDimName(final int knownAxesIndex) {
-		if (availableAxes.length > knownAxesIndex) {
-			return getDatasetDimName(availableAxes[knownAxesIndex]);
+//	public String getDatasetDimName(final int knownAxesIndex) {
+//		if (availableAxes.length > knownAxesIndex) {
+//			return getDatasetDimName(availableAxes[knownAxesIndex]);
+//		}
+//		return "not found";
+//	}
+
+	public String getDatasetDimName(final int datasetAxisIndex) {
+		if (dataset.numDimensions() > datasetAxisIndex) {
+			return getDatasetDimName(dataset.axis(datasetAxisIndex).type());
 		}
 		return "not found";
 	}

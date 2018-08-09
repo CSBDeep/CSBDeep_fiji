@@ -66,7 +66,7 @@ public class MappingDialog {
 			for (int i = 0; i < inputNode.numDimensions(); i++) {
 
 				final String dimName = inputNode.getDatasetDimName(i);
-				final long dimSize = inputNode.getDatasetDimSize(i);
+				final long dimSize = inputNode.getDataset().dimension(i);
 
 				final JTextField field = new JTextField();
 				field.setText(String.valueOf(dimSize));
