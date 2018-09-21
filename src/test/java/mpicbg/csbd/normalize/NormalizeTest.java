@@ -2,9 +2,12 @@
 package mpicbg.csbd.normalize;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 
 import java.util.Random;
 
+import org.junit.Ignore;
 import org.junit.Test;
 
 import net.imagej.Dataset;
@@ -16,6 +19,7 @@ import net.imglib2.cache.img.DiskCachedCellImgFactory;
 import net.imglib2.img.Img;
 import net.imglib2.type.numeric.real.FloatType;
 
+@Ignore
 public class NormalizeTest {
 
 	@Test
@@ -47,7 +51,7 @@ public class NormalizeTest {
 	@Test
 	public void testNormalizeInvertedArrayLong() {
 
-		final long[] dimensions = new long[] { 50, 2 };
+		final long[] dimensions = new long[] { 50, 200 };
 		final double[] data = new double[(int) mult(dimensions)];
 		for (int i = 0; i < data.length; i++) {
 			data[i] = data.length - i;
@@ -141,6 +145,8 @@ public class NormalizeTest {
 
 		float[] resValues = normalizer.getResValues();
 
+		assertNotEquals(resValues[0], resValues[1]);
+
 		System.out.println("resValues 0: " + resValues[0]);
 		System.out.println("resValues 1: " + resValues[1]);
 
@@ -160,8 +166,10 @@ public class NormalizeTest {
 			raOrig.setPosition(cursorRes2);
 			raRes1.setPosition(cursorRes2);
 			i++;
-			System.out.println(data[i] + " " + raRes1.get() + " " + cursorRes2.get());
+//			System.out.println(data[i] + " " + raRes1.get() + " " + cursorRes2.get());
 			assertEquals((int) data[i], (int)raOrig.get().getRealFloat());
+			assertFalse(Float.isNaN(raRes1.get().get()));
+			assertFalse(Float.isNaN(cursorRes2.get().get()));
 //			assertEquals(raRes1.get().getRealFloat(), cursorRes2.get().getRealFloat(), 0.01);
 			// assertNotEquals(cursor2.get(), cursor.get());
 		}

@@ -3,6 +3,7 @@ package mpicbg.csbd.commands;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 
 import java.io.File;
 import java.util.List;
@@ -83,7 +84,7 @@ public class GenericNetworksMismatchTest extends CSBDeepTest {
 				"input", input,
 				"modelFile", new File(network),
 				"overlap", 2);
-		assertFalse("Plugin future is null", future == null);
+		assertNotEquals(null, future);
 		final Module module = ij.module().waitFor(future);
 		List<Dataset> result = (List<Dataset>) module.getOutput("output");
 		assertEquals(1, result.size());

@@ -47,4 +47,6 @@ public interface Tiling<T extends RealType<T>> {
 	RandomAccessibleInterval<T> postprocess(Task parent,
 	                                        final AdvancedTiledView<T> results, AxisType[] axisTypes);
 
+	int getTilesNum();
+
 }

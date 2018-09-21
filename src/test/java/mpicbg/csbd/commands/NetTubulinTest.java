@@ -20,7 +20,7 @@ public class NetTubulinTest extends CSBDeepTest {
 	@Test
 	public void testNetTubulin() {
 		for (int i = 0; i < 1; i++) {
-			testDataset(new FloatType(), new long[] { 10, 10, 10 }, new AxisType[] {
+			testDataset(new FloatType(), new long[] { 3, 4, 5 }, new AxisType[] {
 				Axes.X, Axes.Y, Axes.TIME });
 		}
 		// testDataset(new FloatType(), new long[] {50, 10, 100}, new AxisType[]

@@ -38,16 +38,14 @@ public class PseudoNetwork<T extends RealType<T>> extends DefaultNetwork<T> {
 	public void testGPUSupport() {}
 
 	@Override
-	public void loadInputNode(final String defaultName, final Dataset dataset) {
+	public void loadInputNode(final Dataset dataset) {
 		inputNode = new ImageTensor();
-		inputNode.setName("input");
 		inputNode.initializeNodeMapping();
 	}
 
 	@Override
-	public void loadOutputNode(final String defaultName) {
+	public void loadOutputNode(Dataset dataset) {
 		outputNode = new ImageTensor();
-		outputNode.setName("output");
 		outputNode.initializeNodeMapping();
 	}
 
@@ -70,10 +68,11 @@ public class PseudoNetwork<T extends RealType<T>> extends DefaultNetwork<T> {
 
 	@Override
 	public void initMapping() {
-		inputNode.initMapping();
+		inputNode.setMappingDefaults();
 	}
 
-	protected void calculateMapping() {
+	@Override
+	public void calculateMapping() {
 
 		for (int i = 0; i < inputNode.getNodeShape().length; i++) {
 			outputNode.setNodeAxis(i, inputNode.getNodeAxis(i));
@@ -89,15 +88,7 @@ public class PseudoNetwork<T extends RealType<T>> extends DefaultNetwork<T> {
 	}
 
 	private void handleDimensionReduction() {
-		if (doDimensionReduction) {
-			getOutputNode().removeAxisFromMapping(axisToRemove);
-			final Dataset outputDummy = createEmptyDuplicateWithoutAxis(inputNode
-				.getDataset(), axisToRemove);
-			getOutputNode().initialize(outputDummy);
-		}
-		else {
-			getOutputNode().initialize(inputNode.getDataset().duplicate());
-		}
+		getOutputNode().initialize(inputNode.getImage());
 	}
 
 	private Dataset createEmptyDuplicateWithoutAxis(final Dataset input,

@@ -29,62 +29,63 @@
 
 package mpicbg.csbd.commands;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.OptionalLong;
-
-import org.scijava.command.Command;
-import org.scijava.plugin.Plugin;
-
+import mpicbg.csbd.util.DatasetHelper;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
-import net.imagej.axis.Axes;
-import net.imagej.axis.AxisType;
+import org.scijava.ItemIO;
+import org.scijava.command.Command;
+import org.scijava.command.CommandModule;
+import org.scijava.command.CommandService;
+import org.scijava.module.ModuleService;
+import org.scijava.plugin.Parameter;
+import org.scijava.plugin.Plugin;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.OptionalLong;
+import java.util.concurrent.Future;
 
 /**
  */
 @Plugin(type = Command.class,
 	menuPath = "Plugins>CSBDeep>Demo>3D Denoising - Tribolium", headless = true)
-public class NetTribolium extends CSBDeepCommand implements Command {
+public class NetTribolium implements Command {
 
-//	@Parameter
-//	CommandService commandService;
-//
-//	@Parameter
-//	ModuleService moduleService;
+	@Parameter(type = ItemIO.INPUT)
+	public Dataset input;
 
-	@Override
-	public void initialize() {
+	@Parameter(type = ItemIO.OUTPUT)
+	protected List<Dataset> output = new ArrayList<>();
 
-		super.initialize();
+	@Parameter(label = "Number of tiles", min = "1")
+	protected int nTiles = 8;
 
-		modelFileUrl = "http://csbdeep.bioimagecomputing.com/model-tribolium.zip";
-		modelName = "net_tribolium";
+	@Parameter
+	CommandService commandService;
 
-	}
+	@Parameter
+	ModuleService moduleService;
+
+	private String modelUrl = "http://csbdeep.bioimagecomputing.com/model-tribolium.zip";
 
 	@Override
 	public void run() {
-		try {
-			tryToInitialize();
-			validateInput(getInput(), "3D grayscale image with dimension order X-Y-Z",
-				OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty());
 
-			final AxisType[] mapping = { Axes.TIME, Axes.Z, Axes.Y, Axes.X,
-				Axes.CHANNEL };
-			if (getInput().dimension(Axes.Z) < getInput().dimension(Axes.CHANNEL)) {
-				mapping[1] = Axes.CHANNEL;
-				mapping[4] = Axes.Z;
-			}
-			setMapping(mapping);
-			super.run();
-//			Future<CommandModule> resFuture = commandService.run(GenericNetwork.class, true, "input", getInput(), "modelFileUrl", modelFileUrl, "modelName", "net_tribolium");
-//			final Module module = moduleService.waitFor(resFuture);
-//			output.addAll((Collection) module.getOutput("output"));
-		}
-		catch (final IOException e) {
-			showError(e.getMessage());
-		}
+		DatasetHelper.validate(input, "3D grayscale image with size order X-Y-Z",
+			OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty());
+
+		Future<CommandModule> resFuture = commandService.run(
+				GenericNetwork.class, false,
+				"input", input,
+				"modelUrl", modelUrl,
+				"blockMultiple", 8,
+				"nTiles", nTiles);
+		final CommandModule module = moduleService.waitFor(resFuture);
+		output.addAll((Collection) module.getOutput("output"));
+
 	}
 
 	public static void main(final String... args) throws Exception {

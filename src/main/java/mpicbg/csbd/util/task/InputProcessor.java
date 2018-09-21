@@ -10,6 +10,6 @@ import net.imglib2.type.numeric.RealType;
 
 public interface InputProcessor<T extends RealType<T>> extends Task {
 
-	List<RandomAccessibleInterval<T>> run(Dataset input);
+	List<RandomAccessibleInterval<T>> run(Dataset input, int numDimensions);
 
 }

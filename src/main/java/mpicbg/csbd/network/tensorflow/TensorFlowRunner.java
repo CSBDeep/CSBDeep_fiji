@@ -39,7 +39,7 @@ public class TensorFlowRunner {
 
 	/*
 	 * runs graph on input tensor
-	 * converts result tensor to dataset
+	 *
 	 */
 	public static Tensor executeGraph(final SavedModelBundle model,
 		final Tensor image, final TensorInfo inputTensorInfo,

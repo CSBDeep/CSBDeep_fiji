@@ -1,9 +1,17 @@
 
 package mpicbg.csbd.network.tensorflow;
 
-import java.io.IOException;
-import java.util.Arrays;
-
+import com.google.protobuf.InvalidProtocolBufferException;
+import mpicbg.csbd.network.DefaultNetwork;
+import mpicbg.csbd.task.Task;
+import net.imagej.Dataset;
+import net.imagej.DatasetService;
+import net.imagej.axis.Axes;
+import net.imagej.axis.AxisType;
+import net.imagej.tensorflow.TensorFlowService;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.FloatType;
 import org.scijava.io.location.Location;
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
@@ -14,17 +22,10 @@ import org.tensorflow.framework.SignatureDef;
 import org.tensorflow.framework.TensorInfo;
 import org.tensorflow.framework.TensorShapeProto;
 
-import com.google.protobuf.InvalidProtocolBufferException;
-
-import mpicbg.csbd.network.DefaultNetwork;
-import mpicbg.csbd.task.Task;
-import net.imagej.Dataset;
-import net.imagej.DatasetService;
-import net.imagej.axis.AxisType;
-import net.imagej.tensorflow.TensorFlowService;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class TensorFlowNetwork<T extends RealType<T>> extends
 	DefaultNetwork<T>
@@ -37,6 +38,8 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	private TensorInfo inputTensorInfo, outputTensorInfo;
 	private boolean foundJNI = true;
 	private boolean gpuSupport = false;
+	protected boolean isDoingDimensionReduction = false;
+	protected AxisType axisToRemove;
 	// Same as
 	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
 	// in Python. Perhaps this should be an exported constant in TensorFlow's Java
@@ -87,9 +90,9 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	}
 
 	@Override
-	public void loadInputNode(final String defaultName, final Dataset dataset) {
-		super.loadInputNode(defaultName, dataset);
-		if (sig != null && sig.isInitialized() && sig.getInputsCount() > 0) {
+	public void loadInputNode(final Dataset dataset) {
+		super.loadInputNode( dataset);
+		if (sig != null && sig.getInputsCount() > 0) {
 			inputNode.setName(sig.getInputsMap().keySet().iterator().next());
 			setInputTensor(sig.getInputsOrThrow(inputNode.getName()));
 			inputNode.setNodeShape(getShape(getInputTensorInfo().getTensorShape()));
@@ -98,13 +101,13 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	}
 
 	@Override
-	public void loadOutputNode(final String defaultName) {
-		super.loadOutputNode(defaultName);
-		if (sig != null && sig.isInitialized() && sig.getOutputsCount() > 0) {
+	public void loadOutputNode(Dataset dataset) {
+		super.loadOutputNode(dataset);
+		if (sig != null && sig.getOutputsCount() > 0) {
 			outputNode.setName(sig.getOutputsMap().keySet().iterator().next());
 			setOutputTensor(sig.getOutputsOrThrow(outputNode.getName()));
 			outputNode.setNodeShape(getShape(getOutputTensorInfo().getTensorShape()));
-			outputNode.initializeNodeMapping(inputNode.getNodeShape());
+			outputNode.initializeNodeMapping();
 		}
 	}
 
@@ -153,22 +156,33 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 
 	@Override
 	public void initMapping() {
-		inputNode.initMapping();
+		inputNode.setMappingDefaults();
+		outputNode.setMappingDefaults();
 	}
 
-	protected void calculateMapping() {
+	@Override
+	public void calculateMapping() {
 
-		for (int i = 0; i < inputNode.getNodeShape().length; i++) {
-			outputNode.setNodeAxis(i, inputNode.getNodeAxis(i));
-		}
-		handleDimensionReduction();
+//		for (int i = 0; i < inputNode.getNodeShape().length; i++) {
+//			outputNode.setNodeAxis(i, inputNode.getNodeAxis(i));
+//		}
+		doDimensionReduction();
 		generateMapping();
 	}
 
 	@Override
 	public void doDimensionReduction() {
+		int diff = getOutputNode().getNodeShape().length - getInputNode().getNodeShape().length;
+		if(diff == 0) return;
+		if(diff > 0) status.logError("Cannot handle case INPUT TENSOR SIZE < OUTPUT TENSOR SIZE");
+		if(diff < -1) status.logError("OUTPUT TENSOR SIZE can only be one dimension smaller than INPUT TENSOR SIZE");
+		isDoingDimensionReduction = true;
+		if(getInputNode().getImageAxes().contains(Axes.TIME)) {
+			axisToRemove = Axes.TIME;
+		} else {
+			axisToRemove = Axes.Z;
+		}
 		handleDimensionReduction();
-		generateMapping();
 	}
 
 	@Override
@@ -187,32 +201,36 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	}
 
 	private void handleDimensionReduction() {
-		if (doDimensionReduction) {
-			getOutputNode().removeAxisFromMapping(axisToRemove);
+		if (isDoingDimensionReduction) {
 			final Dataset outputDummy = createEmptyDuplicateWithoutAxis(inputNode
-				.getDataset(), axisToRemove);
+				.getImageAxes(), inputNode.getImageDimensions(), axisToRemove);
 			getOutputNode().initialize(outputDummy);
+			List<AxisType> mapping = new ArrayList<>();
+			mapping.addAll(getInputNode().getNodeAxes());
+			mapping.remove(axisToRemove);
+			getOutputNode().setMapping(mapping.toArray(new AxisType[0]));
+//			getOutputNode().removeAxisFromMapping(axisToRemove);
 		}
 		else {
-			getOutputNode().initialize(inputNode.getDataset().duplicate());
+			getOutputNode().initialize(inputNode.getImage());
+			getOutputNode().setMapping(getInputNode().getMapping());
 		}
 	}
 
-	private <T> Dataset createEmptyDuplicateWithoutAxis(final Dataset input,
-		final AxisType axisToRemove)
+	private Dataset createEmptyDuplicateWithoutAxis(List<AxisType> imageAxes, List<Long> imageDimensions, AxisType axisToRemove)
 	{
-		int numDims = input.numDimensions();
-		if (input.axis(axisToRemove) != null) {
+		int numDims = imageAxes.size();
+		if (imageAxes.contains(axisToRemove)) {
 			numDims--;
 		}
 		final long[] dims = new long[numDims];
 		final AxisType[] axes = new AxisType[numDims];
 		int j = 0;
-		for (int i = 0; i < input.numDimensions(); i++) {
-			final AxisType axisType = input.axis(i).type();
+		for (int i = 0; i < numDims; i++) {
+			final AxisType axisType = imageAxes.get(i);
 			if (axisType != axisToRemove) {
 				axes[j] = axisType;
-				dims[j] = input.dimension(i);
+				dims[j] = imageDimensions.get(i);
 				j++;
 			}
 		}
@@ -227,16 +245,16 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 		final RandomAccessibleInterval<T> tile) throws Exception
 	{
 
-		final Tensor inputTensor = DatasetTensorflowConverter.datasetToTensor(tile,
-			getInputNode().getMapping());
+		final Tensor inputTensor = DatasetTensorFlowConverter.datasetToTensor(tile,
+			getInputNode().getMappingIndices());
 		if (inputTensor != null) {
 			RandomAccessibleInterval<T> output = null;
 			Tensor outputTensor = TensorFlowRunner.executeGraph(model, inputTensor,
 				getInputTensorInfo(), getOutputTensorInfo());
 
 			if (outputTensor != null) {
-				output = DatasetTensorflowConverter.tensorToDataset(outputTensor, tile
-					.randomAccess().get(), getOutputNode().getMapping(),
+				output = DatasetTensorFlowConverter.tensorToDataset(outputTensor, tile
+					.randomAccess().get(), getOutputNode().getMappingIndices(),
 					dropSingletonDims);
 				outputTensor.close();
 			}
@@ -256,7 +274,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 		logTensorShape("Shape of input tensor", tensorInfo);
 	}
 
-	private void logTensorShape(String title, final TensorInfo tensorInfo) {
+	protected void logTensorShape(String title, final TensorInfo tensorInfo) {
 		long[] dims = new long[tensorInfo.getTensorShape().getDimCount()];
 		for (int i = 0; i < dims.length; i++) {
 			dims[i] = tensorInfo.getTensorShape().getDimList().get(i).getSize();
@@ -286,6 +304,8 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 		outputTensorInfo = null;
 		foundJNI = true;
 		gpuSupport = false;
+		isDoingDimensionReduction = false;
+		axisToRemove = null;
 	}
 
 }

@@ -34,16 +34,8 @@ public class DefaultModelExecutor<T extends RealType<T>> extends DefaultTask
 			}
 
 			setCurrentStep(0);
-			int numSteps = 0;
-			for (AdvancedTiledView<T> tile : input) {
-				int steps = 1;
-				for (int i = 0; i < tile.numDimensions(); i++) {
-					steps *= tile.dimension(i);
-				}
-				numSteps += steps;
-			}
 			network.resetTileCount();
-			setNumSteps(numSteps);
+			setNumSteps(getSteps(input));
 
 			pool = Executors.newWorkStealingPool();
 			final List<AdvancedTiledView<T>> output = new ArrayList<>();
@@ -61,6 +53,18 @@ public class DefaultModelExecutor<T extends RealType<T>> extends DefaultTask
 			return output;
 		}
 		return null;
+	}
+
+	private int getSteps(List<AdvancedTiledView<T>> input) {
+		int numSteps = 0;
+		for (AdvancedTiledView<T> tile : input) {
+			int steps = 1;
+			for (int i = 0; i < tile.numDimensions(); i++) {
+				steps *= tile.dimension(i);
+			}
+			numSteps += steps;
+		}
+		return numSteps;
 	}
 
 	private AdvancedTiledView<T> run(final AdvancedTiledView<T> input,

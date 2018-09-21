@@ -1,6 +1,7 @@
 
 package mpicbg.csbd.commands;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
@@ -22,28 +23,28 @@ public class NetProjectTest extends CSBDeepTest {
 	// @Ignore
 	@Test
 	public void testNetProject_Float_XYZ() {
-		testDataset(new FloatType(), new long[] { 100, 50, 10 }, new AxisType[] {
+		testDataset(new FloatType(), new long[] { 10, 5, 3 }, new AxisType[] {
 			Axes.X, Axes.Y, Axes.Z });
 	}
 
 	@Ignore
 	@Test
 	public void testNetProject_Float_ZXY() {
-		testDataset(new FloatType(), new long[] { 10, 50, 100 }, new AxisType[] {
+		testDataset(new FloatType(), new long[] { 2, 5, 10 }, new AxisType[] {
 			Axes.Z, Axes.X, Axes.Y });
 	}
 
 	@Ignore
 	@Test
 	public void testNetProject_Float_XZY() {
-		testDataset(new FloatType(), new long[] { 100, 10, 50 }, new AxisType[] {
+		testDataset(new FloatType(), new long[] { 10, 2, 5 }, new AxisType[] {
 			Axes.X, Axes.Z, Axes.Y });
 	}
 
 	@Ignore
 	@Test
 	public void testNetProject_Byte_XZY() {
-		testDataset(new ByteType(), new long[] { 50, 10, 100 }, new AxisType[] {
+		testDataset(new ByteType(), new long[] { 5, 2, 10 }, new AxisType[] {
 			Axes.X, Axes.Z, Axes.Y });
 	}
 
@@ -54,8 +55,7 @@ public class NetProjectTest extends CSBDeepTest {
 		launchImageJ();
 		final Dataset input = createDataset(type, dims, axes);
 		final List<Dataset> result = runPlugin(NetProject.class, input);
-		assertTrue("result should contain one dataset bis contains " + result
-			.size(), result.size() == 1);
+		assertEquals(1, result.size());
 		final Dataset output = result.get(0);
 		testResultAxesAndSizeByRemovingAxis(input, output, Axes.Z);
 	}

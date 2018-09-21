@@ -29,87 +29,95 @@
 
 package mpicbg.csbd.commands;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.OptionalLong;
-
+import mpicbg.csbd.util.DatasetHelper;
+import net.imagej.Dataset;
+import net.imagej.ImageJ;
+import org.scijava.ItemIO;
 import org.scijava.command.Command;
+import org.scijava.command.CommandModule;
+import org.scijava.command.CommandService;
+import org.scijava.module.ModuleService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
-import mpicbg.csbd.tiling.DefaultTiling;
-import mpicbg.csbd.tiling.Tiling;
-import net.imagej.Dataset;
-import net.imagej.ImageJ;
-import net.imagej.axis.Axes;
-import net.imagej.axis.AxisType;
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.OptionalLong;
+import java.util.concurrent.Future;
 
 /**
  */
 @Plugin(type = Command.class,
 	menuPath = "Plugins>CSBDeep>Demo>Deconvolution - Microtubules", headless = true)
-public class NetTubulin extends CSBDeepCommand implements Command {
+public class NetTubulin implements Command {
+
+	@Parameter(type = ItemIO.INPUT)
+	public Dataset input;
+
+	@Parameter(type = ItemIO.OUTPUT)
+	protected List<Dataset> output = new ArrayList<>();
+
+	@Parameter(label = "Number of tiles", min = "1")
+	protected int nTiles = 8;
+
+	@Parameter
+	CommandService commandService;
+
+	@Parameter
+	ModuleService moduleService;
 
 	@Parameter(label = "Batch size", min = "1")
 	protected int batchSize = 10;
+	private String url = "http://csbdeep.bioimagecomputing.com/model-tubulin.zip";
 
-	@Override
-	public void initialize() {
-
-		super.initialize();
-
-		modelFileUrl = "http://csbdeep.bioimagecomputing.com/model-tubulin.zip";
-		modelName = "net_tubulin";
-
-	}
-
-	@Override
-	protected void initTiling() {
-		tiling = new DefaultTiling(nTiles, batchSize, blockMultiple, overlap);
-	}
-
-	@Override
-	protected Tiling.TilingAction[] getTilingActions() {
-		Tiling.TilingAction[] actions = super.getTilingActions();
-		if (getInput().numDimensions() == 3) {
-			int batchDim = network.getInputNode().getDatasetDimIndexByTFIndex(0);
-			if (batchDim >= 0) {
-				actions[batchDim] = Tiling.TilingAction.TILE_WITHOUT_PADDING;
-			}
-		}
-		return actions;
-	}
+//	@Override
+//	protected Tiling.TilingAction[] getTilingActions() {
+//		Tiling.TilingAction[] actions = super.getTilingActions();
+//		if (getInput().numDimensions() == 3) {
+//			int batchDim = network.getInputNode().getDatasetDimIndexByTFIndex(0);
+//			if (batchDim >= 0) {
+//				actions[batchDim] = Tiling.TilingAction.TILE_WITHOUT_PADDING;
+//			}
+//		}
+//		return actions;
+//	}
 
 	@Override
 	public void run() {
 		Exception prevException = null;
 		try {
 			try {
-				tryToInitialize();
-				validateInput(getInput(), "3D image with dimension order X-Y-T",
+				DatasetHelper.validateThrowingException(input, "3D image with size order X-Y-T",
 					OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty());
 			}
 			catch (final IOException e) {
 				prevException = e;
-				validateInput(getInput(), "2D image with dimension order X-Y",
+				DatasetHelper.validateThrowingException(input, "2D image with size order X-Y",
 					OptionalLong.empty(), OptionalLong.empty());
 			}
-			final AxisType[] mapping = { Axes.TIME, Axes.Y, Axes.X, Axes.CHANNEL };
-			setMapping(mapping);
-			super.run();
+//			final AxisType[] mapping = { Axes.TIME, Axes.Y, Axes.X, Axes.CHANNEL };
+//			setMapping(mapping);
+			Future<CommandModule> resFuture = commandService.run(
+					GenericNetwork.class, false,
+					"input", input,
+					"modelUrl", url,
+//					"batchSize", batchSize,
+//					"batchAxis", Axes.TIME.getLabel(),
+					"blockMultiple", 8,
+					"nTiles", nTiles);
+			final CommandModule module = moduleService.waitFor(resFuture);
+			output.addAll((Collection) module.getOutput("output"));
 		}
 		catch (final IOException e) {
-			showError(prevException.getMessage() + "\nOR\n" + e.getMessage());
+			if(prevException != null) {
+				prevException.printStackTrace();
+			}else {
+				e.printStackTrace();
+			}
 		}
-	}
-
-	@Override
-	protected boolean handleOutOfMemoryError() {
-		batchSize /= 2;
-		if (batchSize < 1) {
-			return false;
-		}
-		return true;
 	}
 
 	public static void main(final String... args) throws Exception {

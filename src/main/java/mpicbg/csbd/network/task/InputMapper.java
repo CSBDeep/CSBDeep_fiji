@@ -12,4 +12,5 @@ public interface InputMapper extends Task {
 
 	void run(Dataset input, Network network);
 
+	AxisType[] getMapping();
 }

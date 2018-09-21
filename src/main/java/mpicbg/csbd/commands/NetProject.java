@@ -29,45 +29,64 @@
 
 package mpicbg.csbd.commands;
 
-import java.io.File;
-import java.io.IOException;
-import java.util.OptionalLong;
-
-import org.scijava.command.Command;
-import org.scijava.plugin.Plugin;
-
+import mpicbg.csbd.util.DatasetHelper;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
-import net.imagej.axis.Axes;
+import org.scijava.ItemIO;
+import org.scijava.command.Command;
+import org.scijava.command.CommandModule;
+import org.scijava.command.CommandService;
+import org.scijava.module.ModuleService;
+import org.scijava.plugin.Parameter;
+import org.scijava.plugin.Plugin;
+
+import java.io.File;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.OptionalLong;
+import java.util.concurrent.Future;
 
 /**
  */
 @Plugin(type = Command.class,
 	menuPath = "Plugins>CSBDeep>Demo>Surface Projection - Flywing", headless = true)
-public class NetProject extends CSBDeepCommand implements Command {
+public class NetProject implements Command {
 
-	@Override
-	public void initialize() {
+	@Parameter(type = ItemIO.INPUT)
+	public Dataset input;
 
-		super.initialize();
+	@Parameter(type = ItemIO.OUTPUT)
+	protected List<Dataset> output = new ArrayList<>();
 
-		modelFileUrl = "http://csbdeep.bioimagecomputing.com/model-project.zip";
-		modelName = "net_project";
+	@Parameter(label = "Number of tiles", min = "1")
+	protected int nTiles = 8;
 
-	}
+	@Parameter
+	CommandService commandService;
+
+	@Parameter
+	ModuleService moduleService;
+
+
+	String modelFileUrl = "http://csbdeep.bioimagecomputing.com/model-project.zip";
 
 	@Override
 	public void run() {
-		tryToInitialize();
-		network.setDoDimensionReduction(true, Axes.Z);
-		try {
-			validateInput(getInput(), "3D grayscale image with dimension order X-Y-Z",
+
+		DatasetHelper.validate(input, "3D grayscale image with size order X-Y-Z",
 				OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty());
-			super.run();
-		}
-		catch (final IOException e) {
-			showError(e.getMessage());
-		}
+
+		Future<CommandModule> resFuture = commandService.run(
+				GenericNetwork.class, false,
+				"input", input,
+				"modelUrl", modelFileUrl,
+				"blockMultiple", 16,
+				"nTiles", nTiles);
+		final CommandModule module = moduleService.waitFor(resFuture);
+		output.addAll((Collection) module.getOutput("output"));
+
 	}
 
 	public static void main(final String... args) throws Exception {

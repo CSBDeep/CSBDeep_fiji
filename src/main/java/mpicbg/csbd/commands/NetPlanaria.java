@@ -31,9 +31,19 @@ package mpicbg.csbd.commands;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 import java.util.OptionalLong;
+import java.util.concurrent.Future;
 
+import mpicbg.csbd.util.DatasetHelper;
+import org.scijava.ItemIO;
 import org.scijava.command.Command;
+import org.scijava.command.CommandModule;
+import org.scijava.command.CommandService;
+import org.scijava.module.ModuleService;
+import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
 import net.imagej.Dataset;
@@ -45,37 +55,42 @@ import net.imagej.axis.AxisType;
  */
 @Plugin(type = Command.class,
 	menuPath = "Plugins>CSBDeep>Demo>3D Denoising - Planaria", headless = true)
-public class NetPlanaria extends CSBDeepCommand implements Command {
+public class NetPlanaria implements Command {
 
-	@Override
-	public void initialize() {
+	@Parameter(type = ItemIO.INPUT)
+	public Dataset input;
 
-		super.initialize();
+	@Parameter(type = ItemIO.OUTPUT)
+	protected List<Dataset> output = new ArrayList<>();
 
-		modelFileUrl = "http://csbdeep.bioimagecomputing.com/model-planaria.zip";
-		modelName = "net_planaria";
+	@Parameter(label = "Number of tiles", min = "1")
+	protected int nTiles = 8;
 
-	}
+	@Parameter
+	CommandService commandService;
+
+	@Parameter
+	ModuleService moduleService;
+
+	private String modelFileUrl = "http://csbdeep.bioimagecomputing.com/model-planaria.zip";
 
 	@Override
 	public void run() {
-		try {
-			tryToInitialize();
-			validateInput(getInput(), "3D grayscale image with dimension order X-Y-Z",
-				OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty());
 
-			final AxisType[] mapping = { Axes.TIME, Axes.Z, Axes.Y, Axes.X,
-				Axes.CHANNEL };
-			if (getInput().dimension(Axes.Z) < getInput().dimension(Axes.CHANNEL)) {
-				mapping[1] = Axes.CHANNEL;
-				mapping[4] = Axes.Z;
-			}
-			setMapping(mapping);
-			super.run();
-		}
-		catch (final IOException e) {
-			showError(e.getMessage());
-		}
+		DatasetHelper.validate(input, "3D grayscale image with size order X-Y-Z",
+			OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty());
+
+		Future<CommandModule> resFuture = commandService.run(
+				GenericNetwork.class, false,
+				"input", input,
+				"modelUrl", modelFileUrl,
+//				"batchSize", 10,
+//				"batchAxis", Axes.TIME.getLabel(),
+				"blockMultiple", 8,
+				"nTiles", nTiles);
+		final CommandModule module = moduleService.waitFor(resFuture);
+		output.addAll((Collection) module.getOutput("output"));
+
 	}
 
 	public static void main(final String... args) throws Exception {

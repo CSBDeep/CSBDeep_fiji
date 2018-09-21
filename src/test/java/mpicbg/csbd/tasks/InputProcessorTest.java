@@ -28,12 +28,13 @@ public class InputProcessorTest {
 		final InputProcessor inputProcessor = new DefaultInputProcessor();
 
 		final List<RandomAccessibleInterval<FloatType>> output = inputProcessor.run(
-			input);
+			input, 4);
 
 		assertEquals(1, output.size());
 		assertEquals(10, output.get(0).dimension(0));
 		assertEquals(50, output.get(0).dimension(1));
 		assertEquals(100, output.get(0).dimension(2));
+		assertEquals(1, output.get(0).dimension(3));
 
 	}
 

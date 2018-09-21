@@ -1,6 +1,7 @@
 
 package mpicbg.csbd.commands;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
@@ -18,13 +19,15 @@ import net.imglib2.type.numeric.real.FloatType;
 public class NetTriboliumTest extends CSBDeepTest {
 
 	@Test
-	public void testNetTribolium() {
-		// testDataset(new FloatType(), new long[] {50, 100, 10}, new AxisType[]
-		// {Axes.X, Axes.Y, Axes.Z});
-		testDataset(new FloatType(), new long[] { 50, 10, 100 }, new AxisType[] {
-			Axes.X, Axes.Z, Axes.Y });
-		// testDataset(new ByteType(), new long[] {100, 50, 10}, new AxisType[]
-		// {Axes.X, Axes.Y, Axes.Z});
+	public void testNetTriboliumXYZ() {
+		 testDataset(new FloatType(), new long[] {5, 10, 2}, new AxisType[]
+		 {Axes.X, Axes.Y, Axes.Z});
+	}
+
+	@Test
+	public void testNetTriboliumXZY() {
+		testDataset(new FloatType(), new long[] { 5, 2, 10 }, new AxisType[] {
+				Axes.X, Axes.Z, Axes.Y });
 	}
 
 	public <T extends RealType<T> & NativeType<T>> void testDataset(final T type,
@@ -34,7 +37,7 @@ public class NetTriboliumTest extends CSBDeepTest {
 		launchImageJ();
 		final Dataset input = createDataset(type, dims, axes);
 		final List<Dataset> result = runPlugin(NetTribolium.class, input);
-		assertTrue("result should contain one dataset", result.size() == 1);
+		assertEquals(1, result.size());
 		final Dataset output = result.get(0);
 		testResultAxesAndSize(input, output);
 	}

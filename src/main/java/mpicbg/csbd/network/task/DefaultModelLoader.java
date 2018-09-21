@@ -11,15 +11,13 @@ public class DefaultModelLoader extends DefaultTask implements ModelLoader {
 
 	@Override
 	public void run(final String modelName, final Network network,
-		final String modelFileUrl, final String inputNodeName,
-		final String outputNodeName, final Dataset input)
+		final String modelFileUrl, final Dataset input)
 	{
 
 		setStarted();
 
 		if (!network.isInitialized()) {
-			loadNetwork(modelName, network, modelFileUrl, inputNodeName,
-				outputNodeName, input);
+			loadNetwork(modelName, network, modelFileUrl, input);
 			if (!network.isInitialized()) {
 				setFailed();
 				return;
@@ -32,15 +30,14 @@ public class DefaultModelLoader extends DefaultTask implements ModelLoader {
 	}
 
 	protected void loadNetwork(final String modelName, final Network network,
-		final String modelFileUrl, final String inputNodeName,
-		final String outputNodeName, final Dataset input)
+		final String modelFileUrl, final Dataset input)
 	{
 
 		try {
 
 			network.loadModel(modelFileUrl, modelName);
-			network.loadInputNode(inputNodeName, input);
-			network.loadOutputNode(outputNodeName);
+			network.loadInputNode(input);
+			network.loadOutputNode(input);
 			network.initMapping();
 
 		}

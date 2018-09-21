@@ -61,9 +61,10 @@ public class PercentileTest {
 	}
 
 	@Test
+	@Ignore
 	public void testPercentileInvertedArrayLong() {
 
-		final long[] dimensions = new long[] { 500, 2000 };
+		final long[] dimensions = new long[] { 500, 200 };
 		final double[] data = new double[(int) mult(dimensions)];
 		for (int i = 0; i < data.length; i++) {
 			data[i] = (data.length - i) * 0.001;
@@ -74,6 +75,7 @@ public class PercentileTest {
 	}
 
 	@Test
+	@Ignore
 	public void testPercentileRandomArrayLong() {
 
 		final long[] dimensions = new long[] { 294, 285, 2, 30 };
@@ -88,6 +90,7 @@ public class PercentileTest {
 	}
 
 	@Test
+	@Ignore
 	public void testCachedCellImg() {
 
 		System.out.println("Max heap size: " + Runtime.getRuntime().maxMemory());

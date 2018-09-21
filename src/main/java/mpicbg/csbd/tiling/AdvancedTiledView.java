@@ -20,13 +20,20 @@ public class AdvancedTiledView<T extends RealType<T>> extends TiledView<T> {
 	// protected long blockWidth;
 
 	public AdvancedTiledView(final RandomAccessibleInterval<T> source,
-		final long[] blockSize, final long[] overlap, final AxisType[] axes,
-		Tiling.TilingAction[] tilingActions)
+		final long[] blockSize, final long[] overlap, final AxisType[] axes)
 	{
 		super(source, blockSize, overlap);
 		processedTiles = new ArrayList<>();
 		originalDims = new HashMap<>();
 		this.originalAxes = axes;
+	}
+
+	public long[] getOverlapComplete() {
+		long[] overlap = new long[originalAxes.length];
+		for(int i = 0; i < numDimensions(); i++) {
+			overlap[i] = super.getOverlap()[i];
+		}
+		return overlap;
 	}
 
 	public Map<AxisType, Long> getOriginalDims() {

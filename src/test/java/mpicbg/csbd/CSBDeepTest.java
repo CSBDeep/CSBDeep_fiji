@@ -1,32 +1,34 @@
 
 package mpicbg.csbd;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.Future;
-
+import mpicbg.csbd.imglib2.TiledView;
+import net.imagej.Dataset;
+import net.imagej.ImageJ;
+import net.imagej.axis.Axes;
+import net.imagej.axis.AxisType;
+import net.imglib2.AbstractInterval;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.type.NativeType;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.FloatType;
+import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 import org.scijava.command.Command;
 import org.scijava.command.CommandModule;
 import org.scijava.module.Module;
 
-import net.imagej.Dataset;
-import net.imagej.ImageJ;
-import net.imagej.axis.Axes;
-import net.imagej.axis.AxisType;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.type.NativeType;
-import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
+import java.util.Arrays;
+import java.util.List;
+import java.util.concurrent.Future;
+
+import static mpicbg.csbd.tiling.DefaultTiling.arrayProduct;
+import static org.junit.Assert.*;
 
 public class CSBDeepTest {
 
 	protected ImageJ ij;
 
-	@Test
 	public void testCSBDeepTest() {
 		launchImageJ();
 		final Dataset input = createDataset(new FloatType(), new long[] { 30, 80, 2,
@@ -55,7 +57,7 @@ public class CSBDeepTest {
 	{
 		final Future<CommandModule> future = ij.command().run(pluginClass, false,
 			"input", dataset);
-		assertFalse("Plugin future is null", future == null);
+		assertNotEquals(null, future);
 		final Module module = ij.module().waitFor(future);
 		return (List<Dataset>) module.getOutput("output");
 	}
@@ -68,8 +70,14 @@ public class CSBDeepTest {
 		printDim("output", output);
 		printAxes("output", output);
 		for (int i = 0; i < input.numDimensions(); i++) {
-			assertEquals(output.axis(i).type(), input.axis(i).type());
-			assertEquals(output.dimension(i), input.dimension(i));
+			if (input.axis(i).type() == Axes.CHANNEL) {
+				assertTrue(
+						"Since the demo networks are probabilistic, the channels should double",
+						output.dimension(i) == input.dimension(i)*2);
+			}else {
+				assertEquals(input.dimension(i), output.dimension(i));
+			}
+			assertEquals(input.axis(i).type(), output.axis(i).type());
 		}
 	}
 
@@ -77,7 +85,7 @@ public class CSBDeepTest {
 		final RandomAccessibleInterval<T> output)
 	{
 		for (int i = 0; i < input.numDimensions(); i++) {
-			assertEquals(output.dimension(i), input.dimension(i));
+			assertEquals(input.dimension(i), output.dimension(i));
 		}
 	}
 
@@ -104,12 +112,24 @@ public class CSBDeepTest {
 		System.out.println(title + ": " + Arrays.toString(dims));
 	}
 
+	protected static void printDim(final String title, final AbstractInterval input) {
+		final long[] dims = new long[input.numDimensions()];
+		input.dimensions(dims);
+		System.out.println(title + ": " + Arrays.toString(dims));
+	}
+
 	protected static void printAxes(final String title, final Dataset input) {
 		final String[] axes = new String[input.numDimensions()];
 		for (int i = 0; i < axes.length; i++) {
 			axes[i] = input.axis(i).type().getLabel();
 		}
 		System.out.println(title + ": " + Arrays.toString(axes));
+	}
+
+	protected static long getNumTiles(TiledView tiledView) {
+		long[] dims = new long[tiledView.numDimensions()];
+		tiledView.dimensions(dims);
+		return arrayProduct(dims);
 	}
 
 }

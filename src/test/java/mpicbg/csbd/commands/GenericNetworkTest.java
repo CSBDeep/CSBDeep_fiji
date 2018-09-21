@@ -3,6 +3,7 @@ package mpicbg.csbd.commands;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertNotEquals;
 
 import java.io.File;
 import java.util.List;
@@ -51,7 +52,7 @@ public class GenericNetworkTest extends CSBDeepTest {
 		final Future<CommandModule> future = ij.command().run(GenericNetwork.class,
 			false, "input", input, "modelFile", new File(
 				"/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise2D/model.zip"));
-		assertFalse("Plugin future is null", future == null);
+		assertNotEquals(null, future);
 		final Module module = ij.module().waitFor(future);
 		List<Dataset> result = (List<Dataset>) module.getOutput("output");
 		assertEquals(1, result.size());

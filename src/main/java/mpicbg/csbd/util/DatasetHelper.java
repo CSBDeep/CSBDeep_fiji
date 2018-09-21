@@ -49,12 +49,61 @@ public class DatasetHelper {
 
 	}
 
+	public static AxisType[] getDimensionsAllAssigned(final Dataset image) {
+
+		final List<AxisType> unusedAxes = new ArrayList<>();
+		final List<Integer> unknownIndices = new ArrayList<>();
+		for (int j = 0; j < axes.length; j++) {
+			boolean knownAxis = false;
+			for (int i = 0; i < image.numDimensions(); i++) {
+				if (image.axis(i).type() == axes[j]) {
+					knownAxis = true;
+					break;
+				}
+			}
+			if (!knownAxis) unusedAxes.add(axes[j]);
+		}
+
+		AxisType[] result = new AxisType[image.numDimensions()];
+		for (int i = 0; i < image.numDimensions(); i++) {
+			result[i] = image.axis(i).type();
+			boolean knownAxis = false;
+			for (int j = 0; j < axes.length; j++) {
+				if (image.axis(i).type() == axes[j]) {
+					knownAxis = true;
+					break;
+				}
+			}
+			if (!knownAxis) unknownIndices.add(i);
+		}
+
+		for (int i = 0; i < unknownIndices.size() && i < unusedAxes.size(); i++) {
+			result[unknownIndices.get(i)] = unusedAxes.get(i);
+		}
+
+		return result;
+
+	}
+
 	public static void validate(final Dataset dataset, final String formatDesc,
+	                            final OptionalLong... expectedDims) {
+		try {
+			validateThrowingException(dataset, formatDesc, expectedDims);
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	public static void validateThrowingException(final Dataset dataset, final String formatDesc,
 		final OptionalLong... expectedDims) throws IOException
 	{
 		if (dataset.numDimensions() != expectedDims.length) {
-			throw new IOException("Can not process " + dataset.numDimensions() +
-				"D images.\nExpected format: " + formatDesc);
+			//TODO ugly check if dataset has channel, if it does, ignore it for the dimension check.. fix this
+			if (!(dataset.axis(Axes.CHANNEL).isPresent() && dataset.numDimensions()-1 == expectedDims.length)) {
+				throw new IOException("Can not process " + dataset.numDimensions() +
+						"D images.\nExpected format: " + formatDesc);
+			}
 		}
 		for (int i = 0; i < expectedDims.length; i++) {
 			if (expectedDims[i].isPresent() && expectedDims[i].getAsLong() != dataset

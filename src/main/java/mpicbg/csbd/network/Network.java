@@ -37,9 +37,9 @@ public interface Network<T extends RealType<T>> extends
 
 	ImageTensor getOutputNode();
 
-	void loadInputNode(String defaultName, Dataset dataset);
+	void loadInputNode(Dataset dataset);
 
-	void loadOutputNode(String defaultName);
+	void loadOutputNode(Dataset dataset);
 
 	void initMapping();
 
@@ -55,11 +55,13 @@ public interface Network<T extends RealType<T>> extends
 	 * dimension. Default value is true.
 	 */
 	void setDropSingletonDims(final boolean dropSingletonDims);
+//
+//	void setDoDimensionReduction(boolean doDimensionReduction);
+//
+//	void setDoDimensionReduction(boolean doDimensionReduction,
+//		AxisType axisToRemove);
 
-	void setDoDimensionReduction(boolean doDimensionReduction);
-
-	void setDoDimensionReduction(boolean doDimensionReduction,
-		AxisType axisToRemove);
+	void calculateMapping();
 
 	void doDimensionReduction();
 

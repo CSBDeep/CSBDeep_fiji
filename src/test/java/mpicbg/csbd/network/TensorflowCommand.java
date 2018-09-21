@@ -49,13 +49,13 @@ public class TensorflowCommand implements Command {
     private void loadNetwork2d() {
         initNetwork();
         network.dispose();
-        modelLoader.run("model2d-" + new Timestamp(System.currentTimeMillis()).getTime(), network, "/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise2D/model.zip", "input", "output", dataset);
+        modelLoader.run("model2d-" + new Timestamp(System.currentTimeMillis()).getTime(), network, "/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise2D/model.zip", dataset);
     }
 
     private void loadNetwork3d() {
         initNetwork();
         network.dispose();
-        modelLoader.run("model3d-" + new Timestamp(System.currentTimeMillis()).getTime(), network, "/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise3D/model.zip", "input", "output", dataset);
+        modelLoader.run("model3d-" + new Timestamp(System.currentTimeMillis()).getTime(), network, "/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise3D/model.zip", dataset);
     }
 
     @Override
@@ -78,9 +78,9 @@ public class TensorflowCommand implements Command {
 
         initNetwork();
 
-        modelLoader.run("model2d-" + new Timestamp(System.currentTimeMillis()).getTime(), network, "/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise2D/model.zip", "input", "output", dataset);
+        modelLoader.run("model2d-" + new Timestamp(System.currentTimeMillis()).getTime(), network, "/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise2D/model.zip", dataset);
         network.dispose();
-        modelLoader.run("model3d-" + new Timestamp(System.currentTimeMillis()).getTime(), network, "/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise3D/model.zip", "input", "output", dataset);
+        modelLoader.run("model3d-" + new Timestamp(System.currentTimeMillis()).getTime(), network, "/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise3D/model.zip", dataset);
     }
 
     public static void main(final String... args) throws Exception {
