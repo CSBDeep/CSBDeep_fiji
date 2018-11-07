@@ -63,7 +63,7 @@ public class NetTubulin implements Command {
 	protected int nTiles = 8;
 
 	@Parameter(label="Show process dialog")
-	protected boolean showProcessDialog = true;
+	protected boolean showProgressDialog = true;
 
 	@Parameter
 	CommandService commandService;
@@ -107,7 +107,7 @@ public class NetTubulin implements Command {
 	//					"batchAxis", Axes.TIME.getLabel(),
 					"blockMultiple", 8,
 					"nTiles", nTiles,
-					"showProcessDialog", showProcessDialog).get();
+					"showProgressDialog", showProgressDialog).get();
 			output.addAll((Collection) module.getOutput("output"));
 		} catch (InterruptedException e) {
 			e.printStackTrace();

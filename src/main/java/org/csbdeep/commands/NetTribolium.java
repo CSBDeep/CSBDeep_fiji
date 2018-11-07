@@ -63,7 +63,7 @@ public class NetTribolium implements Command {
 	protected int nTiles = 8;
 
 	@Parameter(label="Show process dialog")
-	protected boolean showProcessDialog = true;
+	protected boolean showProgressDialog = true;
 
 	@Parameter
 	CommandService commandService;
@@ -87,7 +87,7 @@ public class NetTribolium implements Command {
 					"modelUrl", modelUrl,
 					"blockMultiple", 8,
 					"nTiles", nTiles,
-					"showProcessDialog", showProcessDialog).get();
+					"showProgressDialog", showProgressDialog).get();
 			output.addAll((Collection) module.getOutput("output"));
 		} catch (InterruptedException e) {
 			e.printStackTrace();

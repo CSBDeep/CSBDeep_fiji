@@ -131,7 +131,7 @@ public class GenericNetwork implements
 	private Button changeTFMapping;
 
 	@Parameter(label="Show process dialog")
-	protected boolean showProcessDialog = true;
+	protected boolean showProgressDialog = true;
 
 	@Parameter(type = ItemIO.OUTPUT)
 	protected List<Dataset> output = new ArrayList<>();
@@ -346,7 +346,7 @@ public class GenericNetwork implements
 	}
 
 	protected void initTaskManager() {
-		final TaskForceManager tfm = new TaskForceManager(isHeadless() || !showProcessDialog, log);
+		final TaskForceManager tfm = new TaskForceManager(isHeadless() || !showProgressDialog, log);
 		tfm.initialize();
 		tfm.createTaskForce("Preprocessing", modelLoader, inputMapper,
 			inputProcessor, inputNormalizer);

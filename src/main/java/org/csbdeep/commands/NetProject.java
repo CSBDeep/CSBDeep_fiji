@@ -63,7 +63,7 @@ public class NetProject implements Command {
 	protected int nTiles = 8;
 
 	@Parameter(label="Show process dialog")
-	protected boolean showProcessDialog = true;
+	protected boolean showProgressDialog = true;
 
 	@Parameter
 	CommandService commandService;
@@ -88,7 +88,7 @@ public class NetProject implements Command {
 					"modelUrl", modelFileUrl,
 					"blockMultiple", 16,
 					"nTiles", nTiles,
-					"showProcessDialog", showProcessDialog).get();
+					"showProgressDialog", showProgressDialog).get();
 			output.addAll((Collection) module.getOutput("output"));
 		} catch (InterruptedException e) {
 			e.printStackTrace();

@@ -71,7 +71,7 @@ public class NetIso implements
 	protected int batchSize = 10;
 
 	@Parameter(label="Show process dialog")
-	protected boolean showProcessDialog = true;
+	protected boolean showProgressDialog = true;
 
 	@Parameter
 	CommandService commandService;
@@ -97,7 +97,7 @@ public class NetIso implements
 					"batchSize", batchSize,
 					"blockMultiple", 8,
 					"nTiles", nTiles,
-					"showProcessDialog", showProcessDialog).get();
+					"showProgressDialog", showProgressDialog).get();
 			output.addAll((Collection) module.getOutput("output"));
 		} catch (InterruptedException e) {
 			e.printStackTrace();
