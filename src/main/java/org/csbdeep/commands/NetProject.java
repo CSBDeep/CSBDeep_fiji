@@ -62,6 +62,9 @@ public class NetProject implements Command {
 	@Parameter(label = "Number of tiles", min = "1")
 	protected int nTiles = 8;
 
+	@Parameter(label="Show process dialog")
+	protected boolean showProcessDialog = true;
+
 	@Parameter
 	CommandService commandService;
 
@@ -84,7 +87,8 @@ public class NetProject implements Command {
 					"input", input,
 					"modelUrl", modelFileUrl,
 					"blockMultiple", 16,
-					"nTiles", nTiles).get();
+					"nTiles", nTiles,
+					"showProcessDialog", showProcessDialog).get();
 			output.addAll((Collection) module.getOutput("output"));
 		} catch (InterruptedException e) {
 			e.printStackTrace();

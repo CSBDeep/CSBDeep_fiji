@@ -62,6 +62,9 @@ public class NetPlanaria implements Command {
 	@Parameter(label = "Number of tiles", min = "1")
 	protected int nTiles = 8;
 
+	@Parameter(label="Show process dialog")
+	protected boolean showProcessDialog = true;
+
 	@Parameter
 	CommandService commandService;
 
@@ -85,7 +88,8 @@ public class NetPlanaria implements Command {
 	//				"batchSize", 10,
 	//				"batchAxis", Axes.TIME.getLabel(),
 					"blockMultiple", 8,
-					"nTiles", nTiles).get();
+					"nTiles", nTiles,
+					"showProcessDialog", showProcessDialog).get();
 			output.addAll((Collection) module.getOutput("output"));
 		} catch (InterruptedException e) {
 			e.printStackTrace();

@@ -130,6 +130,9 @@ public class GenericNetwork implements
 			callback = "openTFMappingDialog")
 	private Button changeTFMapping;
 
+	@Parameter(label="Show process dialog")
+	protected boolean showProcessDialog = true;
+
 	@Parameter(type = ItemIO.OUTPUT)
 	protected List<Dataset> output = new ArrayList<>();
 
@@ -343,7 +346,7 @@ public class GenericNetwork implements
 	}
 
 	protected void initTaskManager() {
-		final TaskForceManager tfm = new TaskForceManager(isHeadless(), log);
+		final TaskForceManager tfm = new TaskForceManager(isHeadless() || !showProcessDialog, log);
 		tfm.initialize();
 		tfm.createTaskForce("Preprocessing", modelLoader, inputMapper,
 			inputProcessor, inputNormalizer);
