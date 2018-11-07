@@ -209,21 +209,31 @@ public class GenericNetwork implements
 			default:
 				break;
 			case FILE:
-				try {
-					cacheName = IOHelper.getFileCacheName(this.getClass(), modelFile);
-					savePreferences();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				cacheName = getFileCacheName(this.getClass(), modelFile);
+				if(cacheName != null) savePreferences();
 				break;
 			case URL:
-				try {
-					cacheName = IOHelper.getUrlCacheName(this.getClass(), modelUrl);
-					savePreferences();
-				} catch (IOException e) {
-					e.printStackTrace();
-				}
+				cacheName = getUrlCacheName(this.getClass(), modelUrl);
+				if(cacheName != null) savePreferences();
 				break;
+		}
+	}
+
+	public static String getUrlCacheName(Class commandClass, String modelUrl) {
+		try {
+			return IOHelper.getUrlCacheName(commandClass, modelUrl);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;
+		}
+	}
+
+	public static String getFileCacheName(Class commandClass, File modelFile) {
+		try {
+			return IOHelper.getFileCacheName(commandClass, modelFile);
+		} catch (IOException e) {
+			e.printStackTrace();
+			return null;
 		}
 	}
 
