@@ -29,25 +29,23 @@
 
 package org.csbdeep.commands;
 
+import net.imagej.Dataset;
+import net.imagej.ImageJ;
+import org.csbdeep.util.DatasetHelper;
+import org.scijava.ItemIO;
+import org.scijava.command.Command;
+import org.scijava.command.CommandModule;
+import org.scijava.command.CommandService;
+import org.scijava.plugin.Parameter;
+import org.scijava.plugin.Plugin;
+import org.scijava.ui.UIService;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.OptionalLong;
-import java.util.concurrent.Future;
-
-import org.scijava.ItemIO;
-import org.scijava.command.Command;
-import org.scijava.command.CommandModule;
-import org.scijava.command.CommandService;
-import org.scijava.module.ModuleService;
-import org.scijava.plugin.Parameter;
-import org.scijava.plugin.Plugin;
-import org.scijava.ui.UIService;
-
-import org.csbdeep.util.DatasetHelper;
-import net.imagej.Dataset;
-import net.imagej.ImageJ;
+import java.util.concurrent.ExecutionException;
 
 /**
  */
@@ -66,9 +64,6 @@ public class NetTubulin implements Command {
 
 	@Parameter
 	CommandService commandService;
-
-	@Parameter
-	ModuleService moduleService;
 
 	@Parameter
 	UIService uiService;
@@ -100,16 +95,21 @@ public class NetTubulin implements Command {
 		if(!validInput) return;
 //			final AxisType[] mapping = { Axes.TIME, Axes.Y, Axes.X, Axes.CHANNEL };
 //			setMapping(mapping);
-		Future<CommandModule> resFuture = commandService.run(
-				GenericNetwork.class, false,
-				"input", input,
-				"modelUrl", url,
-//					"batchSize", batchSize,
-//					"batchAxis", Axes.TIME.getLabel(),
-				"blockMultiple", 8,
-				"nTiles", nTiles);
-		final CommandModule module = moduleService.waitFor(resFuture);
-		output.addAll((Collection) module.getOutput("output"));
+		try {
+			final CommandModule module = commandService.run(
+					GenericNetwork.class, false,
+					"input", input,
+					"modelUrl", url,
+	//					"batchSize", batchSize,
+	//					"batchAxis", Axes.TIME.getLabel(),
+					"blockMultiple", 8,
+					"nTiles", nTiles).get();
+			output.addAll((Collection) module.getOutput("output"));
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public static void main(final String... args) throws Exception {

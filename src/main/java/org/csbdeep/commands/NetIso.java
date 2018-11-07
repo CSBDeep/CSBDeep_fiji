@@ -29,26 +29,24 @@
 
 package org.csbdeep.commands;
 
+import net.imagej.Dataset;
+import net.imagej.ImageJ;
+import org.csbdeep.util.DatasetHelper;
+import org.scijava.ItemIO;
+import org.scijava.command.Command;
+import org.scijava.command.CommandModule;
+import org.scijava.command.CommandService;
+import org.scijava.plugin.Parameter;
+import org.scijava.plugin.Plugin;
+import org.scijava.ui.UIService;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.OptionalLong;
-import java.util.concurrent.Future;
-
-import org.scijava.ItemIO;
-import org.scijava.command.Command;
-import org.scijava.command.CommandModule;
-import org.scijava.command.CommandService;
-import org.scijava.module.ModuleService;
-import org.scijava.plugin.Parameter;
-import org.scijava.plugin.Plugin;
-import org.scijava.ui.UIService;
-
-import org.csbdeep.util.DatasetHelper;
-import net.imagej.Dataset;
-import net.imagej.ImageJ;
+import java.util.concurrent.ExecutionException;
 
 @Plugin(type = Command.class,
 	menuPath = "Plugins>CSBDeep>Demo>Isotropic Reconstruction - Retina",
@@ -76,9 +74,6 @@ public class NetIso implements
 	CommandService commandService;
 
 	@Parameter
-	ModuleService moduleService;
-
-	@Parameter
 	UIService uiService;
 
 	private String modelFileUrl = "http://csbdeep.bioimagecomputing.com/model-iso.zip";
@@ -90,16 +85,21 @@ public class NetIso implements
 				OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty());
 		if(!validInput) return;
 
-		Future<CommandModule> resFuture = commandService.run(
-				GenericIsotropicNetwork.class, false,
-				"input", input,
-				"modelUrl", modelFileUrl,
-				"scale", scale,
-				"batchSize", batchSize,
-				"blockMultiple", 8,
-				"nTiles", nTiles);
-		final CommandModule module = moduleService.waitFor(resFuture);
-		output.addAll((Collection) module.getOutput("output"));
+		try {
+			final CommandModule module = commandService.run(
+					GenericIsotropicNetwork.class, false,
+					"input", input,
+					"modelUrl", modelFileUrl,
+					"scale", scale,
+					"batchSize", batchSize,
+					"blockMultiple", 8,
+					"nTiles", nTiles).get();
+			output.addAll((Collection) module.getOutput("output"));
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			e.printStackTrace();
+		}
 
 	}
 
