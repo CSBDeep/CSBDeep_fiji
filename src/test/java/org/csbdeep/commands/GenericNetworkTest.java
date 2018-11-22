@@ -1,6 +1,7 @@
 
 package org.csbdeep.commands;
 
+import static junit.framework.TestCase.assertNotNull;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
 
@@ -71,9 +72,8 @@ public class GenericNetworkTest extends CSBDeepTest {
 			final Module module = ij.command().run(GenericNetwork.class,
 				false, "input", input, "modelFile", new File(
 					"/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise2D/model.zip")).get();
-			List<Dataset> result = (List<Dataset>) module.getOutput("output");
-			assertEquals(1, result.size());
-			final Dataset output = result.get(0);
+			Dataset output = (Dataset) module.getOutput("output");
+			assertNotNull(output);
 			testResultAxesAndSize(input, output);
 		} catch (InterruptedException e) {
 			e.printStackTrace();

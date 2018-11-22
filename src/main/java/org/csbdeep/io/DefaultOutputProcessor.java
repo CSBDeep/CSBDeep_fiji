@@ -20,7 +20,7 @@ public class DefaultOutputProcessor<T extends RealType<T> & NativeType<T>>
 	public static String[] OUTPUT_NAMES = { "result" };
 
 	@Override
-	public List<Dataset> run(final List<RandomAccessibleInterval<T>> result,
+	public Dataset run(final List<RandomAccessibleInterval<T>> result,
 		final Dataset dataset, final AxisType[] axes,
 		final DatasetService datasetService)
 	{
@@ -32,7 +32,9 @@ public class DefaultOutputProcessor<T extends RealType<T> & NativeType<T>>
 
 		setFinished();
 
-		return output;
+		assert(output.size() == 1);
+
+		return output.get(0);
 	}
 
 	public List<Dataset> _run(final RandomAccessibleInterval<T> result,

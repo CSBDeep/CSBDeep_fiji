@@ -12,7 +12,7 @@ import net.imglib2.type.numeric.RealType;
 
 public interface OutputProcessor<T extends RealType<T>> extends Task {
 
-	List<Dataset> run(final List<RandomAccessibleInterval<T>> result,
+	Dataset run(final List<RandomAccessibleInterval<T>> result,
 		final Dataset datasetView, final AxisType[] axes,
 		final DatasetService datasetService);
 

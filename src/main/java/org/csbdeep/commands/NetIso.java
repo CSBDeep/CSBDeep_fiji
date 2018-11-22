@@ -59,7 +59,7 @@ public class NetIso implements
 	public Dataset input;
 
 	@Parameter(type = ItemIO.OUTPUT)
-	protected List<Dataset> output = new ArrayList<>();
+	protected Dataset output;
 
 	@Parameter(label = "Number of tiles", min = "1")
 	protected int nTiles = 8;
@@ -70,7 +70,7 @@ public class NetIso implements
 	@Parameter(label = "Batch size", min = "1")
 	protected int batchSize = 10;
 
-	@Parameter(label="Show process dialog")
+	@Parameter(label="Show progress dialog")
 	protected boolean showProgressDialog = true;
 
 	@Parameter
@@ -98,7 +98,7 @@ public class NetIso implements
 					"blockMultiple", 8,
 					"nTiles", nTiles,
 					"showProgressDialog", showProgressDialog).get();
-			output.addAll((Collection) module.getOutput("output"));
+			output = (Dataset) module.getOutput("output");
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} catch (ExecutionException e) {

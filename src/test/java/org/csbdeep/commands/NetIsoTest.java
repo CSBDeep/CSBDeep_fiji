@@ -1,10 +1,6 @@
 
 package org.csbdeep.commands;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-
 import java.util.List;
 import java.util.concurrent.Future;
 
@@ -20,6 +16,8 @@ import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 
+import static org.junit.Assert.*;
+
 public class NetIsoTest extends CSBDeepTest {
 
 	@Test
@@ -27,8 +25,8 @@ public class NetIsoTest extends CSBDeepTest {
 		launchImageJ();
 		final Dataset input = createDataset(new FloatType(), new long[] {5, 10}, new AxisType[]
 				{Axes.X, Axes.Y});
-		final List<Dataset> result = runPlugin(NetIso.class, input);
-		assertEquals(0, result.size());
+		final Dataset result = runPlugin(NetIso.class, input);
+		assertNull(result);
 	}
 
 	@Test
@@ -48,11 +46,9 @@ public class NetIsoTest extends CSBDeepTest {
 				"input", input, "scale", 1.5);
 		assertNotEquals(null, future);
 		final Module module = ij.module().waitFor(future);
-		final List<Dataset> result = (List<Dataset>) module.getOutput("output");
+		final Dataset output = (Dataset) module.getOutput("output");
 
-		assertTrue("result should contain one dataset, not " + result.size(), result
-			.size() == 1);
-		final Dataset output = result.get(0);
+		assertNotNull(output);
 		testResultAxesAndSize(input, output);
 	}
 

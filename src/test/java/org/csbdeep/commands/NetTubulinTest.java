@@ -2,6 +2,8 @@
 package org.csbdeep.commands;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertNull;
 
 import java.util.List;
 
@@ -22,8 +24,8 @@ public class NetTubulinTest extends CSBDeepTest {
 		launchImageJ();
 		final Dataset input = createDataset(new FloatType(), new long[] {1, 1, 1, 1}, new AxisType[]
 				{Axes.X, Axes.Y, Axes.Z, Axes.TIME});
-		final List<Dataset> result = runPlugin(NetTubulin.class, input);
-		assertEquals(0, result.size());
+		final Dataset result = runPlugin(NetTubulin.class, input);
+		assertNull(result);
 	}
 
 	@Test
@@ -44,9 +46,8 @@ public class NetTubulinTest extends CSBDeepTest {
 
 		launchImageJ();
 		final Dataset input = createDataset(type, dims, axes);
-		final List<Dataset> result = runPlugin(NetTubulin.class, input);
-		assertEquals(1, result.size());
-		final Dataset output = result.get(0);
+		final Dataset output = runPlugin(NetTubulin.class, input);
+		assertNotNull(output);
 		testResultAxesAndSize(input, output);
 	}
 

@@ -206,13 +206,11 @@ public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwo
 	{
 
 		@Override
-		public List<Dataset> run(final List<RandomAccessibleInterval<T>> result,
+		public Dataset run(final List<RandomAccessibleInterval<T>> result,
 			final Dataset dataset, final AxisType[] axes,
 			final DatasetService datasetService)
 		{
 			setStarted();
-
-			final List<Dataset> output = new ArrayList<>();
 
 			final RandomAccessibleInterval<T> _result0 = result.get(0);
 			final RandomAccessibleInterval<T> _result1 = result.get(1);
@@ -254,8 +252,8 @@ public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwo
 			pointwiseGeometricMean(res0_pred, res1_pred, prediction);
 			DatasetHelper.logDim(this, "Merged output", prediction);
 
-			output.add(wrapIntoDataset(OUTPUT_NAMES[0], prediction, axes,
-				datasetService));
+			Dataset output = wrapIntoDataset(OUTPUT_NAMES[0], prediction, axes,
+				datasetService);
 
 			setFinished();
 

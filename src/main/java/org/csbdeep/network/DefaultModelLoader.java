@@ -37,7 +37,8 @@ public class DefaultModelLoader extends DefaultTask implements ModelLoader {
 
 		try {
 
-			network.loadModel(modelFileUrl, modelName);
+			boolean loaded = network.loadModel(modelFileUrl, modelName);
+			if(!loaded) return;
 			network.loadInputNode(input);
 			network.loadOutputNode(input);
 			network.initMapping();

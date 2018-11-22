@@ -114,6 +114,8 @@ public class GenericNetwork implements
 	@Parameter(label = "Batch size", min = "1")
 	protected int batchSize = 1;
 
+	private boolean modelNeedsInitialization;
+
 	public enum NetworkInputSourceType { UNSET, FILE, URL }
 	
 	private NetworkInputSourceType networkInputSourceType = NetworkInputSourceType.UNSET;
@@ -130,11 +132,11 @@ public class GenericNetwork implements
 			callback = "openTFMappingDialog")
 	private Button changeTFMapping;
 
-	@Parameter(label="Show process dialog")
+	@Parameter(label="Show progress dialog")
 	protected boolean showProgressDialog = true;
 
 	@Parameter(type = ItemIO.OUTPUT)
-	protected List<Dataset> output = new ArrayList<>();
+	protected Dataset output;
 
 	@Parameter
 	protected LogService log;
@@ -191,13 +193,14 @@ public class GenericNetwork implements
 	private int oldBatchesSize;
 
 	protected void openTFMappingDialog() {
+		initiateModelIfNeeded();
 		finishModelLoading();
 		MappingDialog.create(network.getInputNode(), network.getOutputNode());
 	}
 
 	/** Executed whenever the {@link #modelFile} parameter is initialized. */
 	protected void modelFileInitialized() {
-		final String p_modelfile = prefService.get(GenericNetwork.class, modelFileKey, "");
+		final String p_modelfile = prefService.get(this.getClass(), modelFileKey, "");
 		if (!p_modelfile.isEmpty()) {
 			modelFile = new File(p_modelfile);
 			if(modelFile.exists()) {
@@ -282,8 +285,13 @@ public class GenericNetwork implements
 			} else {
 				tryToInitialize();
 			}
-			tryToPrepareInputAndNetwork();
+			modelNeedsInitialization = true;
 		});
+	}
+
+	protected void initiateModelIfNeeded() {
+		if(modelNeedsInitialization)
+			tryToPrepareInputAndNetwork();
 	}
 
 	private void restartPool() {
@@ -417,6 +425,7 @@ public class GenericNetwork implements
 
 	protected void mainThread() throws OutOfMemoryError {
 
+		initiateModelIfNeeded();
 		finishModelLoading();
 		updateCacheName();
 		savePreferences();
@@ -458,9 +467,8 @@ public class GenericNetwork implements
 			for (AdvancedTiledView obj : tiledOutput) {
 				obj.dispose();
 			}
-			this.output.clear();
-			this.output.addAll(outputProcessor.run(output, getInput(),
-					getAxesArray(network.getOutputNode()), datasetService));
+			this.output = outputProcessor.run(output, getInput(),
+					getAxesArray(network.getOutputNode()), datasetService);
 		}
 
 	}

@@ -50,14 +50,14 @@ public class CSBDeepTest {
 		return ij.dataset().create(type, dims, "", axes);
 	}
 
-	protected <C extends Command> List<Dataset> runPlugin(
+	protected <C extends Command> Dataset runPlugin(
 		final Class<C> pluginClass, final Dataset dataset)
 	{
 		final Future<CommandModule> future = ij.command().run(pluginClass, false,
 			"input", dataset);
 		assertNotEquals(null, future);
 		final Module module = ij.module().waitFor(future);
-		return (List<Dataset>) module.getOutput("output");
+		return (Dataset) module.getOutput("output");
 	}
 
 	protected void testResultAxesAndSize(final Dataset input,

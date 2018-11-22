@@ -23,7 +23,7 @@ def getFileName(path):
 def runNetwork(inputPath, outputPath):
 	print("input: " + inputPath + ", output: " + outputPath)
 	imp = io.open(inputPath)
-	future = (command.run(GenericNetwork, True,
+	mymod = (command.run(GenericNetwork, True,
 		"input", imp,
 		"nTiles", nTiles,
 		"overlap", overlap,
@@ -31,25 +31,20 @@ def runNetwork(inputPath, outputPath):
 		"percentileBottom", percentileBottom,
 		"percentileTop", percentileTop,
 		"clip", clip,
-		"modelFile", modelFile))
-	mymod = module.waitFor(future)
+		"modelFile", modelFile)).get()
 	myoutput = mymod.getOutput("output")
-	print(future)
-	print(mymod)
 	print(myoutput)
-	imp = myoutput[0]
-	print(imp)
-	io.save(imp, outputPath);
+	io.save(myoutput, outputPath)
 
-if(input.endswith(".tif")):
-	if(output.endswith(".tif")):
+if input.endswith(".tif"):
+	if output.endswith(".tif"):
 		runNetwork(input, output)
 	else:
 		if not(output.endswith("/")):
 			output += "/"
 		runNetwork(input, output + getFileName(input))
 else:
-	if(output.endswith(".tif")):
+	if output.endswith(".tif"):
 		print("ERROR: please provide a directory as output, because your input is also a directory")
 		sys.exit()
 	if not(output.endswith("/")):
@@ -63,5 +58,5 @@ else:
 	listOfFilesInFolder = directory.listFiles();
 
 	for file in listOfFilesInFolder:
-		if (file.toString().endswith(".tif")):
+		if file.toString().endswith(".tif"):
 			runNetwork(file.toString(), output + getFileName(file.toString()))

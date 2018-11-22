@@ -3,6 +3,7 @@ package org.csbdeep.commands;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
 import java.util.List;
@@ -43,9 +44,8 @@ public class GenericNetworksMultipleCallsTest extends CSBDeepTest {
 						"overlap", 2);
 				assertNotEquals(null, future);
 				final Module module = ij.module().waitFor(future);
-				List<Dataset> result = (List<Dataset>) module.getOutput("output");
-				assertEquals(1, result.size());
-				final Dataset output = result.get(0);
+				final Dataset output = (Dataset) module.getOutput("output");
+				assertNotNull(output);
 				printDim("input", input);
 				printAxes("input", input);
 				printDim("output", output);

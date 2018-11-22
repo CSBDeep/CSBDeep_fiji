@@ -57,12 +57,12 @@ public class NetTribolium implements Command {
 	public Dataset input;
 
 	@Parameter(type = ItemIO.OUTPUT)
-	protected List<Dataset> output = new ArrayList<>();
+	protected Dataset output;
 
 	@Parameter(label = "Number of tiles", min = "1")
 	protected int nTiles = 8;
 
-	@Parameter(label="Show process dialog")
+	@Parameter(label="Show progress dialog")
 	protected boolean showProgressDialog = true;
 
 	@Parameter
@@ -88,7 +88,7 @@ public class NetTribolium implements Command {
 					"blockMultiple", 8,
 					"nTiles", nTiles,
 					"showProgressDialog", showProgressDialog).get();
-			output.addAll((Collection) module.getOutput("output"));
+			output = (Dataset) module.getOutput("output");
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} catch (ExecutionException e) {

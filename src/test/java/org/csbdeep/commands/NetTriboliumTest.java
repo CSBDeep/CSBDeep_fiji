@@ -1,10 +1,12 @@
 
 package org.csbdeep.commands;
 
+import static junit.framework.TestCase.assertNotNull;
 import static org.junit.Assert.assertEquals;
 
 import java.util.List;
 
+import org.junit.Assert;
 import org.junit.Test;
 
 import org.csbdeep.CSBDeepTest;
@@ -22,8 +24,8 @@ public class NetTriboliumTest extends CSBDeepTest {
 		launchImageJ();
 		final Dataset input = createDataset(new FloatType(), new long[] {5, 10}, new AxisType[]
 				{Axes.X, Axes.Y});
-		final List<Dataset> result = runPlugin(NetTribolium.class, input);
-		assertEquals(0, result.size());
+		final Dataset result = runPlugin(NetTribolium.class, input);
+		Assert.assertNull(result);
 	}
 
 	@Test
@@ -44,9 +46,8 @@ public class NetTriboliumTest extends CSBDeepTest {
 
 		launchImageJ();
 		final Dataset input = createDataset(type, dims, axes);
-		final List<Dataset> result = runPlugin(NetTribolium.class, input);
-		assertEquals(1, result.size());
-		final Dataset output = result.get(0);
+		final Dataset output = runPlugin(NetTribolium.class, input);
+		assertNotNull(output);
 		testResultAxesAndSize(input, output);
 	}
 
