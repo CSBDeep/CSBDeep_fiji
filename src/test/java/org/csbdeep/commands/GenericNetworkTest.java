@@ -6,6 +6,7 @@ import static org.junit.Assert.assertNotEquals;
 
 import java.io.File;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
 import org.junit.Ignore;
@@ -26,6 +27,25 @@ import net.imglib2.type.numeric.real.FloatType;
 public class GenericNetworkTest extends CSBDeepTest {
 
 	@Test
+	public void testMissingNetwork() throws ExecutionException, InterruptedException {
+		launchImageJ();
+		final Dataset input = createDataset(new FloatType(), new long[]{2,2}, new AxisType[]{Axes.X, Axes.Y});
+		final Module module = ij.command().run(GenericNetwork.class,
+				false, "input", input, "modelFile", new File(
+						"/some/non/existing/path.zip")).get();
+	}
+
+	@Test
+	public void testNonExistingNetworkPref() throws ExecutionException, InterruptedException {
+		launchImageJ();
+		String bla = new GenericNetwork().getModelFileKey();
+		ij.prefs().put(GenericNetwork.class, bla, "/something/useless");
+		final Dataset input = createDataset(new FloatType(), new long[]{2,2}, new AxisType[]{Axes.X, Axes.Y});
+		final Module module = ij.command().run(GenericNetwork.class,
+				true, "input", input, "modelUrl", "http://csbdeep.bioimagecomputing.com/model-tubulin.zip").get();
+	}
+
+	@Test
 	@Ignore
 	public void testGenericNetwork() {
 		launchImageJ();
@@ -44,19 +64,23 @@ public class GenericNetworkTest extends CSBDeepTest {
 	}
 
 	public <T extends RealType<T> & NativeType<T>> void testDataset(final T type,
-		final long[] dims, final AxisType[] axes)
-	{
+		final long[] dims, final AxisType[] axes) {
 
 		final Dataset input = createDataset(type, dims, axes);
-		final Future<CommandModule> future = ij.command().run(GenericNetwork.class,
-			false, "input", input, "modelFile", new File(
-				"/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise2D/model.zip"));
-		assertNotEquals(null, future);
-		final Module module = ij.module().waitFor(future);
-		List<Dataset> result = (List<Dataset>) module.getOutput("output");
-		assertEquals(1, result.size());
-		final Dataset output = result.get(0);
-		testResultAxesAndSize(input, output);
+		try {
+			final Module module = ij.command().run(GenericNetwork.class,
+				false, "input", input, "modelFile", new File(
+					"/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise2D/model.zip")).get();
+			List<Dataset> result = (List<Dataset>) module.getOutput("output");
+			assertEquals(1, result.size());
+			final Dataset output = result.get(0);
+			testResultAxesAndSize(input, output);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			e.printStackTrace();
+		}
+
 	}
 
 }

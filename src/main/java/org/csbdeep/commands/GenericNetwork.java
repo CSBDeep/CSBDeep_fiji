@@ -197,7 +197,7 @@ public class GenericNetwork implements
 
 	/** Executed whenever the {@link #modelFile} parameter is initialized. */
 	protected void modelFileInitialized() {
-		final String p_modelfile = prefService.get(String.class, modelFileKey, "");
+		final String p_modelfile = prefService.get(GenericNetwork.class, modelFileKey, "");
 		if (!p_modelfile.isEmpty()) {
 			modelFile = new File(p_modelfile);
 			if(modelFile.exists()) {
@@ -282,7 +282,7 @@ public class GenericNetwork implements
 			} else {
 				tryToInitialize();
 			}
-			prepareInputAndNetwork();
+			tryToPrepareInputAndNetwork();
 		});
 	}
 
@@ -310,10 +310,14 @@ public class GenericNetwork implements
 	public void initialize() {
 		initialized = true;
 		cacheName = this.getClass().getSimpleName();
-		modelFileKey = this.getClass().getSimpleName() + "_modelfile";
+		modelFileKey = getModelFileKey();
 		initTasks();
 		initTaskManager();
 		initNetwork();
+	}
+
+	public String getModelFileKey() {
+		return this.getClass().getSimpleName() + "_modelfile";
 	}
 
 	protected void tryToInitialize() {
@@ -422,7 +426,11 @@ public class GenericNetwork implements
 
 		solveModelSource();
 
-		prepareInputAndNetwork();
+		boolean successfulNetworkPreparation = tryToPrepareInputAndNetwork();
+		if(!successfulNetworkPreparation) {
+			error("Network preparation failed.");
+			return;
+		}
 
 		final Dataset normalizedInput;
 		if (doInputNormalization()) {
@@ -461,7 +469,12 @@ public class GenericNetwork implements
 		if(modelFileUrl.isEmpty()) modelFileChanged();
 		if(modelFileUrl.isEmpty()) modelUrlChanged();
 		try {
-			modelLoadingFuture.get();
+			if(modelLoadingFuture == null) {
+				error("Could not load model. (model file url: \"" + modelFileUrl + "\")");
+			} else {
+				modelLoadingFuture.get();
+
+			}
 		} catch (InterruptedException | ExecutionException e) {
 			e.printStackTrace();
 		}
@@ -477,11 +490,15 @@ public class GenericNetwork implements
 		return normalizeInput;
 	}
 
-	protected void prepareInputAndNetwork() {
+	protected boolean tryToPrepareInputAndNetwork() {
 
 		modelName = cacheName;
+
+		if(modelFileUrl.isEmpty()) return false;
 		modelLoader.run(modelName, network, modelFileUrl, getInput());
+		if(modelLoader.isFailed()) return false;
 		inputMapper.run(getInput(), network);
+		return !inputMapper.isFailed();
 
 	}
 
@@ -669,6 +686,15 @@ public class GenericNetwork implements
 		}
 		else {
 			System.out.println(msg);
+		}
+	}
+
+	protected void error(final String msg) {
+		if (taskManager != null) {
+			taskManager.logError(msg);
+		}
+		else {
+			System.out.println("[ERROR] " + msg);
 		}
 	}
 

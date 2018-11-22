@@ -33,6 +33,8 @@ public class DefaultModelLoader extends DefaultTask implements ModelLoader {
 		final String modelFileUrl, final Dataset input)
 	{
 
+		if(modelFileUrl.isEmpty()) return;
+
 		try {
 
 			network.loadModel(modelFileUrl, modelName);
