@@ -12,7 +12,7 @@
 	</parent>
 
 	<groupId>mpicbg.csbd</groupId>
-	<artifactId>CSBDeep</artifactId>
+	<artifactId>CSBDeep_</artifactId>
 	<version>0.2.1</version>
 
 	<name>CSBDeep</name>
