@@ -31,6 +31,7 @@ package org.csbdeep.commands;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 
 import org.csbdeep.network.ModelExecutor;
 import org.csbdeep.network.model.Network;
@@ -93,6 +94,8 @@ public class OOMThrowingNetwork extends GenericNetwork
 			tryToTileAndRunNetwork(list);
 		}
 		catch(OutOfMemoryError e) {
+		} catch (ExecutionException e) {
+			e.printStackTrace();
 		}
 
 	}

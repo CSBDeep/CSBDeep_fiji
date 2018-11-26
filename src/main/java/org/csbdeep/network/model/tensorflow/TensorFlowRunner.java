@@ -35,6 +35,8 @@ import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
 import org.tensorflow.framework.TensorInfo;
 
+import java.util.concurrent.ExecutionException;
+
 public class TensorFlowRunner {
 
 	/*
@@ -43,7 +45,7 @@ public class TensorFlowRunner {
 	 */
 	public static Tensor executeGraph(final SavedModelBundle model,
 		final Tensor image, final TensorInfo inputTensorInfo,
-		final TensorInfo outputTensorInfo) throws Exception
+		final TensorInfo outputTensorInfo) throws IllegalArgumentException, ExecutionException
 	{
 
 		final Tensor output_t = model.session().runner() //
@@ -55,7 +57,7 @@ public class TensorFlowRunner {
 
 			if (output_t.numDimensions() == 0) {
 				showError("Output tensor has no dimensions");
-				throw new Exception("Output tensor has no dimensions");
+				throw new ExecutionException("Output tensor has no dimensions", null);
 			}
 		}
 		else {

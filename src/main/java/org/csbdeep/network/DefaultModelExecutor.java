@@ -9,6 +9,7 @@ import org.csbdeep.network.model.Network;
 import org.csbdeep.task.DefaultTask;
 import org.csbdeep.tiling.AdvancedTiledView;
 import org.csbdeep.util.DatasetHelper;
+
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 
@@ -23,8 +24,7 @@ public class DefaultModelExecutor<T extends RealType<T>> extends DefaultTask
 
 	@Override
 	public List<AdvancedTiledView<T>> run(final List<AdvancedTiledView<T>> input,
-		final Network network) throws OutOfMemoryError
-	{
+		final Network network) throws OutOfMemoryError, ExecutionException {
 		if(!isCanceled()) {
 			setStarted();
 			this.network = network;
@@ -40,7 +40,11 @@ public class DefaultModelExecutor<T extends RealType<T>> extends DefaultTask
 			pool = Executors.newWorkStealingPool();
 			final List<AdvancedTiledView<T>> output = new ArrayList<>();
 			for (AdvancedTiledView<T> tile : input) {
-				output.add(run(tile, network));
+				try {
+					output.add(run(tile, network));
+				} catch (ExecutionException e) {
+					throw e;
+				}
 				if(isCanceled()) return null;
 			}
 			pool.shutdown();
@@ -68,8 +72,7 @@ public class DefaultModelExecutor<T extends RealType<T>> extends DefaultTask
 	}
 
 	private AdvancedTiledView<T> run(final AdvancedTiledView<T> input,
-		final Network network) throws OutOfMemoryError
-	{
+		final Network network) throws OutOfMemoryError, IllegalArgumentException, ExecutionException {
 
 		input.getProcessedTiles().clear();
 
@@ -84,12 +87,20 @@ public class DefaultModelExecutor<T extends RealType<T>> extends DefaultTask
 			}
 
 		}
-		catch(RejectedExecutionException e) {
+		catch(final RejectedExecutionException e) {
 			//canceled
 			return null;
 		}
+		catch(final IllegalArgumentException e) {
+			setFailed();
+			throw e;
+		}
 		catch (final ExecutionException | IllegalStateException exc) {
 			exc.printStackTrace();
+			if(exc.getMessage().contains(IllegalArgumentException.class.getSimpleName())) {
+				setFailed();
+				throw exc;
+			}
 			setIdle();
 			throw new OutOfMemoryError();
 		}

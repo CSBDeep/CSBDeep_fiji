@@ -1,11 +1,19 @@
 
 package org.csbdeep.network.model.tensorflow;
 
+import java.io.File;
+import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
+import org.csbdeep.network.DefaultInputMapper;
+import org.csbdeep.network.model.DefaultNetwork;
+import org.csbdeep.network.model.NetworkSettings;
+import org.csbdeep.task.Task;
 import org.scijava.io.location.Location;
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
@@ -16,10 +24,10 @@ import org.tensorflow.framework.SignatureDef;
 import org.tensorflow.framework.TensorInfo;
 import org.tensorflow.framework.TensorShapeProto;
 
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
 import com.google.protobuf.InvalidProtocolBufferException;
 
-import org.csbdeep.network.model.DefaultNetwork;
-import org.csbdeep.task.Task;
 import net.imagej.Dataset;
 import net.imagej.DatasetService;
 import net.imagej.axis.Axes;
@@ -35,6 +43,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 
 	private SavedModelBundle model;
 	private SignatureDef sig;
+	private Map meta;
 	private final TensorFlowService tensorFlowService;
 	private final DatasetService datasetService;
 	private TensorInfo inputTensorInfo, outputTensorInfo;
@@ -123,11 +132,13 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 
 	@Override
 	protected boolean loadModel(final Location source, final String modelName) {
+		log("Loading TensorFlow model " + modelName + " from source file " + source.getURI());
 		try {
 			if (model != null) {
 				model.close();
 			}
 			model = tensorFlowService.loadModel(source, modelName, MODEL_TAG);
+			loadNetworkSettingsFromJson(tensorFlowService.loadFile(source, modelName, "meta.json"));
 		}
 		catch (TensorFlowException | IOException e) {
 			e.printStackTrace();
@@ -144,6 +155,82 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 			 e.printStackTrace();
 		}
 		return true;
+	}
+
+	private void loadNetworkSettingsFromJson(File jsonFile) {
+		networkSettings = new NetworkSettings();
+		try {
+			JsonReader reader = new JsonReader(new FileReader(jsonFile));
+			try {
+				readNetworkSettingsArray(reader);
+			} finally {
+				reader.close();
+			}
+		} catch (IOException e) {
+			log("No meta.json file found for network.");
+		}
+	}
+
+	private void readNetworkSettingsArray(JsonReader reader) throws IOException {
+		reader.beginObject();
+		while (reader.hasNext()) {
+			String name = reader.nextName();
+			if (name.equals("axes_div_by") && reader.peek() != JsonToken.NULL) {
+				networkSettings.axesDivBy = readIntArray(reader);
+			} else if (name.equals("tile_overlap") && reader.peek() != JsonToken.NULL) {
+				networkSettings.tileOverlap = readIntArray(reader);
+			} else if (name.equals("axes") && reader.peek() != JsonToken.NULL) {
+				networkSettings.axesIn = readAxesString(reader);
+			} else if (name.equals("axes_out") && reader.peek() != JsonToken.NULL) {
+				networkSettings.axesOut = readAxesString(reader);
+			} else if (name.equals("tiling") && reader.peek() != JsonToken.NULL) {
+				networkSettings.tilingAllowed = readBooleanArray(reader);
+			} else {
+				reader.skipValue();
+			}
+		}
+		reader.endObject();
+	}
+
+	private List readAxesString(JsonReader reader) throws IOException {
+		String singleEntry = reader.nextString();
+		return toAxesList(singleEntry);
+	}
+
+	private List<AxisType> toAxesList(String axesStr) {
+		return DefaultInputMapper.parseMappingStr(axesStr);
+	}
+
+	private List<Integer> readIntArray(JsonReader reader) throws IOException {
+		List<Integer> res = new ArrayList<>();
+		try {
+			Integer singleEntry = reader.nextInt();
+			res.add(singleEntry);
+		}
+		catch(IllegalStateException | NumberFormatException e) {
+			reader.beginArray();
+			while (reader.hasNext()) {
+				res.add(reader.nextInt());
+			}
+			reader.endArray();
+		}
+		return res;
+	}
+
+	private List<Boolean> readBooleanArray(JsonReader reader) throws IOException {
+		List<Boolean> res = new ArrayList<>();
+		try {
+			Boolean singleEntry = reader.nextBoolean();
+			res.add(singleEntry);
+		}
+		catch(IllegalStateException | NumberFormatException e) {
+			reader.beginArray();
+			while (reader.hasNext()) {
+				res.add(reader.nextBoolean());
+			}
+			reader.endArray();
+		}
+		return res;
 	}
 
 	protected void setModel(final SavedModelBundle model) {
@@ -244,8 +331,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	// TODO this is the tensorflow runner
 	@Override
 	public RandomAccessibleInterval<T> execute(
-		final RandomAccessibleInterval<T> tile) throws Exception
-	{
+		final RandomAccessibleInterval<T> tile) throws IllegalArgumentException, OutOfMemoryError, ExecutionException {
 
 		final Tensor inputTensor = DatasetTensorFlowConverter.datasetToTensor(tile,
 			getInputNode().getMappingIndices());
@@ -298,16 +384,22 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	}
 
 	@Override
-	public void dispose() {
-		super.dispose();
+	public void clear() {
+		super.clear();
 		sig = null;
 		model = null;
 		inputTensorInfo = null;
 		outputTensorInfo = null;
-		foundJNI = true;
-		gpuSupport = false;
 		isDoingDimensionReduction = false;
 		axisToRemove = null;
+	}
+
+	@Override
+	public void dispose() {
+		super.dispose();
+		foundJNI = true;
+		gpuSupport = false;
+		clear();
 	}
 
 }

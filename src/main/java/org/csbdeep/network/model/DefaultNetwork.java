@@ -9,11 +9,11 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import org.scijava.io.location.Location;
-
 import org.csbdeep.imglib2.TiledView;
 import org.csbdeep.task.Task;
 import org.csbdeep.util.IOHelper;
+import org.scijava.io.location.Location;
+
 import net.imagej.Dataset;
 import net.imglib2.Cursor;
 import net.imglib2.RandomAccessibleInterval;
@@ -31,6 +31,7 @@ public abstract class DefaultNetwork<T extends RealType<T>> implements
 	protected boolean supportsGPU = false;
 	protected Integer doneTileCount;
 	protected boolean dropSingletonDims = false;
+	protected NetworkSettings networkSettings;
 	ExecutorService pool;
 
 	public DefaultNetwork(Task associatedTask) {
@@ -48,8 +49,6 @@ public abstract class DefaultNetwork<T extends RealType<T>> implements
 	{
 
 		final Location source = IOHelper.loadFileOrURL(pathOrURL);
-		log("loading model " + modelName + " from source " + source
-			.getURI());
 		return loadModel(source, modelName);
 
 	}
@@ -59,7 +58,7 @@ public abstract class DefaultNetwork<T extends RealType<T>> implements
 
 	@Override
 	public List<RandomAccessibleInterval<T>> call()
-		throws ExecutionException
+		throws IllegalArgumentException, ExecutionException, OutOfMemoryError
 	{
 
 		pool = Executors.newSingleThreadExecutor();
@@ -88,6 +87,11 @@ public abstract class DefaultNetwork<T extends RealType<T>> implements
 					if (res == null) return null;
 					results.add(res);
 					upTileCount();
+				}
+				catch (final IllegalArgumentException exc) {
+					pool.shutdownNow();
+					fail();
+					throw  exc;
 				}
 				catch (final InterruptedException exc) {
 					pool.shutdownNow();
@@ -232,5 +236,11 @@ public abstract class DefaultNetwork<T extends RealType<T>> implements
 			pool.shutdown();
 		}
 		pool = null;
+	}
+
+	@Override
+	public void clear() {
+		inputNode = null;
+		outputNode = null;
 	}
 }

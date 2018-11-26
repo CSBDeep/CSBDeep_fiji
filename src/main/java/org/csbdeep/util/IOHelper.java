@@ -14,11 +14,10 @@ import java.time.ZoneId;
 import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 
+import org.csbdeep.commands.GenericNetwork;
 import org.scijava.io.http.HTTPLocation;
 import org.scijava.io.location.FileLocation;
 import org.scijava.io.location.Location;
-
-import org.csbdeep.commands.GenericNetwork;
 
 public class IOHelper {
 
@@ -55,7 +54,9 @@ public class IOHelper {
 			existingUrl = con.getResponseCode() == HttpURLConnection.HTTP_OK;
 		} catch (IOException | IllegalArgumentException e) {
 		} finally {
-			con.disconnect();
+			if(con != null){
+				con.disconnect();
+			}
 		}
 		return existingUrl;
 	}

@@ -5,11 +5,11 @@ import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.concurrent.Callable;
 
+import org.csbdeep.imglib2.TiledView;
+import org.csbdeep.task.Task;
 import org.scijava.Cancelable;
 import org.scijava.Disposable;
 
-import org.csbdeep.imglib2.TiledView;
-import org.csbdeep.task.Task;
 import net.imagej.Dataset;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
@@ -65,4 +65,6 @@ public interface Network<T extends RealType<T>> extends
 	void doDimensionReduction();
 
 	boolean libraryLoaded();
+
+	void clear();
 }

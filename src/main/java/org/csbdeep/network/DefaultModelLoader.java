@@ -5,19 +5,24 @@ import java.io.FileNotFoundException;
 
 import org.csbdeep.network.model.Network;
 import org.csbdeep.task.DefaultTask;
+
 import net.imagej.Dataset;
 
 public class DefaultModelLoader extends DefaultTask implements ModelLoader {
 
 	@Override
 	public void run(final String modelName, final Network network,
-		final String modelFileUrl, final Dataset input)
-	{
+		final String modelFileUrl, final Dataset input) throws FileNotFoundException {
 
 		setStarted();
 
 		if (!network.isInitialized()) {
-			loadNetwork(modelName, network, modelFileUrl, input);
+			try {
+				loadNetwork(modelName, network, modelFileUrl, input);
+			} catch (FileNotFoundException e) {
+				setFailed();
+				throw e;
+			}
 			if (!network.isInitialized()) {
 				setFailed();
 				return;
@@ -30,25 +35,15 @@ public class DefaultModelLoader extends DefaultTask implements ModelLoader {
 	}
 
 	protected void loadNetwork(final String modelName, final Network network,
-		final String modelFileUrl, final Dataset input)
-	{
+		final String modelFileUrl, final Dataset input) throws FileNotFoundException {
 
 		if(modelFileUrl.isEmpty()) return;
 
-		try {
-
-			boolean loaded = network.loadModel(modelFileUrl, modelName);
-			if(!loaded) return;
-			network.loadInputNode(input);
-			network.loadOutputNode(input);
-			network.initMapping();
-
-		}
-		catch (final FileNotFoundException exc1) {
-
-			exc1.printStackTrace();
-
-		}
+		boolean loaded = network.loadModel(modelFileUrl, modelName);
+		if(!loaded) return;
+		network.loadInputNode(input);
+		network.loadOutputNode(input);
+		network.initMapping();
 
 	}
 

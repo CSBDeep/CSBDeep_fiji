@@ -48,4 +48,14 @@ public class NetTubulinTest extends CSBDeepTest {
 		testResultAxesAndSize(input, output);
 	}
 
+	@Test
+	public void testUnfittingDataset()
+	{
+		launchImageJ();
+		final Dataset input = createDataset(new FloatType(), new long[] { 3, 4, 5 }, new AxisType[] {
+				Axes.Y, Axes.Z, Axes.TIME });
+		final Dataset output = runPlugin(NetTubulin.class, input);
+		assertNull(output);
+	}
+
 }

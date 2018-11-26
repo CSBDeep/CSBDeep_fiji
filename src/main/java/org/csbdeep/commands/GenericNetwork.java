@@ -29,15 +29,21 @@
 
 package org.csbdeep.commands;
 
-import net.imagej.Dataset;
-import net.imagej.DatasetService;
-import net.imagej.ImageJ;
-import net.imagej.axis.Axes;
-import net.imagej.axis.AxisType;
-import net.imagej.ops.OpService;
-import net.imagej.tensorflow.TensorFlowService;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.type.numeric.real.FloatType;
+import java.awt.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.Arrays;
+import java.util.List;
+import java.util.MissingResourceException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import javax.swing.*;
+
 import org.csbdeep.io.DefaultInputProcessor;
 import org.csbdeep.io.DefaultOutputProcessor;
 import org.csbdeep.io.InputProcessor;
@@ -59,6 +65,7 @@ import org.scijava.Disposable;
 import org.scijava.Initializable;
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
+import org.scijava.log.LogLevel;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
@@ -67,16 +74,15 @@ import org.scijava.thread.ThreadService;
 import org.scijava.ui.UIService;
 import org.scijava.widget.Button;
 
-import javax.swing.*;
-import java.io.File;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import net.imagej.Dataset;
+import net.imagej.DatasetService;
+import net.imagej.ImageJ;
+import net.imagej.axis.Axes;
+import net.imagej.axis.AxisType;
+import net.imagej.ops.OpService;
+import net.imagej.tensorflow.TensorFlowService;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.type.numeric.real.FloatType;
 
 @Plugin(type = Command.class, menuPath = "Plugins>CSBDeep>Run your network")
 public class GenericNetwork implements
@@ -114,7 +120,8 @@ public class GenericNetwork implements
 	@Parameter(label = "Batch size", min = "1")
 	protected int batchSize = 1;
 
-	private boolean modelNeedsInitialization;
+	private boolean modelNeedsInitialization = false;
+	private boolean networkInitialized;
 
 	public enum NetworkInputSourceType { UNSET, FILE, URL }
 	
@@ -184,18 +191,22 @@ public class GenericNetwork implements
 	protected String modelFileKey;
 	private String modelFileUrl = "";
 
-	private boolean modelChangeCallbackCalled = false;
-
-	private ExecutorService modelLoadingPool = null;
-	private Future<?> modelLoadingFuture = null;
-
 	private int oldNTiles;
 	private int oldBatchesSize;
 
 	protected void openTFMappingDialog() {
-		initiateModelIfNeeded();
-		finishModelLoading();
-		MappingDialog.create(network.getInputNode(), network.getOutputNode());
+		threadService.run(() -> {
+			tryToInitialize();
+			solveModelSource();
+			initiateModelIfNeeded();
+			try {
+				threadService.invoke(() -> MappingDialog.create(network.getInputNode(), network.getOutputNode()));
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			} catch (InvocationTargetException e) {
+				e.printStackTrace();
+			}
+		});
 	}
 
 	/** Executed whenever the {@link #modelFile} parameter is initialized. */
@@ -244,72 +255,41 @@ public class GenericNetwork implements
 	}
 
 	protected void modelFileChanged() {
-		threadService.run(() -> {
-		if(!modelChangeCallbackCalled) {
-			modelChangeCallbackCalled = true;
-			if (modelFile != null && modelFile.exists()) {
-				modelUrl = null;
-				networkInputSourceType = NetworkInputSourceType.FILE;
-				modelFileUrl = modelFile.getAbsolutePath();
-				modelChanged();
-			}
-			modelChangeCallbackCalled = false;
+		if (modelFile != null && modelFile.exists()) {
+			modelUrl = null;
+			networkInputSourceType = NetworkInputSourceType.FILE;
+			modelFileUrl = modelFile.getAbsolutePath();
+			modelChanged();
 		}
-		});
-
 	}
 
 	protected void modelUrlChanged() {
-		if(!modelChangeCallbackCalled) {
-			modelChangeCallbackCalled = true;
-			if(modelUrl != null && modelUrl.length() > new String("https://").length()) {
-				if (IOHelper.urlExists(modelUrl)) {
-					modelFile = null;
-					networkInputSourceType = NetworkInputSourceType.URL;
-					modelFileUrl = modelUrl;
-					modelChanged();
-					return;
-				}
+		if(modelUrl != null && modelUrl.length() > new String("https://").length()) {
+			if (IOHelper.urlExists(modelUrl)) {
+				modelFile = null;
+				networkInputSourceType = NetworkInputSourceType.URL;
+				modelFileUrl = modelUrl;
+				modelChanged();
+				return;
 			}
-			modelChangeCallbackCalled = false;
 		}
 	}
 
 	protected void modelChanged() {
 		updateCacheName();
-		restartPool();
-		modelLoadingFuture = modelLoadingPool.submit(() -> {
-			savePreferences();
-			if (initialized) {
-				network.dispose();
-			} else {
-				tryToInitialize();
-			}
-			modelNeedsInitialization = true;
-		});
+		modelNeedsInitialization = true;
+		savePreferences();
+		if (networkInitialized) {
+			network.clear();
+		}
 	}
 
 	protected void initiateModelIfNeeded() {
-		if(modelNeedsInitialization)
-			tryToPrepareInputAndNetwork();
-	}
-
-	private void restartPool() {
-		finishModelLoading();
-		modelLoadingPool = Executors.newSingleThreadExecutor();
-	}
-
-	protected void finishModelLoading() {
-		try {
-			if(modelLoadingFuture != null) {
-				modelLoadingFuture.get();
-			}
-		} catch (InterruptedException | ExecutionException e) {
-			e.printStackTrace();
-		} finally {
-			if(modelLoadingPool != null) {
-				modelLoadingPool.shutdown();
-				modelLoadingPool = null;
+		if(modelNeedsInitialization) {
+			try {
+				tryToPrepareInputAndNetwork();
+			} catch (Exception e) {
+				e.printStackTrace();
 			}
 		}
 	}
@@ -335,6 +315,7 @@ public class GenericNetwork implements
 	}
 
 	protected boolean initNetwork() {
+		networkInitialized = true;
 		network = new TensorFlowNetwork(tensorFlowService, datasetService,
 			modelExecutor);
 		if(network.libraryLoaded()) {
@@ -425,19 +406,22 @@ public class GenericNetwork implements
 
 	protected void mainThread() throws OutOfMemoryError {
 
+		System.out.println("MAIN THREAD");
+
+		tryToInitialize();
+		solveModelSource();
 		initiateModelIfNeeded();
-		finishModelLoading();
+
 		updateCacheName();
 		savePreferences();
-		tryToInitialize();
 
 		taskManager.finalizeSetup();
 
-		solveModelSource();
-
-		boolean successfulNetworkPreparation = tryToPrepareInputAndNetwork();
-		if(!successfulNetworkPreparation) {
-			error("Network preparation failed.");
+		try {
+			tryToPrepareInputAndNetwork();
+		}
+		catch (Exception e) {
+			e.printStackTrace();
 			return;
 		}
 
@@ -459,8 +443,12 @@ public class GenericNetwork implements
 		network.getOutputNode().printMapping(inputProcessor);
 
 		initTiling();
-		final List<AdvancedTiledView<FloatType>> tiledOutput =
-				tryToTileAndRunNetwork(processedInput);
+		List<AdvancedTiledView<FloatType>> tiledOutput = null;
+		try {
+			tiledOutput = tryToTileAndRunNetwork(processedInput);
+		} catch (ExecutionException e) {
+			e.printStackTrace();
+		}
 		if(tiledOutput != null) {
 			final List<RandomAccessibleInterval<FloatType>> output = outputTiler.run(
 					tiledOutput, tiling, getAxesArray(network.getOutputNode()));
@@ -476,16 +464,6 @@ public class GenericNetwork implements
 	private void solveModelSource() {
 		if(modelFileUrl.isEmpty()) modelFileChanged();
 		if(modelFileUrl.isEmpty()) modelUrlChanged();
-		try {
-			if(modelLoadingFuture == null) {
-				error("Could not load model. (model file url: \"" + modelFileUrl + "\")");
-			} else {
-				modelLoadingFuture.get();
-
-			}
-		} catch (InterruptedException | ExecutionException e) {
-			e.printStackTrace();
-		}
 	}
 
 	protected void setupNormalizer() {
@@ -498,21 +476,25 @@ public class GenericNetwork implements
 		return normalizeInput;
 	}
 
-	protected boolean tryToPrepareInputAndNetwork() {
+	protected void tryToPrepareInputAndNetwork() throws MissingResourceException, FileNotFoundException {
 
 		modelName = cacheName;
 
-		if(modelFileUrl.isEmpty()) return false;
+		if(!networkInitialized)
+			initNetwork();
+
+		if(modelFileUrl.isEmpty()) {
+			throw new MissingResourceException("Network file or URL missing", this.getClass().getSimpleName(), modelFileUrl);
+		}
 		modelLoader.run(modelName, network, modelFileUrl, getInput());
-		if(modelLoader.isFailed()) return false;
+		if(modelLoader.isFailed()) return;
 		inputMapper.run(getInput(), network);
-		return !inputMapper.isFailed();
 
 	}
 
 	private void savePreferences() {
 		if(modelFile != null) {
-			prefService.put(String.class, modelFileKey, modelFile.getAbsolutePath());
+			prefService.put(this.getClass(), modelFileKey, modelFile.getAbsolutePath());
 		}
 	}
 
@@ -541,8 +523,7 @@ public class GenericNetwork implements
 
 	protected List<AdvancedTiledView<FloatType>> tryToTileAndRunNetwork(
 		final List<RandomAccessibleInterval> normalizedInput)
-		throws OutOfMemoryError
-	{
+			throws OutOfMemoryError, ExecutionException {
 		List<AdvancedTiledView<FloatType>> tiledOutput = null;
 
 		boolean isOutOfMemory = true;
@@ -723,6 +704,8 @@ public class GenericNetwork implements
 		final ImageJ ij = new ImageJ();
 
 		ij.launch(args);
+
+//		ij.log().setLevel(LogLevel.TRACE);
 
 		// ask the user for a file to open
 		final File file = new File("/home/random/Development/imagej/project/CSBDeep/CSBDeep-data/net_tubulin/input.tif");

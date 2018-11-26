@@ -4,6 +4,7 @@ package org.csbdeep.commands;
 import static junit.framework.TestCase.assertNotNull;
 
 import java.io.File;
+import java.net.URL;
 import java.util.concurrent.ExecutionException;
 
 import org.csbdeep.CSBDeepTest;
@@ -37,12 +38,11 @@ public class GenericNetworkTest extends CSBDeepTest {
 		String bla = new GenericNetwork().getModelFileKey();
 		ij.prefs().put(GenericNetwork.class, bla, "/something/useless");
 		final Dataset input = createDataset(new FloatType(), new long[]{2,2}, new AxisType[]{Axes.X, Axes.Y});
-		final Module module = ij.command().run(GenericNetwork.class,
+		ij.command().run(GenericNetwork.class,
 				true, "input", input, "modelUrl", "http://csbdeep.bioimagecomputing.com/model-tubulin.zip").get();
 	}
 
 	@Test
-	@Ignore
 	public void testGenericNetwork() {
 		launchImageJ();
 		for (int i = 0; i < 1; i++) {
@@ -62,11 +62,12 @@ public class GenericNetworkTest extends CSBDeepTest {
 	public <T extends RealType<T> & NativeType<T>> void testDataset(final T type,
 		final long[] dims, final AxisType[] axes) {
 
+		URL networkUrl = this.getClass().getResource("denoise3D/model.zip");
+
 		final Dataset input = createDataset(type, dims, axes);
 		try {
 			final Module module = ij.command().run(GenericNetwork.class,
-				false, "input", input, "modelFile", new File(
-					"/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise2D/model.zip")).get();
+				false, "input", input, "modelFile", new File(networkUrl.getPath())).get();
 			Dataset output = (Dataset) module.getOutput("output");
 			assertNotNull(output);
 			testResultAxesAndSize(input, output);

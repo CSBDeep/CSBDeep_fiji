@@ -1,5 +1,6 @@
 package org.csbdeep.network.model.tensorflow;
 
+import java.io.FileNotFoundException;
 import java.sql.Timestamp;
 
 import org.csbdeep.network.DefaultModelLoader;
@@ -46,13 +47,13 @@ public class TensorflowCommand implements Command {
                 null);
     }
 
-    private void loadNetwork2d() {
+    private void loadNetwork2d() throws FileNotFoundException {
         initNetwork();
         network.dispose();
         modelLoader.run("model2d-" + new Timestamp(System.currentTimeMillis()).getTime(), network, "/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise2D/model.zip", dataset);
     }
 
-    private void loadNetwork3d() {
+    private void loadNetwork3d() throws FileNotFoundException {
         initNetwork();
         network.dispose();
         modelLoader.run("model3d-" + new Timestamp(System.currentTimeMillis()).getTime(), network, "/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise3D/model.zip", dataset);
@@ -78,9 +79,17 @@ public class TensorflowCommand implements Command {
 
         initNetwork();
 
-        modelLoader.run("model2d-" + new Timestamp(System.currentTimeMillis()).getTime(), network, "/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise2D/model.zip", dataset);
+        try {
+            modelLoader.run("model2d-" + new Timestamp(System.currentTimeMillis()).getTime(), network, "/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise2D/model.zip", dataset);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
         network.dispose();
-        modelLoader.run("model3d-" + new Timestamp(System.currentTimeMillis()).getTime(), network, "/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise3D/model.zip", dataset);
+        try {
+            modelLoader.run("model3d-" + new Timestamp(System.currentTimeMillis()).getTime(), network, "/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise3D/model.zip", dataset);
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+        }
     }
 
     public static void main(final String... args) throws Exception {

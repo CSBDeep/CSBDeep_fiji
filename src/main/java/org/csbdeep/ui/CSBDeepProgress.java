@@ -175,7 +175,13 @@ public class CSBDeepProgress extends JPanel {
 
 	public void display() {
 		// Display the window.
-		frame.pack();
+		if (SwingUtilities.isEventDispatchThread())
+			frame.pack();
+		else try {
+			SwingUtilities.invokeAndWait(new Runnable() { public void run() {
+				frame.pack();
+			}});
+		} catch (Exception e) { /* ignore */ }
 		frame.setLocationRelativeTo(null);
 		frame.setVisible(true);
 	}
