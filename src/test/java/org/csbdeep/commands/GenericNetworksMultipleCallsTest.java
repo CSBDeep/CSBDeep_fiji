@@ -6,15 +6,14 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
-import java.util.List;
 import java.util.concurrent.Future;
 
+import org.csbdeep.CSBDeepTest;
 import org.junit.Ignore;
 import org.junit.Test;
 import org.scijava.command.CommandModule;
 import org.scijava.module.Module;
 
-import org.csbdeep.CSBDeepTest;
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;

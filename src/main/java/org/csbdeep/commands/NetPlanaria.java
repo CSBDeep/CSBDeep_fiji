@@ -29,8 +29,10 @@
 
 package org.csbdeep.commands;
 
-import net.imagej.Dataset;
-import net.imagej.ImageJ;
+import java.io.File;
+import java.util.OptionalLong;
+import java.util.concurrent.ExecutionException;
+
 import org.csbdeep.util.DatasetHelper;
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
@@ -40,12 +42,8 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.UIService;
 
-import java.io.File;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
-import java.util.OptionalLong;
-import java.util.concurrent.ExecutionException;
+import net.imagej.Dataset;
+import net.imagej.ImageJ;
 
 /**
  */

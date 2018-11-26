@@ -5,10 +5,10 @@ import static org.junit.Assert.assertEquals;
 
 import java.util.List;
 
-import org.junit.Test;
-
 import org.csbdeep.io.DefaultInputProcessor;
 import org.csbdeep.io.InputProcessor;
+import org.junit.Test;
+
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;

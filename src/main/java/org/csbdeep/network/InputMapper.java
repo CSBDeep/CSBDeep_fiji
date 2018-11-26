@@ -3,6 +3,7 @@ package org.csbdeep.network;
 
 import org.csbdeep.network.model.Network;
 import org.csbdeep.task.Task;
+
 import net.imagej.Dataset;
 import net.imagej.axis.AxisType;
 

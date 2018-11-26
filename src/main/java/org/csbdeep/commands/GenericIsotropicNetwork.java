@@ -42,10 +42,6 @@ import java.util.concurrent.Future;
 import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
-import org.scijava.command.Command;
-import org.scijava.plugin.Parameter;
-import org.scijava.plugin.Plugin;
-
 import org.csbdeep.imglib2.TiledView;
 import org.csbdeep.io.DefaultOutputProcessor;
 import org.csbdeep.io.InputProcessor;
@@ -54,6 +50,10 @@ import org.csbdeep.task.DefaultTask;
 import org.csbdeep.tiling.DefaultTiling;
 import org.csbdeep.tiling.Tiling;
 import org.csbdeep.util.DatasetHelper;
+import org.scijava.command.Command;
+import org.scijava.plugin.Parameter;
+import org.scijava.plugin.Plugin;
+
 import net.imagej.Dataset;
 import net.imagej.DatasetService;
 import net.imagej.ImageJ;

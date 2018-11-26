@@ -2,6 +2,7 @@
 package org.csbdeep.normalize;
 
 import org.csbdeep.task.Task;
+
 import net.imagej.Dataset;
 import net.imagej.DatasetService;
 import net.imagej.ops.OpService;

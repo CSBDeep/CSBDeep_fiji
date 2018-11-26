@@ -29,6 +29,10 @@
 
 package org.csbdeep.network.model.tensorflow;
 
+import org.csbdeep.converter.*;
+import org.tensorflow.DataType;
+import org.tensorflow.Tensor;
+
 import net.imagej.tensorflow.Tensors;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.converter.Converters;
@@ -41,9 +45,6 @@ import net.imglib2.type.numeric.integer.UnsignedShortType;
 import net.imglib2.type.numeric.real.DoubleType;
 import net.imglib2.type.numeric.real.FloatType;
 import net.imglib2.view.Views;
-import org.csbdeep.converter.*;
-import org.tensorflow.DataType;
-import org.tensorflow.Tensor;
 
 public class DatasetTensorFlowConverter {
 

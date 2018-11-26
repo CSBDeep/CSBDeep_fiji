@@ -2,9 +2,9 @@ package org.csbdeep.network;
 
 import static org.junit.Assert.assertEquals;
 
+import org.csbdeep.network.model.Network;
 import org.junit.Test;
 
-import org.csbdeep.network.model.Network;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;

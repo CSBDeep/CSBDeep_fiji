@@ -4,10 +4,10 @@ package org.csbdeep.network;
 import java.util.List;
 
 import org.csbdeep.network.model.Network;
-import org.scijava.Cancelable;
-
 import org.csbdeep.task.Task;
 import org.csbdeep.tiling.AdvancedTiledView;
+import org.scijava.Cancelable;
+
 import net.imglib2.type.numeric.RealType;
 
 public interface ModelExecutor<T extends RealType<T>> extends Task, Cancelable {

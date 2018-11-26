@@ -5,14 +5,13 @@ import static org.csbdeep.tiling.DefaultTiling.arrayProduct;
 import static org.junit.Assert.*;
 
 import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.Future;
 
+import org.csbdeep.imglib2.TiledView;
 import org.scijava.command.Command;
 import org.scijava.command.CommandModule;
 import org.scijava.module.Module;
 
-import org.csbdeep.imglib2.TiledView;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;

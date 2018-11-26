@@ -3,11 +3,11 @@ package org.csbdeep.tasks;
 
 import java.io.FileNotFoundException;
 
-import org.scijava.io.location.Location;
-
 import org.csbdeep.network.model.DefaultNetwork;
 import org.csbdeep.network.model.ImageTensor;
 import org.csbdeep.task.Task;
+import org.scijava.io.location.Location;
+
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;

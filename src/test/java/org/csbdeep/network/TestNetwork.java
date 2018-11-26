@@ -1,9 +1,9 @@
 
 package org.csbdeep.network;
 
+import org.csbdeep.network.model.tensorflow.TensorFlowNetwork;
 import org.tensorflow.framework.TensorInfo;
 
-import org.csbdeep.network.model.tensorflow.TensorFlowNetwork;
 import net.imagej.Dataset;
 import net.imagej.DatasetService;
 import net.imagej.tensorflow.TensorFlowService;

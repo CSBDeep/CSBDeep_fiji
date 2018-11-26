@@ -1,22 +1,21 @@
 
 package org.csbdeep.commands;
 
-import java.util.List;
+import static org.junit.Assert.*;
+
 import java.util.concurrent.Future;
 
+import org.csbdeep.CSBDeepTest;
 import org.junit.Test;
 import org.scijava.command.CommandModule;
 import org.scijava.module.Module;
 
-import org.csbdeep.CSBDeepTest;
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
-
-import static org.junit.Assert.*;
 
 public class NetIsoTest extends CSBDeepTest {
 

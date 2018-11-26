@@ -6,11 +6,11 @@ import static org.junit.Assert.assertNotEquals;
 import java.util.List;
 import java.util.concurrent.Future;
 
+import org.csbdeep.tiling.Tiling;
 import org.junit.Test;
 import org.scijava.command.CommandModule;
 import org.scijava.module.Module;
 
-import org.csbdeep.tiling.Tiling;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;

@@ -32,16 +32,15 @@ package org.csbdeep.commands;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.scijava.ItemIO;
-import org.scijava.command.Command;
-import org.scijava.plugin.Parameter;
-import org.scijava.plugin.Plugin;
-
 import org.csbdeep.network.ModelExecutor;
 import org.csbdeep.network.model.Network;
 import org.csbdeep.task.DefaultTask;
 import org.csbdeep.tiling.AdvancedTiledView;
 import org.csbdeep.tiling.Tiling;
+import org.scijava.ItemIO;
+import org.scijava.command.Command;
+import org.scijava.plugin.Parameter;
+import org.scijava.plugin.Plugin;
 
 @Plugin(type = Command.class)
 public class OOMThrowingNetwork extends GenericNetwork

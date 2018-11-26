@@ -2,14 +2,11 @@
 package org.csbdeep.commands;
 
 import static junit.framework.TestCase.assertNotNull;
-import static org.junit.Assert.assertEquals;
 
-import java.util.List;
-
+import org.csbdeep.CSBDeepTest;
 import org.junit.Assert;
 import org.junit.Test;
 
-import org.csbdeep.CSBDeepTest;
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;

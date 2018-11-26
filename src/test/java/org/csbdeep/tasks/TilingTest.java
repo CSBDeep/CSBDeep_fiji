@@ -6,14 +6,14 @@ import static org.junit.Assert.assertTrue;
 
 import java.util.Arrays;
 
-import org.junit.Test;
-
 import org.csbdeep.CSBDeepTest;
 import org.csbdeep.task.DefaultTask;
 import org.csbdeep.task.Task;
 import org.csbdeep.tiling.AdvancedTiledView;
 import org.csbdeep.tiling.DefaultTiling;
 import org.csbdeep.tiling.Tiling;
+import org.junit.Test;
+
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;

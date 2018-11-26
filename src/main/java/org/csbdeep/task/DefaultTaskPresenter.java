@@ -4,9 +4,8 @@ package org.csbdeep.task;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-import org.scijava.log.Logger;
-
 import org.csbdeep.ui.CSBDeepProgress;
+import org.scijava.log.Logger;
 
 public class DefaultTaskPresenter implements TaskPresenter, ActionListener {
 
