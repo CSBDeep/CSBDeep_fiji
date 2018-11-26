@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import org.csbdeep.task.Task;
 import org.csbdeep.util.ArrayHelper;
 import org.csbdeep.util.DatasetHelper;
+
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
@@ -247,6 +248,14 @@ public class ImageTensor {
 	{
 		if (knownAxesIndex < availableAxes.length && nodeDim < node.size()) {
 			node.get(nodeDim).type = availableAxes[knownAxesIndex];
+		}
+	}
+
+	public void setNodeAxisByImageAxisIndex(final int nodeDim,
+	                                        final int axisIndex)
+	{
+		if (axisIndex < image.size()) {
+			node.get(nodeDim).type = image.get(axisIndex).type;
 		}
 	}
 

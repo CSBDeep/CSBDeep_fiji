@@ -45,6 +45,8 @@ public class MappingDialog {
 		final ImageTensor outputNode)
 	{
 
+		if(inputNode == null) return;
+
 		final List<JComboBox<String>> inputDrops = new ArrayList<>();
 		// final List< JComboBox< String > > outputDrops = new ArrayList<>();
 
@@ -157,10 +159,10 @@ public class MappingDialog {
 
 		if (result == JOptionPane.OK_OPTION) {
 			for (int i = 0; i < inputDrops.size(); i++) {
-				// System.out.println(
-				// "selected index for tf index " + i + ": " + inputDrops.get(
-				// i ).getSelectedIndex() );
-				inputNode.setNodeAxisByKnownAxesIndex(i, inputDrops.get(i)
+//				 System.out.println(
+//				 "selected index for tf index " + i + ": " + inputDrops.get(
+//				 i ).getSelectedIndex() );
+				inputNode.setNodeAxisByImageAxisIndex(i, inputDrops.get(i)
 					.getSelectedIndex());
 			}
 			inputNode.generateMapping();
