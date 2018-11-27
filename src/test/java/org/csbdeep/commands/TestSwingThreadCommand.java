@@ -1,6 +1,7 @@
 package org.csbdeep.commands;
 
-import net.imagej.ImageJ;
+import java.util.concurrent.ExecutionException;
+
 import org.scijava.Context;
 import org.scijava.command.Command;
 import org.scijava.download.DownloadService;
@@ -13,7 +14,7 @@ import org.scijava.thread.ThreadService;
 import org.scijava.util.ByteArray;
 import org.scijava.widget.Button;
 
-import java.util.concurrent.ExecutionException;
+import net.imagej.ImageJ;
 
 public class TestSwingThreadCommand implements Command {
 

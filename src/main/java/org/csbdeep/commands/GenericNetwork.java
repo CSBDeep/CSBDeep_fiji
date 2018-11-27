@@ -65,7 +65,6 @@ import org.scijava.Disposable;
 import org.scijava.Initializable;
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
-import org.scijava.log.LogLevel;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
@@ -406,8 +405,6 @@ public class GenericNetwork implements
 
 	protected void mainThread() throws OutOfMemoryError {
 
-		System.out.println("MAIN THREAD");
-
 		tryToInitialize();
 		solveModelSource();
 		initiateModelIfNeeded();
@@ -459,6 +456,8 @@ public class GenericNetwork implements
 					getAxesArray(network.getOutputNode()), datasetService);
 		}
 
+		log("Done!");
+
 	}
 
 	private void solveModelSource() {
@@ -484,7 +483,7 @@ public class GenericNetwork implements
 			initNetwork();
 
 		if(modelFileUrl.isEmpty()) {
-			throw new MissingResourceException("Network file or URL missing", this.getClass().getSimpleName(), modelFileUrl);
+			throw new MissingResourceException("Trained model file / URL is missing or unavailable", this.getClass().getSimpleName(), modelFileUrl);
 		}
 		modelLoader.run(modelName, network, modelFileUrl, getInput());
 		if(modelLoader.isFailed()) return;

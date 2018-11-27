@@ -8,7 +8,6 @@ import java.net.URL;
 import java.util.concurrent.ExecutionException;
 
 import org.csbdeep.CSBDeepTest;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.scijava.module.Module;
 

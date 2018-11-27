@@ -29,13 +29,13 @@
 
 package org.csbdeep.network.model.tensorflow;
 
+import java.util.concurrent.ExecutionException;
+
 import javax.swing.*;
 
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
 import org.tensorflow.framework.TensorInfo;
-
-import java.util.concurrent.ExecutionException;
 
 public class TensorFlowRunner {
 

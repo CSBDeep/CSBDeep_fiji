@@ -79,7 +79,7 @@ import net.imglib2.util.Intervals;
 import net.imglib2.view.Views;
 
 @Plugin(type = Command.class,
-	menuPath = "Plugins>CSBDeep>Run your isotropic reconstruction network",
+	menuPath = "Plugins>CSBDeep>Run your IsoNet",
 	headless = true)
 public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwork implements
 	Command
@@ -155,14 +155,6 @@ public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwo
 
 			final RandomAccessibleInterval<FloatType> rotated1 = Views.permute(
 				rotated0, dimY, dimZ);
-
-			// //TODO neccessary?
-			// final RandomAccessibleInterval< FloatType > rotated0_applied =
-			// ArrayImgs.floats( Intervals.dimensionsAsLongArray( rotated0 ) );
-			// final RandomAccessibleInterval< FloatType > rotated1_applied =
-			// ArrayImgs.floats( Intervals.dimensionsAsLongArray( rotated1 ) );
-			// copy( rotated0, rotated0_applied );
-			// copy( rotated1, rotated1_applied );
 
 			final List<RandomAccessibleInterval<FloatType>> output =
 				new ArrayList<>();
@@ -261,7 +253,6 @@ public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwo
 		}
 	}
 
-	//TODO find out why the resulting length should not be old_length*scale and fix it
 	/**
 	 * Scales the given dimension by the given scale and uses linear interpolation
 	 * for the missing values. NOTE: This method will return very fast because the
@@ -270,20 +261,20 @@ public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwo
 	 * old_dimension_length * scale. But the min and max of the image are mapped
 	 * to the scaled positions and used to define the new interval.
 	 *
-	 * @param normalizedInput Input image
+	 * @param input Input image
 	 * @param dim Dimension number to scale
 	 * @param scale Scale of the dimension
 	 * @return The scaled image
 	 */
 	private <U extends NumericType<U>> RandomAccessibleInterval<U> upsample(
-		final RandomAccessibleInterval<U> normalizedInput, final int dim,
+		final RandomAccessibleInterval<U> input, final int dim,
 		final float scale)
 	{
-		final int n = normalizedInput.numDimensions();
+		final int n = input.numDimensions();
 
 		// Interpolate
 		final RealRandomAccessible<U> interpolated = Views.interpolate(Views
-			.extendBorder(normalizedInput), new NLinearInterpolatorFactory<>());
+			.extendBorder(input), new NLinearInterpolatorFactory<>());
 
 		// Affine transformation to scale the Z axis
 		final double[] scales = IntStream.range(0, n).mapToDouble(i -> i == dim
@@ -293,51 +284,14 @@ public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwo
 		// Scale min and max to create an interval afterwards
 		final double[] targetMin = new double[n];
 		final double[] targetMax = new double[n];
-		scaling.apply(Intervals.minAsDoubleArray(normalizedInput), targetMin);
-		scaling.apply(Intervals.maxAsDoubleArray(normalizedInput), targetMax);
+		scaling.apply(Intervals.minAsDoubleArray(input), targetMin);
+		scaling.apply(Intervals.maxAsDoubleArray(input), targetMax);
 
 		// Apply the transformation
 		final RandomAccessible<U> scaled = RealViews.affine(interpolated, scaling);
 		return Views.interval(scaled, Arrays.stream(targetMin).mapToLong(
 			d -> (long) Math.ceil(d)).toArray(), Arrays.stream(targetMax).mapToLong(
 				d -> (long) Math.floor(d)).toArray());
-	}
-
-	/**
-	 * Copies one image into another. Used to apply the transformations.
-	 *
-	 * @param in
-	 * @param out
-	 */
-	private <U extends Type<U>> void copy(final RandomAccessibleInterval<U> in,
-		final RandomAccessibleInterval<U> out)
-	{
-		final long[] blockSize = computeBlockSize(in);
-
-		final TiledView<U> tiledViewIn = new TiledView<>(in, blockSize);
-		final TiledView<U> tiledViewOut = new TiledView<>(out, blockSize);
-
-		// final ExecutorService pool = Executors.newWorkStealingPool();
-		final List<Future<?>> futures = new ArrayList<>();
-
-		LoopBuilder.setImages(tiledViewIn, tiledViewOut).forEachPixel((inTile,
-			outTile) -> {
-			final LoopBuilder<BiConsumer<U, U>> loop = LoopBuilder.setImages(inTile,
-				outTile);
-			futures.add(pool.submit(() -> {
-				loop.forEachPixel((i, o) -> o.set(i));
-			}));
-		});
-
-		for (final Future<?> f : futures) {
-			try {
-				f.get();
-			}
-			catch (InterruptedException | ExecutionException e) {
-				e.printStackTrace();
-			}
-		}
-		// pool.shutdown();
 	}
 
 	private <U extends RealType<U>, V extends RealType<V>, W extends RealType<W>>

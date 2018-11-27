@@ -60,6 +60,9 @@ public class NetTubulin implements Command {
 	@Parameter(label = "Number of tiles", min = "1")
 	protected int nTiles = 8;
 
+	@Parameter(label = "Batch size", min = "1")
+	protected int batchSize = 10;
+
 	@Parameter(label="Show progress dialog")
 	protected boolean showProgressDialog = true;
 
@@ -69,8 +72,6 @@ public class NetTubulin implements Command {
 	@Parameter
 	UIService uiService;
 
-	@Parameter(label = "Batch size", min = "1")
-	protected int batchSize = 10;
 	private String url = "http://csbdeep.bioimagecomputing.com/model-tubulin.zip";
 
 //	@Override
@@ -101,7 +102,7 @@ public class NetTubulin implements Command {
 					GenericNetwork.class, false,
 					"input", input,
 					"modelUrl", url,
-	//					"batchSize", batchSize,
+					"batchSize", batchSize,
 	//					"batchAxis", Axes.TIME.getLabel(),
 					"blockMultiple", 8,
 					"nTiles", nTiles,
