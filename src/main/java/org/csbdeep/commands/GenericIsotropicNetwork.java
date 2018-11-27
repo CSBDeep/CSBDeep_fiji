@@ -162,9 +162,13 @@ public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwo
 	public void run() {
 		tryToInitialize();
 		boolean validInput = DatasetHelper.validate(getInput(),
-			"4D image with size order X-Y-C-Z and two channels", isHeadless(), OptionalLong
-				.empty(), OptionalLong.empty(), OptionalLong.of(2), OptionalLong
-					.empty());
+				"4D image with size order X-Y-C-Z and two channels, checking if the order is X-Y-Z-C (also valid)",
+				isHeadless(), OptionalLong.empty(), OptionalLong.empty(), OptionalLong.of(2), OptionalLong.empty());
+		if(!validInput) {
+			validInput = DatasetHelper.validate(getInput(),
+					"4D image with size order X-Y-Z-Y and two channels",
+					isHeadless(), OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty(), OptionalLong.of(2));
+		}
 		if(!validInput)	return;
 
 		final AxisType[] mapping = { Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
