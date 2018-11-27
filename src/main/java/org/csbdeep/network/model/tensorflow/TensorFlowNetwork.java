@@ -251,10 +251,6 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 
 	@Override
 	public void calculateMapping() {
-
-//		for (int i = 0; i < inputNode.getNodeShape().length; i++) {
-//			outputNode.setNodeAxis(i, inputNode.getNodeAxis(i));
-//		}
 		doDimensionReduction();
 		generateMapping();
 	}

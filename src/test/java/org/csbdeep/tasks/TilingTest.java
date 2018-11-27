@@ -7,6 +7,8 @@ import static org.junit.Assert.assertTrue;
 import java.util.Arrays;
 
 import org.csbdeep.CSBDeepTest;
+import org.csbdeep.commands.GenericNetwork;
+import org.csbdeep.network.model.ImageTensor;
 import org.csbdeep.task.DefaultTask;
 import org.csbdeep.task.Task;
 import org.csbdeep.tiling.AdvancedTiledView;
@@ -207,9 +209,9 @@ public class TilingTest extends CSBDeepTest {
 		assertEquals(10, tiledView.dimension(1));
 		assertEquals(20, tiledView.dimension(2));
 
-		assertEquals(10, tiledView.getBlockSize()[0]);
-		assertEquals(10, tiledView.getBlockSize()[1]);
-		assertEquals(10, tiledView.getBlockSize()[2]);
+		assertEquals(5, tiledView.getBlockSize()[0]);
+		assertEquals(5, tiledView.getBlockSize()[1]);
+		assertEquals(5, tiledView.getBlockSize()[2]);
 
 		assertEquals(0, tiledView.getOverlap()[0]);
 		assertEquals(0, tiledView.getOverlap()[1]);
@@ -237,6 +239,54 @@ public class TilingTest extends CSBDeepTest {
 		assertEquals(32, tiledView.getBlockSize()[0]);
 		assertEquals(32, tiledView.getBlockSize()[1]);
 		assertEquals(32, tiledView.getBlockSize()[2]);
+
+		assertEquals(0, tiledView.getOverlap()[0]);
+		assertEquals(0, tiledView.getOverlap()[1]);
+		assertEquals(0, tiledView.getOverlap()[2]);
+
+		tiledView.dispose();
+	}
+
+	@Test
+	public void testNetworkTiling() {
+
+		final long[] datasetSize = { 3, 4, 5 };
+		final AxisType[] datasetAxes = { Axes.X, Axes.Y, Axes.TIME };
+		final long[] nodeShape = {-1,-1,-1,1};
+
+		launchImageJ();
+
+		Dataset dataset = ij.dataset().create(new FloatType(), datasetSize, "", datasetAxes);
+		final Tiling tiling = new DefaultTiling(8, 1, 32, 32);
+
+		ImageTensor node = new ImageTensor();
+		node.initialize(dataset);
+		node.setNodeShape(nodeShape);
+		node.setMapping(new AxisType[]{Axes.TIME, Axes.Y, Axes.X, Axes.CHANNEL});
+
+		Tiling.TilingAction[] actions = GenericNetwork.getTilingActionsForNode(node);
+
+		System.out.println(Arrays.toString(actions));
+
+		assertEquals(4, actions.length);
+		assertEquals(Tiling.TilingAction.TILE_WITH_PADDING, actions[0]); //x
+		assertEquals(Tiling.TilingAction.TILE_WITH_PADDING, actions[1]); //y
+		assertEquals(Tiling.TilingAction.TILE_WITHOUT_PADDING, actions[2]); //t
+		assertEquals(Tiling.TilingAction.NO_TILING, actions[3]); //channel
+
+		final RandomAccessibleInterval<FloatType> input =
+				(RandomAccessibleInterval<FloatType>) dataset.getImgPlus();
+
+		final AdvancedTiledView<FloatType> tiledView = tiling.preprocess(input,
+				datasetAxes, actions, new DefaultTask());
+
+		assertEquals(1, tiledView.dimension(0));
+		assertEquals(1, tiledView.dimension(1));
+		assertEquals(5, tiledView.dimension(2));
+
+		assertEquals(32, tiledView.getBlockSize()[0]);
+		assertEquals(32, tiledView.getBlockSize()[1]);
+		assertEquals(1, tiledView.getBlockSize()[2]);
 
 		assertEquals(0, tiledView.getOverlap()[0]);
 		assertEquals(0, tiledView.getOverlap()[1]);
@@ -273,30 +323,5 @@ public class TilingTest extends CSBDeepTest {
 		}
 		return actions;
 	}
-
-	// @Test
-	// public void testDatasetWrap() {
-	// ImageJ ij = new ImageJ();
-	// Dataset dataset = ij.dataset().create(new FloatType(), new long[]{10, 10,
-	// 10, 2}, "", new AxisType[]{Axes.X, Axes.Y, Axes.Z, Axes.CHANNEL});
-	// final RandomAccessibleInterval< FloatType > input =
-	// ( RandomAccessibleInterval< FloatType > ) dataset.getImgPlus();
-	// long[] grid = {1,2,1,1};
-	// long[] blockSize = {10,5,10,2};
-	// long[] overlap = {5,5,5,0};
-	// TiledView tv = new TiledView( input, blockSize, overlap );
-	//
-	// List<RandomAccessibleInterval> results = new ArrayList<>();
-	// final Cursor< RandomAccessibleInterval< FloatType > > cursor =
-	// Views.iterable( tv ).cursor();
-	// while ( cursor.hasNext() ) {
-	// results.add( cursor.next() );
-	// }
-	//
-	// final RandomAccessibleInterval< FloatType > result =
-	// new GridView<FloatType>( new ListImg<>( results, grid ) );
-	//
-	//
-	// }
 
 }

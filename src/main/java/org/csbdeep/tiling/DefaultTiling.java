@@ -194,8 +194,7 @@ public class DefaultTiling<T extends RealType<T>> implements Tiling<T> {
 		RandomAccessibleInterval<T> dataset, long[] tiling)
 	{
 		for (int i = 0; i < dataset.numDimensions(); i++) {
-			if (tilingActions[i] == TilingAction.TILE_WITH_PADDING
-			|| tilingActions[i] == TilingAction.TILE_WITHOUT_PADDING) {
+			if (tilingActions[i] == TilingAction.TILE_WITH_PADDING) {
 				dataset = expandDimToSize(dataset, i, getTileSize(dataset, i, tiling, blockMultiple) * tiling[i]);
 			}
 		}

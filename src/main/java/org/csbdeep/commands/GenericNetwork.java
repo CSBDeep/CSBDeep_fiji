@@ -29,7 +29,6 @@
 
 package org.csbdeep.commands;
 
-import java.awt.*;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -531,13 +530,12 @@ public class GenericNetwork implements
 		while (isOutOfMemory && canHandleOutOfMemory) {
 			try {
 				final List<AdvancedTiledView> tiledInput = inputTiler.run(
-					normalizedInput, getAxesArray(getInput()), tiling, getTilingActions());
+					normalizedInput, getAxesArray(getInput()), tiling,
+					getTilingActions());
 				nTiles = tiling.getTilesNum();
-				if(tiledInput != null) {
-					tiledOutput = modelExecutor.run(tiledInput, network);
-				}
+				if(tiledInput == null) return null;
+				tiledOutput = modelExecutor.run(tiledInput, network);
 				isOutOfMemory = false;
-
 			}
 			catch (final OutOfMemoryError e) {
 				isOutOfMemory = true;
@@ -570,17 +568,22 @@ public class GenericNetwork implements
 		return res;
 	}
 
-	protected Tiling.TilingAction[] getTilingActions() {
-		Tiling.TilingAction[] actions = new Tiling.TilingAction[network.getInputNode().getNodeShape().length];
+	public Tiling.TilingAction[] getTilingActions() {
+		return getTilingActionsForNode(network.getInputNode());
+	}
+
+	public static Tiling.TilingAction[] getTilingActionsForNode(ImageTensor node) {
+		if(node.getNodeShape().length == 0) return null;
+		Tiling.TilingAction[] actions = new Tiling.TilingAction[node.getNodeShape().length];
 		Arrays.fill(actions, Tiling.TilingAction.NO_TILING);
-		for (int i = 0; i < actions.length; i++) {
-			if(input.numDimensions() <= i) break;
-			AxisType type = getInput().axis(i).type();
-			if (type.isSpatial()) {
-				actions[i] = Tiling.TilingAction.TILE_WITH_PADDING;
-			}
-			if(type.getLabel().equals(batchAxis)) {
-				actions[i] = Tiling.TilingAction.TILE_WITHOUT_PADDING;
+		Integer indexFirst = node.getDatasetDimIndexByNodeIndex(0);
+		Integer indexLast = node.getDatasetDimIndexByNodeIndex(node.getNodeShape().length-1);
+		if(indexFirst != null) actions[indexFirst] = Tiling.TilingAction.TILE_WITHOUT_PADDING; // img batch dimension
+		if(indexLast != null) actions[indexLast] = Tiling.TilingAction.NO_TILING; // channel dimension
+		for (int i = 1; i < node.getNodeShape().length-1; i++) {
+			if(node.getNodeShape()[i] < 0) {
+				Integer imgIndex = node.getDatasetDimIndexByNodeIndex(i);
+				if(imgIndex != null) actions[imgIndex] = Tiling.TilingAction.TILE_WITH_PADDING;
 			}
 		}
 		return actions;

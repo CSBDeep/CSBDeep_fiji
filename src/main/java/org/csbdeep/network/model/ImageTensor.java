@@ -200,14 +200,14 @@ public class ImageTensor {
 	}
 
 	public Long getDatasetDimSizeByNodeDim(final int nodeDim) {
-		final Integer index = getDatasetDimIndexByTFIndex(nodeDim);
+		final Integer index = getDatasetDimIndexByNodeIndex(nodeDim);
 		if (index != null) {
 			return image.get(index).size;
 		}
 		return (long) 1;
 	}
 
-	public Integer getDatasetDimIndexByTFIndex(final int nodeDim) {
+	public Integer getDatasetDimIndexByNodeIndex(final int nodeDim) {
 		if (node.size() > nodeDim) {
 			final AxisType axis = node.get(nodeDim).getType();
 			for (int i = 0; i < image.size(); i++) {
@@ -264,6 +264,7 @@ public class ImageTensor {
 		for (int i = 0; i < newmapping.length; i++) {
 			node.get(i).type = newmapping[i];
 		}
+		generateMapping();
 		printMapping();
 	}
 

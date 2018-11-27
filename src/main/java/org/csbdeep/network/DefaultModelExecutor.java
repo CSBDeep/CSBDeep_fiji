@@ -87,8 +87,11 @@ public class DefaultModelExecutor<T extends RealType<T>> extends DefaultTask
 			}
 
 		}
-		catch(final RejectedExecutionException e) {
+		catch(final CancellationException | RejectedExecutionException e) {
 			//canceled
+			logError(PROGRESS_CANCELED);
+			setFailed();
+			cancel("Canceled");
 			return null;
 		}
 		catch(final IllegalArgumentException e) {
@@ -96,13 +99,13 @@ public class DefaultModelExecutor<T extends RealType<T>> extends DefaultTask
 			throw e;
 		}
 		catch (final ExecutionException | IllegalStateException exc) {
-			exc.printStackTrace();
-			if(exc.getMessage().contains(IllegalArgumentException.class.getSimpleName())) {
-				setFailed();
-				throw exc;
+			if(exc.getMessage() != null && exc.getMessage().contains("OOM")) {
+				setIdle();
+				throw new OutOfMemoryError();
 			}
-			setIdle();
-			throw new OutOfMemoryError();
+			exc.printStackTrace();
+			setFailed();
+			throw exc;
 		}
 		catch (final InterruptedException exc) {
 			logError(PROGRESS_CANCELED);

@@ -39,7 +39,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
-import java.util.function.BiConsumer;
 import java.util.stream.IntStream;
 
 import org.csbdeep.imglib2.TiledView;
@@ -48,7 +47,6 @@ import org.csbdeep.io.InputProcessor;
 import org.csbdeep.io.OutputProcessor;
 import org.csbdeep.task.DefaultTask;
 import org.csbdeep.tiling.DefaultTiling;
-import org.csbdeep.tiling.Tiling;
 import org.csbdeep.util.DatasetHelper;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
@@ -71,7 +69,6 @@ import net.imglib2.realtransform.AffineGet;
 import net.imglib2.realtransform.RealViews;
 import net.imglib2.realtransform.Scale;
 import net.imglib2.type.NativeType;
-import net.imglib2.type.Type;
 import net.imglib2.type.numeric.NumericType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
@@ -96,18 +93,6 @@ public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwo
 		batchSize = (int) Math.ceil((float) batchSize / (float) batchMultiple) *
 			batchMultiple;
 		tiling = new DefaultTiling(nTiles, batchSize, blockMultiple, overlap);
-	}
-
-	@Override
-	protected Tiling.TilingAction[] getTilingActions() {
-		Tiling.TilingAction[] actions = super.getTilingActions();
-		if (getInput().numDimensions() >= 3) {
-			int batchDim = network.getInputNode().getDatasetDimIndexByTFIndex(0);
-			if (batchDim >= 0) {
-				actions[batchDim] = Tiling.TilingAction.TILE_WITHOUT_PADDING;
-			}
-		}
-		return actions;
 	}
 
 	@Override

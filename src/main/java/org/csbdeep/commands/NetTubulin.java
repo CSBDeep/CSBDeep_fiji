@@ -75,10 +75,10 @@ public class NetTubulin implements Command {
 	private String url = "http://csbdeep.bioimagecomputing.com/model-tubulin.zip";
 
 //	@Override
-//	protected Tiling.TilingAction[] getTilingActions() {
-//		Tiling.TilingAction[] actions = super.getTilingActions();
+//	protected Tiling.TilingAction[] getTilingActionsForNode() {
+//		Tiling.TilingAction[] actions = super.getTilingActionsForNode();
 //		if (getInput().numDimensions() == 3) {
-//			int batchDim = network.getInputNode().getDatasetDimIndexByTFIndex(0);
+//			int batchDim = network.getInputNode().getDatasetDimIndexByNodeIndex(0);
 //			if (batchDim >= 0) {
 //				actions[batchDim] = Tiling.TilingAction.TILE_WITHOUT_PADDING;
 //			}

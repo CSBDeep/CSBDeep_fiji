@@ -73,7 +73,7 @@ public class OOMThrowingNetwork extends GenericNetwork
 	}
 
 	@Override
-	protected Tiling.TilingAction[] getTilingActions() {
+	public Tiling.TilingAction[] getTilingActions() {
 		return actions;
 	}
 
