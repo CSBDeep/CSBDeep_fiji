@@ -11,8 +11,8 @@
 		<relativePath />
 	</parent>
 
-	<groupId>mpicbg.csbd</groupId>
-	<artifactId>CSBDeep</artifactId>
+	<groupId>org.csbdeep</groupId>
+	<artifactId>csbdeep</artifactId>
 	<version>0.2.1</version>
 
 	<name>CSBDeep</name>
