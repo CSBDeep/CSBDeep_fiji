@@ -7,7 +7,6 @@ import java.io.File;
 import java.net.URL;
 
 import org.csbdeep.CSBDeepTest;
-import org.junit.Ignore;
 import org.junit.Test;
 import org.scijava.module.Module;
 
@@ -44,7 +43,6 @@ public class GenericNetworksMismatchTest extends CSBDeepTest {
 	}
 
 	@Test
-	@Ignore //TODO this crashes without catchable errors
 	public void test3DNetworkWith2DInputImage() {
 
 		launchImageJ();

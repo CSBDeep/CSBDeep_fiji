@@ -34,7 +34,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import java.util.OptionalLong;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -156,24 +155,6 @@ public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwo
 
 		}
 
-	}
-
-	@Override
-	public void run() {
-		tryToInitialize();
-		boolean validInput = DatasetHelper.validate(getInput(),
-				"4D image with size order X-Y-C-Z and two channels, checking if the order is X-Y-Z-C (also valid)",
-				isHeadless(), OptionalLong.empty(), OptionalLong.empty(), OptionalLong.of(2), OptionalLong.empty());
-		if(!validInput) {
-			validInput = DatasetHelper.validate(getInput(),
-					"4D image with size order X-Y-Z-Y and two channels",
-					isHeadless(), OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty(), OptionalLong.of(2));
-		}
-		if(!validInput)	return;
-
-		final AxisType[] mapping = { Axes.Z, Axes.Y, Axes.X, Axes.CHANNEL };
-		setMapping(mapping);
-		super.run();
 	}
 
 	@Override

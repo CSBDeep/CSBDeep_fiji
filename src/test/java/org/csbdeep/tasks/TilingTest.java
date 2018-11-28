@@ -264,7 +264,8 @@ public class TilingTest extends CSBDeepTest {
 		node.setNodeShape(nodeShape);
 		node.setMapping(new AxisType[]{Axes.TIME, Axes.Y, Axes.X, Axes.CHANNEL});
 
-		Tiling.TilingAction[] actions = GenericNetwork.getTilingActionsForNode(node);
+		Tiling.TilingAction[] actions = GenericNetwork.getTilingActionsForNode(
+				node, new int[]{2,1,0,3});
 
 		System.out.println(Arrays.toString(actions));
 

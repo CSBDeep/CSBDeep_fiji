@@ -81,6 +81,7 @@ public class DefaultTiling<T extends RealType<T>> implements Tiling<T> {
 			tilesNum = (int) arrayProduct(tiling);
 			long[] padding = getPadding(tiling);
 			computeBatching(input, tiling, tilingActions);
+			parent.log("Tiling actions: " + Arrays.toString(tilingActions));
 			parent.log("Dividing image into " + arrayProduct(tiling) + " tile(s)..");
 
 			RandomAccessibleInterval<T> expandedInput = expandToFitBatchSize(input,

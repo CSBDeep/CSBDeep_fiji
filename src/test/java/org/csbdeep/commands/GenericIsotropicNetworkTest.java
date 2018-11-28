@@ -1,38 +1,51 @@
 
 package org.csbdeep.commands;
 
+import static junit.framework.TestCase.assertNotNull;
+import static org.junit.Assert.*;
+
+import java.io.File;
+import java.net.URL;
+import java.util.concurrent.ExecutionException;
+
+import org.csbdeep.CSBDeepTest;
+import org.junit.Assert;
+import org.junit.Test;
+import org.scijava.module.Module;
+
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.integer.ByteType;
-import net.imglib2.type.numeric.integer.UnsignedIntType;
 import net.imglib2.type.numeric.real.FloatType;
-import org.csbdeep.CSBDeepTest;
-import org.junit.Assert;
-import org.junit.Test;
-import org.scijava.command.CommandModule;
-import org.scijava.module.Module;
-
-import java.io.File;
-import java.net.URL;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-
-import static junit.framework.TestCase.assertNotNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
 
 public class GenericIsotropicNetworkTest extends CSBDeepTest {
 
 	@Test
-	public void testGenericIsotropicNetwork() {
+	public void testCompatibleInput() {
 		launchImageJ();
 		testDataset(new FloatType(), new long[] { 10, 10, 10, 2 }, new AxisType[] {
 				Axes.X, Axes.Y, Axes.Z, Axes.CHANNEL });
 
+	}
+
+	@Test
+	public void testIncompatibleInput() {
+		launchImageJ();
+
+		URL networkUrl = this.getClass().getResource("isoNet/model.zip");
+		final Dataset input = createDataset(new FloatType(), new long[] { 10, 10, 10 }, new AxisType[] {
+				Axes.X, Axes.Y, Axes.Z, Axes.CHANNEL });
+		boolean noException = true;
+		try {
+			final Module module = ij.command().run(GenericIsotropicNetwork.class, false,
+					"modelFile", new File(networkUrl.getPath()), "input", input, "scale", 1.5).get();
+			assertNotNull(module);
+			assertNull(module.getOutput("output"));
+		} catch (InterruptedException | ExecutionException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public <T extends RealType<T> & NativeType<T>> void testDataset(final T type,
@@ -40,14 +53,19 @@ public class GenericIsotropicNetworkTest extends CSBDeepTest {
 
 		URL networkUrl = this.getClass().getResource("isoNet/model.zip");
 		final Dataset input = createDataset(type, dims, axes);
-		final Future<CommandModule> future = ij.command().run(GenericIsotropicNetwork.class, false,
-				"modelFile", new File(networkUrl.getPath()), "input", input, "scale", 1.5);
-		assertNotEquals(null, future);
-		final Module module = ij.module().waitFor(future);
-		final Dataset output = (Dataset) module.getOutput("output");
+		try {
+			final Module module = ij.command().run(GenericIsotropicNetwork.class, false,
+					"modelFile", new File(networkUrl.getPath()), "input", input, "scale", 1.5).get();
+			assertNotEquals(null, module);
+			final Dataset output = (Dataset) module.getOutput("output");
 
-		Assert.assertNotNull(output);
-		testResultAxesAndSize(input, output);
+			Assert.assertNotNull(output);
+			testResultAxesAndSize(input, output);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} catch (ExecutionException e) {
+			e.printStackTrace();
+		}
 	}
 
 	@Override

@@ -35,7 +35,6 @@ import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.MissingResourceException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -80,6 +79,7 @@ import net.imagej.axis.AxisType;
 import net.imagej.ops.OpService;
 import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.exception.IncompatibleTypeException;
 import net.imglib2.type.numeric.real.FloatType;
 
 @Plugin(type = Command.class, menuPath = "Plugins>CSBDeep>Run your network")
@@ -120,6 +120,7 @@ public class GenericNetwork implements
 
 	private boolean modelNeedsInitialization = false;
 	private boolean networkInitialized;
+	private boolean networkAndInputCompatible;
 
 	public enum NetworkInputSourceType { UNSET, FILE, URL }
 	
@@ -172,6 +173,7 @@ public class GenericNetwork implements
 	protected Tiling tiling;
 
 	protected InputProcessor inputProcessor;
+	protected InputValidator inputValidator;
 	protected InputMapper inputMapper;
 	protected InputNormalizer inputNormalizer;
 	protected InputTiler inputTiler;
@@ -326,6 +328,7 @@ public class GenericNetwork implements
 	}
 
 	protected void initTasks() {
+		inputValidator = initInputValidator();
 		inputMapper = initInputMapper();
 		inputProcessor = initInputProcessor();
 		inputNormalizer = initInputNormalizer();
@@ -339,12 +342,16 @@ public class GenericNetwork implements
 	protected void initTaskManager() {
 		final TaskForceManager tfm = new TaskForceManager(isHeadless() || !showProgressDialog, log);
 		tfm.initialize();
-		tfm.createTaskForce("Preprocessing", modelLoader, inputMapper,
+		tfm.createTaskForce("Preprocessing", modelLoader, inputValidator, inputMapper,
 			inputProcessor, inputNormalizer);
 		tfm.createTaskForce("Tiling", inputTiler);
 		tfm.createTaskForce("Execution", modelExecutor);
 		tfm.createTaskForce("Postprocessing", outputTiler, outputProcessor);
 		taskManager = tfm;
+	}
+
+	protected InputValidator initInputValidator() {
+		return new DefaultInputValidator();
 	}
 
 	protected InputMapper initInputMapper() {
@@ -405,13 +412,13 @@ public class GenericNetwork implements
 	protected void mainThread() throws OutOfMemoryError {
 
 		tryToInitialize();
+		taskManager.finalizeSetup();
 		solveModelSource();
 		initiateModelIfNeeded();
+		if(!networkAndInputCompatible) return;
 
 		updateCacheName();
 		savePreferences();
-
-		taskManager.finalizeSetup();
 
 		try {
 			tryToPrepareInputAndNetwork();
@@ -474,7 +481,9 @@ public class GenericNetwork implements
 		return normalizeInput;
 	}
 
-	protected void tryToPrepareInputAndNetwork() throws MissingResourceException, FileNotFoundException {
+	protected void tryToPrepareInputAndNetwork() throws FileNotFoundException {
+
+		networkAndInputCompatible = false;
 
 		modelName = cacheName;
 
@@ -482,12 +491,19 @@ public class GenericNetwork implements
 			initNetwork();
 
 		if(modelFileUrl.isEmpty()) {
-			throw new MissingResourceException("Trained model file / URL is missing or unavailable", this.getClass().getSimpleName(), modelFileUrl);
+			taskManager.logError("Trained model file / URL is missing or unavailable");
 		}
 		modelLoader.run(modelName, network, modelFileUrl, getInput());
-		if(modelLoader.isFailed()) return;
-		inputMapper.run(getInput(), network);
 
+		try {
+			inputValidator.run(getInput(), network);
+		}
+		catch(IncompatibleTypeException e) {
+			taskManager.logError(e.getMessage());
+			return;
+		}
+		inputMapper.run(getInput(), network);
+		networkAndInputCompatible = !inputMapper.isFailed();
 	}
 
 	private void savePreferences() {
@@ -529,8 +545,9 @@ public class GenericNetwork implements
 
 		while (isOutOfMemory && canHandleOutOfMemory) {
 			try {
+				AxisType[] finalInputAxes = getAxesArray(getInput());
 				final List<AdvancedTiledView> tiledInput = inputTiler.run(
-					normalizedInput, getAxesArray(getInput()), tiling,
+					normalizedInput, finalInputAxes, tiling,
 					getTilingActions());
 				nTiles = tiling.getTilesNum();
 				if(tiledInput == null) return null;
@@ -569,24 +586,33 @@ public class GenericNetwork implements
 	}
 
 	public Tiling.TilingAction[] getTilingActions() {
-		return getTilingActionsForNode(network.getInputNode());
+		return getTilingActionsForNode(network.getInputNode(), network.getInputNode().getMappingIndices());
 	}
 
-	public static Tiling.TilingAction[] getTilingActionsForNode(ImageTensor node) {
+	public static Tiling.TilingAction[] getTilingActionsForNode(ImageTensor node, int[] mapping) {
+
 		if(node.getNodeShape().length == 0) return null;
 		Tiling.TilingAction[] actions = new Tiling.TilingAction[node.getNodeShape().length];
 		Arrays.fill(actions, Tiling.TilingAction.NO_TILING);
-		Integer indexFirst = node.getDatasetDimIndexByNodeIndex(0);
-		Integer indexLast = node.getDatasetDimIndexByNodeIndex(node.getNodeShape().length-1);
-		if(indexFirst != null) actions[indexFirst] = Tiling.TilingAction.TILE_WITHOUT_PADDING; // img batch dimension
-		if(indexLast != null) actions[indexLast] = Tiling.TilingAction.NO_TILING; // channel dimension
+		actions[0] = Tiling.TilingAction.TILE_WITHOUT_PADDING; // img batch dimension
 		for (int i = 1; i < node.getNodeShape().length-1; i++) {
 			if(node.getNodeShape()[i] < 0) {
-				Integer imgIndex = node.getDatasetDimIndexByNodeIndex(i);
-				if(imgIndex != null) actions[imgIndex] = Tiling.TilingAction.TILE_WITH_PADDING;
+				actions[i] = Tiling.TilingAction.TILE_WITH_PADDING;
 			}
 		}
-		return actions;
+		//permute
+		Tiling.TilingAction[] imgActions = new Tiling.TilingAction[node.getNodeShape().length];
+		for (int i = 0; i < actions.length; i++) {
+			imgActions[i] = actions[mapping[i]];
+		}
+		return imgActions;
+	}
+
+	private static int indexOf(Object[] array, Object item) {
+		for (int i = 0; i < array.length; i++) {
+			if(array[i].equals(item)) return i;
+		}
+		return -1;
 	}
 
 	public void setMapping(final AxisType[] mapping) {
