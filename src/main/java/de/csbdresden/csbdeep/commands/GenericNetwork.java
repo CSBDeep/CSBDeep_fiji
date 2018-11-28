@@ -107,14 +107,12 @@ public class GenericNetwork implements
 	@Parameter(label = "Number of tiles", min = "1")
 	protected int nTiles = 8;
 
-	@Parameter(label = "Tile size has to be a multiple of", min = "1")
+	@Parameter(label = "Tile size has to be multiple of", min = "1")
 	protected int blockMultiple = 32;
 
 	@Parameter(label = "Overlap between tiles", min = "0", stepSize = "16")
 	protected int overlap = 32;
 
-	@Parameter(label = "Batch axis", choices = {"no batching", "X", "Y", "Z", "TIME", "CHANNEL"})
-	protected String batchAxis = "no batching";
 
 	@Parameter(label = "Batch size", min = "1")
 	protected int batchSize = 1;
@@ -257,11 +255,15 @@ public class GenericNetwork implements
 	}
 
 	protected void modelFileChanged() {
-		if (modelFile != null && modelFile.exists()) {
-			modelUrl = null;
-			networkInputSourceType = NetworkInputSourceType.FILE;
-			modelFileUrl = modelFile.getAbsolutePath();
-			modelChanged();
+		if (modelFile != null) {
+			if(modelFile.exists()) {
+				modelUrl = null;
+				networkInputSourceType = NetworkInputSourceType.FILE;
+				modelFileUrl = modelFile.getAbsolutePath();
+				modelChanged();
+			}else {
+				error("Model file " + modelFile.getAbsolutePath() + " does not exist.");
+			}
 		}
 	}
 
