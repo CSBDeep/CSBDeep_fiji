@@ -6,9 +6,9 @@ import static org.junit.Assert.assertNotEquals;
 import static org.junit.Assert.assertNotNull;
 
 import java.io.File;
+import java.net.URL;
 import java.util.concurrent.Future;
 
-import org.junit.Ignore;
 import org.junit.Test;
 import org.scijava.command.CommandModule;
 import org.scijava.module.Module;
@@ -22,24 +22,23 @@ import net.imglib2.type.numeric.real.FloatType;
 public class GenericNetworksMultipleCallsTest extends CSBDeepTest {
 
 	@Test
-	@Ignore
 	public void testMultipleGenericNetworks() {
 
 		launchImageJ();
 
-		String[] networks = {"/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise2D/model.zip",
-				"/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise3D/model.zip"};
+		String[] networks = {"denoise2D/model.zip",
+				"denoise3D/model.zip"};
 
 		Dataset input = createDataset(new FloatType(), new long[] { 10, 10, 10 }, new AxisType[] {
 				Axes.X, Axes.Y, Axes.Z });
 
 		for (int i = 0; i < 3; i++) {
-
 			for(String networkSrc : networks) {
+				URL networkUrl = this.getClass().getResource(networkSrc);
 				final Future<CommandModule> future = ij.command().run(GenericNetwork.class,
 						false,
 						"input", input,
-						"modelFile", new File(networkSrc),
+						"modelFile", new File(networkUrl.getPath()),
 						"overlap", 2);
 				assertNotEquals(null, future);
 				final Module module = ij.module().waitFor(future);
@@ -54,8 +53,6 @@ public class GenericNetworksMultipleCallsTest extends CSBDeepTest {
 					assertEquals(input.axis(j).type(), output.axis(j).type());
 				}
 			}
-
-			System.out.println(i);
 		}
 
 	}
