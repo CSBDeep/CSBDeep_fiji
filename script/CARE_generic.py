@@ -14,7 +14,7 @@
 
 from java.io import File
 import sys
-from mpicbg.csbd.commands import GenericNetwork
+from de.csbdresden.csbdeep.commands import GenericNetwork
 
 def getFileName(path):
 	fileparts = path.split("/")

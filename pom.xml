@@ -11,7 +11,7 @@
 		<relativePath />
 	</parent>
 
-	<groupId>org.csbdeep</groupId>
+	<groupId>de.csbdresden</groupId>
 	<artifactId>csbdeep</artifactId>
 	<version>0.2.1</version>
 
