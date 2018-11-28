@@ -172,7 +172,7 @@ public class CSBDeepProgress extends JPanel {
 
 		add(footer, BorderLayout.SOUTH);
 
-		dispose();
+		invalidate();
 		repaint();
 
 		getOkBtn().addActionListener(e -> frame.dispose());
@@ -350,6 +350,7 @@ public class CSBDeepProgress extends JPanel {
 	}
 
 	public void dispose() {
+		status.showProgress(1,1);
 		frame.dispose();
 	}
 
