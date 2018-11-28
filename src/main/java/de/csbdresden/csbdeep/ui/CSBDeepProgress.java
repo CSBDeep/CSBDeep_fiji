@@ -88,6 +88,10 @@ public class CSBDeepProgress extends JPanel {
 
 	private final SimpleAttributeSet red = new SimpleAttributeSet();
 
+	public JFrame getFrame() {
+		return frame;
+	}
+
 	public JButton getCancelBtn() {
 		return cancelButton;
 	}
@@ -341,7 +345,6 @@ public class CSBDeepProgress extends JPanel {
 
 		// Create and set up the window.
 		final JFrame frame = new JFrame("CSBDeep progress");
-		// frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
 
 		// Create and set up the content pane.
 		final CSBDeepProgress newContentPane = new CSBDeepProgress(frame, status, threadService);

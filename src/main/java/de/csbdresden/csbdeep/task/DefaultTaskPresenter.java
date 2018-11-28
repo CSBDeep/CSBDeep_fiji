@@ -1,8 +1,7 @@
 
 package de.csbdresden.csbdeep.task;
 
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.*;
 
 import javax.swing.*;
 
@@ -11,7 +10,7 @@ import org.scijava.thread.ThreadService;
 
 import de.csbdresden.csbdeep.ui.CSBDeepProgress;
 
-public class DefaultTaskPresenter implements TaskPresenter, ActionListener {
+public class DefaultTaskPresenter extends WindowAdapter implements TaskPresenter, ActionListener {
 
 	private CSBDeepProgress progressWindow;
 	private final TaskManager taskManager;
@@ -19,6 +18,7 @@ public class DefaultTaskPresenter implements TaskPresenter, ActionListener {
 	private final StatusService status;
 	private final boolean headless;
 	private boolean initialized = false;
+	private boolean closing = false;
 
 	public DefaultTaskPresenter(final TaskManager taskManager, boolean headless, StatusService status, ThreadService threadService)
 	{
@@ -33,6 +33,7 @@ public class DefaultTaskPresenter implements TaskPresenter, ActionListener {
 		if (!headless) {
 			progressWindow = CSBDeepProgress.create(status, threadService);
 			progressWindow.getCancelBtn().addActionListener(this);
+			progressWindow.getFrame().addWindowListener(this);
 			initialized = true;
 		}
 	}
@@ -44,6 +45,7 @@ public class DefaultTaskPresenter implements TaskPresenter, ActionListener {
 	@Override
 	public void close() {
 		if (inUse()) {
+			closing = true;
 			progressWindow.getCancelBtn().removeActionListener(this);
 			progressWindow.dispose();
 		}
@@ -150,4 +152,10 @@ public class DefaultTaskPresenter implements TaskPresenter, ActionListener {
 		}
 	}
 
+	@Override
+	public void windowClosed(WindowEvent e) {
+		if (inUse()) {
+			if(!closing) taskManager.cancel("Canceled");
+		}
+	}
 }
