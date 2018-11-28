@@ -5,9 +5,10 @@
 # @Integer(label="Number of tiles", required=false, value=8) nTiles
 # @Integer(label="Tile overlap", required=false, value=32) overlap
 # @Boolean(label="Normalize input", required=false, value=true) normalizeInput
-# @Float(label="Bottom percentile", required=false, value=0.03, stepSize=0.001) percentileBottom
-# @Float(label="Top percentile", required=false, value=0.998, stepSize=0.001) percentileTop
+# @Float(label="Bottom percentile", required=false, value=3.0, stepSize=0.1) percentileBottom
+# @Float(label="Top percentile", required=false, value=99.8, stepSize=0.1) percentileTop
 # @Boolean(label="Clip", required=false, value=false) clip
+# @Boolean(label="Show progress dialog", required=false, value=true) showProgressDialog
 # @DatasetIOService io
 # @CommandService command
 # @ModuleService module
@@ -23,7 +24,7 @@ def getFileName(path):
 def runNetwork(inputPath, outputPath):
 	print("input: " + inputPath + ", output: " + outputPath)
 	imp = io.open(inputPath)
-	mymod = (command.run(GenericNetwork, True,
+	mymod = (command.run(GenericNetwork, False,
 		"input", imp,
 		"nTiles", nTiles,
 		"overlap", overlap,
@@ -31,6 +32,7 @@ def runNetwork(inputPath, outputPath):
 		"percentileBottom", percentileBottom,
 		"percentileTop", percentileTop,
 		"clip", clip,
+		"showProgressDialog", showProgressDialog,
 		"modelFile", modelFile)).get()
 	myoutput = mymod.getOutput("output")
 	print(myoutput)
