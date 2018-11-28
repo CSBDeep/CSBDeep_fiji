@@ -96,7 +96,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 			log("Couldn't load tensorflow GPU support.");
 			log(
 				"If the problem is CUDA related, make sure CUDA and cuDNN are in the LD_LIBRARY_PATH.");
-			log("Using CPU version from jar file.");
+			log("Using CPU version.");
 		}
 	}
 

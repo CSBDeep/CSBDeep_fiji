@@ -30,6 +30,7 @@
 package de.csbdresden.csbdeep.ui;
 
 import java.awt.*;
+import java.lang.reflect.InvocationTargetException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -187,11 +188,15 @@ public class CSBDeepProgress extends JPanel {
 
 	public void display() {
 		// Display the window.
-		threadService.queue(() -> {
-			frame.pack();
-			frame.setLocationRelativeTo(null);
-			frame.setVisible(true);
-		});
+		try {
+			threadService.invoke(() -> {
+				frame.pack();
+				frame.setLocationRelativeTo(null);
+				frame.setVisible(true);
+			});
+		} catch (InterruptedException | InvocationTargetException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void addTask(final String title) {
@@ -219,34 +224,48 @@ public class CSBDeepProgress extends JPanel {
 		}
 		currentTask = -1;
 		currentTaskFailing = false;
-		threadService.queue(() -> progressBar.setValue(0));
+		try {
+			threadService.invoke(() -> progressBar.setValue(0));
+		} catch (InterruptedException | InvocationTargetException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void setProgressBarMax(final int value) {
-		threadService.queue(() -> {
-			progressBar.setMaximum(value);
-		});
+		try {
+			threadService.invoke(() -> progressBar.setMaximum(value));
+		} catch (InterruptedException | InvocationTargetException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void setProgressBarValue(final int value) {
-		threadService.queue(() -> {
-			progressBar.setValue(value);
-			status.showProgress(value, progressBar.getMaximum());
-		});
+		try {
+			threadService.invoke(() -> {
+				progressBar.setValue(value);
+				status.showProgress(value, progressBar.getMaximum());
+			});
+		} catch (InterruptedException | InvocationTargetException e) {
+			e.printStackTrace();
+		}
 	}
 
 	private void updateGUI() {
 
-		threadService.queue(() -> {
-			boolean alldone = true;
-			for (final GuiTask task : tasks) {
-				if (!task.taskDone) alldone = false;
-			}
-			okButton.setEnabled(alldone || currentTaskFailing);
-			cancelButton.setEnabled(!alldone && !currentTaskFailing);
+		try {
+			threadService.invoke(() -> {
+				boolean alldone = true;
+				for (final GuiTask task : tasks) {
+					if (!task.taskDone) alldone = false;
+				}
+				okButton.setEnabled(alldone || currentTaskFailing);
+				cancelButton.setEnabled(!alldone && !currentTaskFailing);
 
-			invalidate();
-		});
+				invalidate();
+			});
+		} catch (InterruptedException | InvocationTargetException e) {
+			e.printStackTrace();
+		}
 
 	}
 
@@ -319,22 +338,30 @@ public class CSBDeepProgress extends JPanel {
 	public void addLog(final String data, final SimpleAttributeSet style) {
 		final Date date = new Date();
 		final DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		threadService.queue(() -> {
-			try {
-				taskOutput.getDocument().insertString(taskOutput.getDocument()
-						.getLength(), df.format(date) + " | " + data + "\n", style);
-				taskOutput.setCaretPosition(taskOutput.getDocument().getLength());
-				taskOutput.invalidate();
-				this.invalidate();
-			}
-			catch (final BadLocationException exc) {
-				exc.printStackTrace();
-			}
-		});
+		try {
+			threadService.invoke(() -> {
+				try {
+					taskOutput.getDocument().insertString(taskOutput.getDocument()
+							.getLength(), df.format(date) + " | " + data + "\n", style);
+					taskOutput.setCaretPosition(taskOutput.getDocument().getLength());
+					taskOutput.invalidate();
+					this.invalidate();
+				}
+				catch (final BadLocationException exc) {
+					exc.printStackTrace();
+				}
+			});
+		} catch (InterruptedException | InvocationTargetException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void showGPUWarning() {
-		threadService.queue(() -> note1.setVisible(true));
+		try {
+			threadService.invoke(() -> note1.setVisible(true));
+		} catch (InterruptedException | InvocationTargetException e) {
+			e.printStackTrace();
+		}
 	}
 
 	public void addError(final String data) {

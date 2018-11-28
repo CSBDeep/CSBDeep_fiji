@@ -205,9 +205,7 @@ public class GenericNetwork implements
 			initiateModelIfNeeded();
 			try {
 				threadService.invoke(() -> MappingDialog.create(network.getInputNode(), network.getOutputNode()));
-			} catch (InterruptedException e) {
-				e.printStackTrace();
-			} catch (InvocationTargetException e) {
+			} catch (InterruptedException | InvocationTargetException e) {
 				e.printStackTrace();
 			}
 		});
