@@ -4,14 +4,16 @@ package org.csbdeep.task;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.scijava.app.StatusService;
 import org.scijava.log.Logger;
+import org.scijava.thread.ThreadService;
 
 public class TaskForceManager extends DefaultTaskManager {
 
 	private final List<TaskForce> taskForces;
 
-	public TaskForceManager(boolean headless, Logger logger) {
-		super(headless, logger);
+	public TaskForceManager(boolean headless, Logger logger, StatusService status, ThreadService threadService) {
+		super(headless, logger, status, threadService);
 		taskForces = new ArrayList<>();
 	}
 

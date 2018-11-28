@@ -71,11 +71,11 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 		}
 		catch (final UnsatisfiedLinkError e){
 			foundJNI = false;
-			logError("Couldn't load tensorflow library.");
-			logError("By default, CSBDeep will load the tensorflow CPU library. " +
-					"If you added a libtensorflow-jni.jar file to Fiji.app/lib/linux64 " +
+			logError("Couldn't load TensorFlow.\n" +
+					"By default, CSBDeep will load TensorFlow for CPU. " +
+					"If you added a CSBDeep update site for CUDA " +
 					"to get GPU support, make sure you have the matching CUDA and cuDNN " +
-					"versions installed. If you want to use the CPU library, make sure " +
+					"versions installed. \nIf you want to use the CPU, make sure " +
 					"the GPU tensorflow library file is removed from the lib folder.");
 			e.printStackTrace();
 		}
@@ -132,6 +132,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 
 	@Override
 	protected boolean loadModel(final Location source, final String modelName) {
+		if(!foundJNI) return false;
 		log("Loading TensorFlow model " + modelName + " from source file " + source.getURI());
 		try {
 			if (model != null) {

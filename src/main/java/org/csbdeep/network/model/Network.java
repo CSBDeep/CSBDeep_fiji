@@ -67,4 +67,5 @@ public interface Network<T extends RealType<T>> extends
 	boolean libraryLoaded();
 
 	void clear();
+
 }

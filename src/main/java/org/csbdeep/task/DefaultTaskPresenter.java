@@ -4,29 +4,33 @@ package org.csbdeep.task;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import javax.swing.*;
+
 import org.csbdeep.ui.CSBDeepProgress;
-import org.scijava.log.Logger;
+import org.scijava.app.StatusService;
+import org.scijava.thread.ThreadService;
 
 public class DefaultTaskPresenter implements TaskPresenter, ActionListener {
 
-	CSBDeepProgress progressWindow;
-	TaskManager taskManager;
-	Logger logger;
-	final boolean headless;
-	boolean initialized = false;
+	private CSBDeepProgress progressWindow;
+	private final TaskManager taskManager;
+	private final ThreadService threadService;
+	private final StatusService status;
+	private final boolean headless;
+	private boolean initialized = false;
 
-	public DefaultTaskPresenter(final TaskManager taskManager, boolean headless,
-		Logger logger)
+	public DefaultTaskPresenter(final TaskManager taskManager, boolean headless, StatusService status, ThreadService threadService)
 	{
 		this.headless = headless;
 		this.taskManager = taskManager;
-		this.logger = logger;
+		this.status = status;
+		this.threadService = threadService;
 	}
 
 	@Override
 	public void initialize() {
 		if (!headless) {
-			progressWindow = CSBDeepProgress.create();
+			progressWindow = CSBDeepProgress.create(status, threadService);
 			progressWindow.getCancelBtn().addActionListener(this);
 			initialized = true;
 		}
@@ -112,7 +116,6 @@ public class DefaultTaskPresenter implements TaskPresenter, ActionListener {
 		if (inUse()) {
 			progressWindow.addLog(msg);
 		}
-		logger.debug(msg);
 	}
 
 	@Override
@@ -120,15 +123,21 @@ public class DefaultTaskPresenter implements TaskPresenter, ActionListener {
 		if (inUse()) {
 			progressWindow.addLog(msg);
 		}
-		logger.info(msg);
 	}
 
 	@Override
 	public void logError(final String msg) {
 		if (inUse()) {
 			progressWindow.addError(msg);
+			createErrorPopup(msg);
 		}
-		logger.error(msg);
+	}
+
+	private void createErrorPopup(String msg) {
+		JOptionPane.showMessageDialog(null,
+				"<html><p style='width: 333px;'>"+msg.replace("\n", "<br/>")+"</p>",
+				"CSBDeep error",
+				JOptionPane.ERROR_MESSAGE);
 	}
 
 	@Override

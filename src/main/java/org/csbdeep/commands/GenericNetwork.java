@@ -62,6 +62,7 @@ import org.scijava.Cancelable;
 import org.scijava.Disposable;
 import org.scijava.Initializable;
 import org.scijava.ItemIO;
+import org.scijava.app.StatusService;
 import org.scijava.command.Command;
 import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
@@ -146,6 +147,9 @@ public class GenericNetwork implements
 
 	@Parameter
 	protected LogService log;
+
+	@Parameter
+	protected StatusService status;
 
 	@Parameter
 	protected TensorFlowService tensorFlowService;
@@ -340,7 +344,7 @@ public class GenericNetwork implements
 	}
 
 	protected void initTaskManager() {
-		final TaskForceManager tfm = new TaskForceManager(isHeadless() || !showProgressDialog, log);
+		final TaskForceManager tfm = new TaskForceManager(isHeadless() || !showProgressDialog, log, status, threadService);
 		tfm.initialize();
 		tfm.createTaskForce("Preprocessing", modelLoader, inputValidator, inputMapper,
 			inputProcessor, inputNormalizer);
@@ -392,6 +396,8 @@ public class GenericNetwork implements
 
 	public void run() {
 
+		final long startTime = System.currentTimeMillis();
+
 		if (noInputData()) return;
 
 		pool = Executors.newSingleThreadExecutor();
@@ -406,6 +412,8 @@ public class GenericNetwork implements
 		}
 
 		dispose();
+
+		log("Plugin exit (took " + (System.currentTimeMillis() - startTime) + " milliseconds)");
 
 	}
 
@@ -462,8 +470,6 @@ public class GenericNetwork implements
 					getAxesArray(network.getOutputNode()), datasetService);
 		}
 
-		log("Done!");
-
 	}
 
 	private void solveModelSource() {
@@ -487,8 +493,10 @@ public class GenericNetwork implements
 
 		modelName = cacheName;
 
-		if(!networkInitialized)
+		if(!networkInitialized) {
 			initNetwork();
+		}
+		if(!network.libraryLoaded()) return;
 
 		if(modelFileUrl.isEmpty()) {
 			taskManager.logError("Trained model file / URL is missing or unavailable");

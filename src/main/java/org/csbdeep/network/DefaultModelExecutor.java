@@ -17,7 +17,7 @@ public class DefaultModelExecutor<T extends RealType<T>> extends DefaultTask
 	implements ModelExecutor<T>
 {
 
-	private static String PROGRESS_CANCELED = "";
+	private static String PROGRESS_CANCELED = "Canceled";
 	private ExecutorService pool = null;
 	private Network network = null;
 	private boolean canceled = false;
@@ -87,11 +87,11 @@ public class DefaultModelExecutor<T extends RealType<T>> extends DefaultTask
 			}
 
 		}
-		catch(final CancellationException | RejectedExecutionException e) {
+		catch(final CancellationException | RejectedExecutionException | InterruptedException e) {
 			//canceled
-			logError(PROGRESS_CANCELED);
 			setFailed();
-			cancel("Canceled");
+			log(PROGRESS_CANCELED);
+			cancel(PROGRESS_CANCELED);
 			return null;
 		}
 		catch(final IllegalArgumentException e) {
@@ -106,12 +106,6 @@ public class DefaultModelExecutor<T extends RealType<T>> extends DefaultTask
 			exc.printStackTrace();
 			setFailed();
 			throw exc;
-		}
-		catch (final InterruptedException exc) {
-			logError(PROGRESS_CANCELED);
-			setFailed();
-			cancel("");
-			return null;
 		}
 
 		return input;

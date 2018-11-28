@@ -44,6 +44,9 @@ import javax.swing.text.BadLocationException;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
 
+import org.scijava.app.StatusService;
+import org.scijava.thread.ThreadService;
+
 public class CSBDeepProgress extends JPanel {
 
 	private class GuiTask {
@@ -57,7 +60,10 @@ public class CSBDeepProgress extends JPanel {
 		public boolean taskDone;
 	}
 
-	final JButton okButton, cancelButton;
+	private final StatusService status;
+	private final ThreadService threadService;
+
+	private final JButton okButton, cancelButton;
 	private final JProgressBar progressBar;
 	private final Component progressBarSpace;
 	private final JTextPane taskOutput;
@@ -67,17 +73,17 @@ public class CSBDeepProgress extends JPanel {
 	public static final int STATUS_DONE = 1;
 	public static final int STATUS_FAIL = 2;
 
-	List<GuiTask> tasks = new ArrayList<>();
-	int currentTask;
-	boolean currentTaskFailing;
+	private final List<GuiTask> tasks = new ArrayList<>();
+	private int currentTask;
+	private boolean currentTaskFailing;
 
-	final JPanel taskContainer;
-	final JFrame frame;
+	private final JPanel taskContainer;
+	private final JFrame frame;
 
 	private JPanel note1;
 
-	JLabel noTensorFlow = new JLabel(
-		"<html>Couldn't load tensorflow from library<br />path and will therefore use CPU<br />instead of GPU version.<br />This will affect performance.<br />See wiki for further details.</html>",
+	private static JLabel noTensorFlow = new JLabel(
+		"<html>Couldn't load TensorFlow from library<br />path and will therefore use CPU<br />instead of GPU version.<br />This will affect performance.<br />See wiki for further details.</html>",
 		SwingConstants.RIGHT);
 
 	private final SimpleAttributeSet red = new SimpleAttributeSet();
@@ -90,11 +96,13 @@ public class CSBDeepProgress extends JPanel {
 		return okButton;
 	}
 
-	public CSBDeepProgress(JFrame frame) {
+	public CSBDeepProgress(JFrame frame, StatusService status, ThreadService threadService) {
 
 		super(new BorderLayout());
 
+		this.status = status;
 		this.frame = frame;
+		this.threadService = threadService;
 
 		StyleConstants.setForeground(red, Color.red);
 
@@ -175,15 +183,11 @@ public class CSBDeepProgress extends JPanel {
 
 	public void display() {
 		// Display the window.
-		if (SwingUtilities.isEventDispatchThread())
+		threadService.queue(() -> {
 			frame.pack();
-		else try {
-			SwingUtilities.invokeAndWait(new Runnable() { public void run() {
-				frame.pack();
-			}});
-		} catch (Exception e) { /* ignore */ }
-		frame.setLocationRelativeTo(null);
-		frame.setVisible(true);
+			frame.setLocationRelativeTo(null);
+			frame.setVisible(true);
+		});
 	}
 
 	public void addTask(final String title) {
@@ -211,27 +215,34 @@ public class CSBDeepProgress extends JPanel {
 		}
 		currentTask = -1;
 		currentTaskFailing = false;
-		progressBar.setValue(0);
+		threadService.queue(() -> progressBar.setValue(0));
 	}
 
 	public void setProgressBarMax(final int value) {
-		progressBar.setMaximum(value);
+		threadService.queue(() -> {
+			progressBar.setMaximum(value);
+		});
 	}
 
 	public void setProgressBarValue(final int value) {
-		progressBar.setValue(value);
+		threadService.queue(() -> {
+			progressBar.setValue(value);
+			status.showProgress(value, progressBar.getMaximum());
+		});
 	}
 
 	private void updateGUI() {
 
-		boolean alldone = true;
-		for (final GuiTask task : tasks) {
-			if (!task.taskDone) alldone = false;
-		}
-		okButton.setEnabled(alldone || currentTaskFailing);
-		cancelButton.setEnabled(!alldone && !currentTaskFailing);
+		threadService.queue(() -> {
+			boolean alldone = true;
+			for (final GuiTask task : tasks) {
+				if (!task.taskDone) alldone = false;
+			}
+			okButton.setEnabled(alldone || currentTaskFailing);
+			cancelButton.setEnabled(!alldone && !currentTaskFailing);
 
-		invalidate();
+			invalidate();
+		});
 
 	}
 
@@ -245,12 +256,14 @@ public class CSBDeepProgress extends JPanel {
 	public void setTaskDone(final int task) {
 		tasks.get(currentTask).taskDone = true;
 		setStepStatus(task, STATUS_DONE);
+		status.clearStatus();
 		updateGUI();
 	}
 
 	public void setTaskFail(final int task) {
 		currentTaskFailing = true;
 		setStepStatus(task, STATUS_FAIL);
+		status.clearStatus();
 		updateGUI();
 	}
 
@@ -302,33 +315,36 @@ public class CSBDeepProgress extends JPanel {
 	public void addLog(final String data, final SimpleAttributeSet style) {
 		final Date date = new Date();
 		final DateFormat df = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-		try {
-			taskOutput.getDocument().insertString(taskOutput.getDocument()
-				.getLength(), df.format(date) + " | " + data + "\n", style);
-			taskOutput.setCaretPosition(taskOutput.getDocument().getLength());
-			taskOutput.invalidate();
-			this.invalidate();
-		}
-		catch (final BadLocationException exc) {
-			exc.printStackTrace();
-		}
+		threadService.queue(() -> {
+			try {
+				taskOutput.getDocument().insertString(taskOutput.getDocument()
+						.getLength(), df.format(date) + " | " + data + "\n", style);
+				taskOutput.setCaretPosition(taskOutput.getDocument().getLength());
+				taskOutput.invalidate();
+				this.invalidate();
+			}
+			catch (final BadLocationException exc) {
+				exc.printStackTrace();
+			}
+		});
 	}
 
 	public void showGPUWarning() {
-		note1.setVisible(true);
+		threadService.queue(() -> note1.setVisible(true));
 	}
 
 	public void addError(final String data) {
 		addLog(data, red);
 	}
 
-	public static CSBDeepProgress create() {
+	public static CSBDeepProgress create(StatusService status, ThreadService threadService) {
+
 		// Create and set up the window.
 		final JFrame frame = new JFrame("CSBDeep progress");
 		// frame.setDefaultCloseOperation( JFrame.EXIT_ON_CLOSE );
 
 		// Create and set up the content pane.
-		final CSBDeepProgress newContentPane = new CSBDeepProgress(frame);
+		final CSBDeepProgress newContentPane = new CSBDeepProgress(frame, status, threadService);
 
 		return newContentPane;
 	}

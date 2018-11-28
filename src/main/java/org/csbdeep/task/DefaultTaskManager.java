@@ -4,15 +4,19 @@ package org.csbdeep.task;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.scijava.app.StatusService;
 import org.scijava.log.Logger;
+import org.scijava.thread.ThreadService;
 
 public class DefaultTaskManager implements TaskManager {
 
-	private final List<Task> tasks;
+	protected final List<Task> tasks;
 	protected final TaskPresenter taskPresenter;
+	protected final Logger logger;
 
-	public DefaultTaskManager(boolean headless, Logger logger) {
-		taskPresenter = new DefaultTaskPresenter(this, headless, logger);
+	public DefaultTaskManager(boolean headless, Logger logger, StatusService status, ThreadService threadService) {
+		this.logger = logger;
+		taskPresenter = new DefaultTaskPresenter(this, headless, status, threadService);
 		tasks = new ArrayList<>();
 	}
 
@@ -53,16 +57,19 @@ public class DefaultTaskManager implements TaskManager {
 	@Override
 	public void debug(final String msg) {
 		taskPresenter.debug(msg);
+		logger.debug(msg);
 	}
 
 	@Override
 	public void log(final String msg) {
 		taskPresenter.log(msg);
+		logger.info(msg);
 	}
 
 	@Override
 	public void logError(final String msg) {
 		taskPresenter.logError(msg);
+		logger.error(msg);
 	}
 
 	@Override

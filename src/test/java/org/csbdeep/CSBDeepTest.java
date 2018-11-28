@@ -37,9 +37,13 @@ public class CSBDeepTest {
 	}
 
 	protected void launchImageJ() {
+		launchImageJ(true);
+	}
+
+	protected void launchImageJ(boolean headless) {
 		if (ij == null) {
 			ij = new ImageJ();
-			ij.ui().setHeadless(true);
+			ij.ui().setHeadless(headless);
 		}
 	}
 

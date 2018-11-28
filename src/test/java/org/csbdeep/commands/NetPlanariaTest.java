@@ -18,12 +18,9 @@ import net.imglib2.type.numeric.real.FloatType;
 public class NetPlanariaTest extends CSBDeepTest {
 
 	@Test
-	public void testNetPlanariaInvalidDataset() {
-		launchImageJ();
-		final Dataset input = createDataset(new FloatType(), new long[] {5, 10}, new AxisType[]
-				{Axes.X, Axes.Y});
-		final Dataset result = runPlugin(NetPlanaria.class, input);
-		assertNull(result);
+	public void testPlanariaFloatTypeXY() {
+		testDataset(new FloatType(), new long[] { 4, 3 }, new AxisType[] {
+				Axes.X, Axes.Y });
 	}
 
 	@Test
@@ -36,6 +33,15 @@ public class NetPlanariaTest extends CSBDeepTest {
 	public void testPlanariaFloatTypeXYZC() {
 		testDataset(new FloatType(), new long[] { 3, 4, 10, 1 }, new AxisType[] {
 			Axes.X, Axes.Y, Axes.Z, Axes.CHANNEL });
+	}
+
+	@Test
+	public void testPlanariaInvalidDataset() throws InterruptedException {
+		launchImageJ();
+		final Dataset input = createDataset(new FloatType(), new long[] { 3, 4, 10, 2 }, new AxisType[]
+				{ Axes.X, Axes.Y, Axes.Z, Axes.CHANNEL });
+		final Dataset result = runPlugin(NetPlanaria.class, input);
+		assertNull(result);
 	}
 
 	@Test

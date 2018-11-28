@@ -30,17 +30,14 @@
 package org.csbdeep.commands;
 
 import java.io.File;
-import java.util.OptionalLong;
 import java.util.concurrent.ExecutionException;
 
-import org.csbdeep.util.DatasetHelper;
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
 import org.scijava.command.CommandModule;
 import org.scijava.command.CommandService;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
-import org.scijava.ui.UIService;
 
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
@@ -69,41 +66,16 @@ public class NetTubulin implements Command {
 	@Parameter
 	CommandService commandService;
 
-	@Parameter
-	UIService uiService;
-
 	private String url = "http://csbdeep.bioimagecomputing.com/model-tubulin.zip";
-
-//	@Override
-//	protected Tiling.TilingAction[] getTilingActionsForNode() {
-//		Tiling.TilingAction[] actions = super.getTilingActionsForNode();
-//		if (getInput().numDimensions() == 3) {
-//			int batchDim = network.getInputNode().getDatasetDimIndexByNodeIndex(0);
-//			if (batchDim >= 0) {
-//				actions[batchDim] = Tiling.TilingAction.TILE_WITHOUT_PADDING;
-//			}
-//		}
-//		return actions;
-//	}
 
 	@Override
 	public void run() {
-		boolean validInput = DatasetHelper.validate(input, "3D image with size order X-Y-T, checking if it is a 2D image (also valid)", uiService.isHeadless(),
-			OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty());
-		if(!validInput) {
-			validInput = DatasetHelper.validate(input, "2D image with size order X-Y", uiService.isHeadless(),
-				OptionalLong.empty(), OptionalLong.empty());
-		}
-		if(!validInput) return;
-//			final AxisType[] mapping = { Axes.TIME, Axes.Y, Axes.X, Axes.CHANNEL };
-//			setMapping(mapping);
 		try {
 			final CommandModule module = commandService.run(
 					GenericNetwork.class, false,
 					"input", input,
 					"modelUrl", url,
 					"batchSize", batchSize,
-	//					"batchAxis", Axes.TIME.getLabel(),
 					"blockMultiple", 8,
 					"nTiles", nTiles,
 					"showProgressDialog", showProgressDialog).get();

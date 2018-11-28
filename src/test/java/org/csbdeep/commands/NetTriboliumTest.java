@@ -19,8 +19,8 @@ public class NetTriboliumTest extends CSBDeepTest {
 	@Test
 	public void testNetTriboliumInvalidDataset() {
 		launchImageJ();
-		final Dataset input = createDataset(new FloatType(), new long[] {5, 10}, new AxisType[]
-				{Axes.X, Axes.Y});
+		final Dataset input = createDataset(new FloatType(), new long[] {5, 10, 10, 2}, new AxisType[]
+				{Axes.X, Axes.Y, Axes.TIME, Axes.CHANNEL});
 		final Dataset result = runPlugin(NetTribolium.class, input);
 		Assert.assertNull(result);
 	}

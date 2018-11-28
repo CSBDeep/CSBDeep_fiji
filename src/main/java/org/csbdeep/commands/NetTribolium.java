@@ -30,10 +30,8 @@
 package org.csbdeep.commands;
 
 import java.io.File;
-import java.util.OptionalLong;
 import java.util.concurrent.ExecutionException;
 
-import org.csbdeep.util.DatasetHelper;
 import org.scijava.ItemIO;
 import org.scijava.command.Command;
 import org.scijava.command.CommandModule;
@@ -73,10 +71,6 @@ public class NetTribolium implements Command {
 
 	@Override
 	public void run() {
-
-		boolean validInput = DatasetHelper.validate(input, "3D grayscale image with size order X-Y-Z", uiService.isHeadless(),
-			OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty());
-		if(!validInput) return;
 
 		try {
 			final CommandModule module = commandService.run(

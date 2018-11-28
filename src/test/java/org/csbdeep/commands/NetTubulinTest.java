@@ -19,7 +19,7 @@ public class NetTubulinTest extends CSBDeepTest {
 	@Test
 	public void testNetTubulinInvalidDataset() {
 		launchImageJ();
-		final Dataset input = createDataset(new FloatType(), new long[] {1, 1, 1, 1}, new AxisType[]
+		final Dataset input = createDataset(new FloatType(), new long[] {15, 5, 3, 3}, new AxisType[]
 				{Axes.X, Axes.Y, Axes.Z, Axes.TIME});
 		final Dataset result = runPlugin(NetTubulin.class, input);
 		assertNull(result);
