@@ -37,6 +37,12 @@ public class NetTriboliumTest extends CSBDeepTest {
 				Axes.X, Axes.Z, Axes.Y });
 	}
 
+	@Test
+	public void testNetTriboliumXY() {
+		testDataset(new FloatType(), new long[] {5, 10}, new AxisType[]
+				{Axes.X, Axes.Y});
+	}
+
 	public <T extends RealType<T> & NativeType<T>> void testDataset(final T type,
 		final long[] dims, final AxisType[] axes)
 	{

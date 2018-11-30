@@ -553,7 +553,7 @@ public class GenericNetwork implements
 
 		while (isOutOfMemory && canHandleOutOfMemory) {
 			try {
-				AxisType[] finalInputAxes = getAxesArray(getInput());
+				AxisType[] finalInputAxes = getFinalAxesArray(getInput());
 				final List<AdvancedTiledView> tiledInput = inputTiler.run(
 					normalizedInput, finalInputAxes, tiling,
 					getTilingActions());
@@ -572,6 +572,21 @@ public class GenericNetwork implements
 			"Out of memory exception occurred. Plugin exit.");
 
 		return tiledOutput;
+	}
+
+	/*
+	no UNKNOWN dimensions
+	 */
+	protected AxisType[] getFinalAxesArray(Dataset input) {
+		if(network != null && network.getInputNode() != null && network.getInputNode().getNodeShape() != null) {
+			AxisType[] res = getAxesArray(input, network.getInputNode().getNodeShape().length);
+			for (int i = 0; i < res.length; i++) {
+				int nodeI = network.getInputNode().getMappingIndices()[i];
+				res[i] = network.getInputNode().getNodeAxis(nodeI);
+			}
+			return res;
+		}
+		return getAxesArray(input, input.numDimensions());
 	}
 
 	protected AxisType[] getAxesArray(Dataset input) {

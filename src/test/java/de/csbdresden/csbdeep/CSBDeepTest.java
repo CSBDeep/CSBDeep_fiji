@@ -80,6 +80,11 @@ public class CSBDeepTest {
 			}
 			assertEquals(input.axis(i).type(), output.axis(i).type());
 		}
+		for (int i = 0; i < output.numDimensions(); i++) {
+			if (!input.axis(output.axis(i).type()).isPresent() && !output.axis(i).type().equals(Axes.CHANNEL)) {
+				assertEquals(1, output.dimension(i));
+			}
+		}
 	}
 
 	protected <T> void compareDimensions(final RandomAccessibleInterval<T> input,
