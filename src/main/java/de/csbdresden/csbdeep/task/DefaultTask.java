@@ -210,4 +210,14 @@ public class DefaultTask implements Task {
 	public void setTitle(final String title) {
 		this.title = title;
 	}
+
+	@Override
+	public void logWarning(String msg) {
+		if (manager != null) {
+			manager.logWarning(msg);
+		}
+		else {
+			System.out.println("WARNING: " + msg);
+		}
+	}
 }

@@ -61,4 +61,5 @@ public interface Task extends Cancelable {
 
 	void setTitle(String title);
 
+	void logWarning(String s);
 }

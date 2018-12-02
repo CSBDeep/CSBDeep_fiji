@@ -594,7 +594,7 @@ public class GenericNetwork implements
 		handleOutOfMemoryError();
 		initTiling();
 		nTiles = tiling.getTilesNum();
-		modelExecutorTask.logError(
+		modelExecutorTask.logWarning(
 			"Out of memory exception occurred. Trying with " + nTiles +
 				" tiles, batch size " + batchSize + " and overlap " + overlap + "...");
 

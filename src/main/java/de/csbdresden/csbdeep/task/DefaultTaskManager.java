@@ -31,6 +31,12 @@ public class DefaultTaskManager implements TaskManager {
 	}
 
 	@Override
+	public void logWarning(String msg) {
+		taskPresenter.logWarning(msg);
+		logger.warn(msg);
+	}
+
+	@Override
 	public void add(final Task task) {
 		tasks.add(task);
 		task.setManager(this);

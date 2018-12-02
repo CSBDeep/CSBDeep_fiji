@@ -66,6 +66,13 @@ public class DefaultTaskPresenter extends WindowAdapter implements TaskPresenter
 	}
 
 	@Override
+	public void logWarning(String msg) {
+		if (inUse()) {
+			progressWindow.addError(msg);
+		}
+	}
+
+	@Override
 	public void addTask(final String title) {
 		if (inUse()) {
 			progressWindow.addTask(title);
