@@ -16,7 +16,7 @@ public class ArrayHelper {
 		for (int i = 0; i < arr.size(); i++) {
 			if (!indices.contains(i)) {
 				for (int j = 0; j < arr.size(); j++) {
-					if (arr.get(j) == -1) {
+					if (arr.get(j) == null) {
 						arr.set(j, i);
 						break;
 					}

@@ -2,6 +2,7 @@
 package de.csbdresden.csbdeep.tasks;
 
 import java.io.FileNotFoundException;
+import java.util.List;
 
 import org.scijava.io.location.Location;
 
@@ -9,12 +10,8 @@ import de.csbdresden.csbdeep.network.model.DefaultNetwork;
 import de.csbdresden.csbdeep.network.model.ImageTensor;
 import de.csbdresden.csbdeep.task.Task;
 import net.imagej.Dataset;
-import net.imagej.ImageJ;
-import net.imagej.axis.Axes;
-import net.imagej.axis.AxisType;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
 
 public class PseudoNetwork<T extends RealType<T>> extends DefaultNetwork<T> {
 
@@ -72,6 +69,11 @@ public class PseudoNetwork<T extends RealType<T>> extends DefaultNetwork<T> {
 	}
 
 	@Override
+	public List<Integer> dropSingletonDims() {
+		return null;
+	}
+
+	@Override
 	public void calculateMapping() {
 
 		for (int i = 0; i < inputNode.getNodeShape().length; i++) {
@@ -89,31 +91,6 @@ public class PseudoNetwork<T extends RealType<T>> extends DefaultNetwork<T> {
 
 	private void handleDimensionReduction() {
 		getOutputNode().initialize(inputNode.getImage());
-	}
-
-	private Dataset createEmptyDuplicateWithoutAxis(final Dataset input,
-		final AxisType axisToRemove)
-	{
-		int numDims = input.numDimensions();
-		if (input.axis(Axes.Z) != null) {
-			numDims--;
-		}
-		final long[] dims = new long[numDims];
-		final AxisType[] axes = new AxisType[numDims];
-		int j = 0;
-		for (int i = 0; i < input.numDimensions(); i++) {
-			final AxisType axisType = input.axis(i).type();
-			if (axisType != axisToRemove) {
-				axes[j] = axisType;
-				dims[j] = input.dimension(i);
-				j++;
-			}
-		}
-		// TODO should not be FloatType but T and should not create ImageJ instance
-		// (memory leak)
-		final Dataset result = new ImageJ().dataset().create(new FloatType(), dims,
-			"", axes);
-		return result;
 	}
 
 	@Override

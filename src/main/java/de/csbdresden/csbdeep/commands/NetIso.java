@@ -31,7 +31,6 @@ package de.csbdresden.csbdeep.commands;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.OptionalLong;
 import java.util.concurrent.ExecutionException;
 
 import org.scijava.ItemIO;
@@ -42,7 +41,6 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.scijava.ui.UIService;
 
-import de.csbdresden.csbdeep.util.DatasetHelper;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 
@@ -81,10 +79,6 @@ public class NetIso implements
 
 	@Override
 	public void run() {
-
-		boolean validInput = DatasetHelper.validate(input, "3D grayscale image with size order X-Y-Z", uiService.isHeadless(),
-				OptionalLong.empty(), OptionalLong.empty(), OptionalLong.empty());
-		if(!validInput) return;
 
 		try {
 			final CommandModule module = commandService.run(

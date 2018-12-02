@@ -45,17 +45,18 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
 import de.csbdresden.csbdeep.imglib2.TiledView;
+import de.csbdresden.csbdeep.io.DefaultInputProcessor;
 import de.csbdresden.csbdeep.io.DefaultOutputProcessor;
 import de.csbdresden.csbdeep.io.InputProcessor;
 import de.csbdresden.csbdeep.io.OutputProcessor;
-import de.csbdresden.csbdeep.task.DefaultTask;
+import de.csbdresden.csbdeep.network.model.ImageTensor;
+import de.csbdresden.csbdeep.network.model.Network;
 import de.csbdresden.csbdeep.tiling.DefaultTiling;
 import de.csbdresden.csbdeep.util.DatasetHelper;
 import net.imagej.Dataset;
 import net.imagej.DatasetService;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
-import net.imagej.axis.AxisType;
 import net.imglib2.RandomAccessible;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.RealRandomAccessible;
@@ -104,12 +105,11 @@ public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwo
 		return new IsoOutputProcessor();
 	}
 
-	private class IsoInputProcessor extends DefaultTask implements
-		InputProcessor
+	private class IsoInputProcessor extends DefaultInputProcessor
 	{
 
 		@Override
-		public List<RandomAccessibleInterval<FloatType>> run(final Dataset input, int numDimensions) {
+		public List<RandomAccessibleInterval<FloatType>> run(final Dataset input, Network network) {
 
 			setStarted();
 
@@ -117,8 +117,12 @@ public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwo
 				(RandomAccessibleInterval) input.getImgPlus(),
 				new RealFloatConverter<T>(), new FloatType());
 
+			List droppedDims = network.dropSingletonDims();
+
+			inputRai = dropSingletonDimensions(inputRai, droppedDims);
+
 			// Add dimensions until it fits the input tensor
-			while (inputRai.numDimensions() < numDimensions) {
+			while (inputRai.numDimensions() < network.getInputNode().getNodeShape().length) {
 				inputRai = Views.addDimension(inputRai, 0, 0);
 			}
 
@@ -169,7 +173,7 @@ public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwo
 
 		@Override
 		public Dataset run(final List<RandomAccessibleInterval<T>> result,
-			final Dataset dataset, final AxisType[] axes,
+			final Dataset dataset, final ImageTensor node,
 			final DatasetService datasetService)
 		{
 			setStarted();
@@ -214,7 +218,7 @@ public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwo
 			pointwiseGeometricMean(res0_pred, res1_pred, prediction);
 			DatasetHelper.logDim(this, "Merged output", prediction);
 
-			Dataset output = wrapIntoDataset(OUTPUT_NAMES[0], prediction, axes,
+			Dataset output = wrapIntoDataset(OUTPUT_NAMES[0], prediction, node.getAxesArray(),
 				datasetService);
 
 			setFinished();

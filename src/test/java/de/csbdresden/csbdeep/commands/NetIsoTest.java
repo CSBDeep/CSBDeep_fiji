@@ -29,7 +29,6 @@ public class NetIsoTest extends CSBDeepTest {
 	}
 
 	@Test
-	// @Ignore
 	public void testNetIso() {
 		testDataset(new FloatType(), new long[] { 5, 10, 2, 5 }, new AxisType[] {
 			Axes.X, Axes.Y, Axes.CHANNEL, Axes.Z });

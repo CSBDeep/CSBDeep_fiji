@@ -68,4 +68,5 @@ public interface Network<T extends RealType<T>> extends
 
 	void clear();
 
+	List<Integer> dropSingletonDims();
 }

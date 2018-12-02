@@ -43,6 +43,8 @@ import de.csbdresden.csbdeep.network.model.Network;
 import de.csbdresden.csbdeep.task.DefaultTask;
 import de.csbdresden.csbdeep.tiling.AdvancedTiledView;
 import de.csbdresden.csbdeep.tiling.Tiling;
+import net.imagej.axis.AxisType;
+import net.imglib2.RandomAccessibleInterval;
 
 @Plugin(type = Command.class)
 public class OOMThrowingNetwork extends GenericNetwork
@@ -74,11 +76,6 @@ public class OOMThrowingNetwork extends GenericNetwork
 	}
 
 	@Override
-	public Tiling.TilingAction[] getTilingActions() {
-		return actions;
-	}
-
-	@Override
 	public void run() throws OutOfMemoryError {
 
 		nTilesHistory.clear();
@@ -99,6 +96,25 @@ public class OOMThrowingNetwork extends GenericNetwork
 			e.printStackTrace();
 		}
 
+	}
+
+	@Override
+	protected List tileAndRunNetwork(List<RandomAccessibleInterval> input) throws ExecutionException {
+		AxisType[] finalInputAxes =  new AxisType[getInput().numDimensions()];
+		Tiling.TilingAction[] tilingActions = actions;
+		dummyTiling(finalInputAxes);
+		final List<AdvancedTiledView> tiledInput = inputTiler.run(
+				input, finalInputAxes, tiling, tilingActions);
+		nTiles = tiling.getTilesNum();
+		if(tiledInput == null) return null;
+		return modelExecutor.run(tiledInput, network);
+	}
+
+
+	public void dummyTiling(final AxisType[] finalInputAxes) {
+		for (int i = 0; i < input.numDimensions(); i++) {
+			finalInputAxes[i] = input.axis(i).type();
+		}
 	}
 
 	@Override

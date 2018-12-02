@@ -4,6 +4,7 @@ package de.csbdresden.csbdeep.io;
 import java.util.ArrayList;
 import java.util.List;
 
+import de.csbdresden.csbdeep.network.model.ImageTensor;
 import de.csbdresden.csbdeep.task.DefaultTask;
 import de.csbdresden.csbdeep.util.DatasetHelper;
 import net.imagej.Dataset;
@@ -12,6 +13,7 @@ import net.imagej.axis.AxisType;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
+import net.imglib2.view.Views;
 
 public class DefaultOutputProcessor<T extends RealType<T> & NativeType<T>>
 	extends DefaultTask implements OutputProcessor<T>
@@ -21,13 +23,13 @@ public class DefaultOutputProcessor<T extends RealType<T> & NativeType<T>>
 
 	@Override
 	public Dataset run(final List<RandomAccessibleInterval<T>> result,
-		final Dataset dataset, final AxisType[] axes,
+		final Dataset dataset, final ImageTensor node,
 		final DatasetService datasetService)
 	{
 		setStarted();
 
 		final List<Dataset> output = new ArrayList<>();
-		result.forEach(image -> output.addAll(_run(image, dataset, axes,
+		result.forEach(image -> output.addAll(_run(image, node,
 			datasetService)));
 
 		setFinished();
@@ -37,17 +39,21 @@ public class DefaultOutputProcessor<T extends RealType<T> & NativeType<T>>
 		return output.get(0);
 	}
 
-	public List<Dataset> _run(final RandomAccessibleInterval<T> result,
-		final Dataset dataset, final AxisType[] axes, DatasetService datasetService)
+	private List<Dataset> _run(RandomAccessibleInterval<T> result,
+	                           final ImageTensor node, DatasetService datasetService)
 	{
 
 		final List<Dataset> output = new ArrayList<>();
 
 		if (result != null) {
 
+			node.setImageShape(result);
+			List<Integer> droppedDims = node.dropSingletonDims();
+			result = dropSingletonDimensions(result, droppedDims);
+
 			log("Displaying " + OUTPUT_NAMES[0] + " image..");
 			output.add(wrapIntoDataset(OUTPUT_NAMES[0], result,
-				axes, datasetService));
+				node.getAxesArray(), datasetService));
 			return output;
 		}
 
@@ -72,6 +78,18 @@ public class DefaultOutputProcessor<T extends RealType<T> & NativeType<T>>
 			dataset.axis(i).setType(axes[i]);
 		}
 		return dataset;
+	}
+
+
+	protected RandomAccessibleInterval<T> dropSingletonDimensions(RandomAccessibleInterval<T> rai, List<Integer> droppedDims) {
+		RandomAccessibleInterval<T> res = rai;
+
+		for(int d = rai.numDimensions() - 1; d >= 0; --d) {
+			if (droppedDims.contains(d)) {
+				res = Views.hyperSlice((RandomAccessibleInterval)res, d, rai.min(d));
+			}
+		}
+		return res;
 	}
 
 }

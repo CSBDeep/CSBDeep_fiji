@@ -257,6 +257,12 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	}
 
 	@Override
+	public List<Integer> dropSingletonDims() {
+		outputNode.dropSingletonDims();
+		return inputNode.dropSingletonDims();
+	}
+
+	@Override
 	public void doDimensionReduction() {
 		int diff = getOutputNode().getNodeShape().length - getInputNode().getNodeShape().length;
 		if(diff == 0) return;
@@ -330,8 +336,10 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	public RandomAccessibleInterval<T> execute(
 		final RandomAccessibleInterval<T> tile) throws IllegalArgumentException, OutOfMemoryError, ExecutionException {
 
+		long[] tileDims = new long[tile.numDimensions()];
+		tile.dimensions(tileDims);
 		final Tensor inputTensor = DatasetTensorFlowConverter.datasetToTensor(tile,
-			getInputNode().getMappingIndices());
+			convertNodeMappingToImgMapping(getInputNode().getMappingIndices()));
 		if (inputTensor != null) {
 			RandomAccessibleInterval<T> output = null;
 			Tensor outputTensor = TensorFlowRunner.executeGraph(model, inputTensor,
@@ -339,7 +347,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 
 			if (outputTensor != null) {
 				output = DatasetTensorFlowConverter.tensorToDataset(outputTensor, tile
-					.randomAccess().get(), getOutputNode().getMappingIndices(),
+					.randomAccess().get(), convertNodeMappingToImgMapping(getOutputNode().getMappingIndices()),
 					dropSingletonDims);
 				outputTensor.close();
 			}
@@ -347,6 +355,19 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 			return output;
 		}
 		return null;
+	}
+
+	private static int[] convertNodeMappingToImgMapping(int[] nodeMapping) {
+		int[] res = new int[nodeMapping.length];
+		for (int i = 0; i < nodeMapping.length; i++) {
+			for (int j = 0; j < nodeMapping.length; j++) {
+				if(i == nodeMapping[j]) {
+					res[i] = j;
+					break;
+				}
+			}
+		}
+		return res;
 	}
 
 	@Override

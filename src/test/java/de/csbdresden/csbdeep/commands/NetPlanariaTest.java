@@ -36,7 +36,7 @@ public class NetPlanariaTest extends CSBDeepTest {
 	}
 
 	@Test
-	public void testPlanariaInvalidDataset() throws InterruptedException {
+	public void testPlanariaInvalidDataset() {
 		launchImageJ();
 		final Dataset input = createDataset(new FloatType(), new long[] { 3, 4, 10, 2 }, new AxisType[]
 				{ Axes.X, Axes.Y, Axes.Z, Axes.CHANNEL });

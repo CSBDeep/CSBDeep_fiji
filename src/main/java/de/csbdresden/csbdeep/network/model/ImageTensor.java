@@ -1,16 +1,22 @@
 
 package de.csbdresden.csbdeep.network.model;
 
+import static java.lang.Math.max;
+
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 import de.csbdresden.csbdeep.task.Task;
+import de.csbdresden.csbdeep.tiling.Tiling;
 import de.csbdresden.csbdeep.util.ArrayHelper;
 import de.csbdresden.csbdeep.util.DatasetHelper;
 import net.imagej.Dataset;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.type.NativeType;
+import net.imglib2.type.numeric.RealType;
 
 // TODO rename
 public class ImageTensor {
@@ -62,6 +68,29 @@ public class ImageTensor {
 		image = new ArrayList<>();
 		for (int i = 0; i < otherImage.size(); i++) {
 			image.add(new Dimension(otherImage.get(i).getType(), otherImage.get(i).getSize()));
+		}
+	}
+
+	public void setNode(long[] dimensions, AxisType[] axisTypes) {
+		if(node != null) node.clear();
+		else node = new ArrayList<>();
+		for (int i = 0; i < dimensions.length; i++) {
+			node.add(new Dimension(axisTypes[i], dimensions[i]));
+		}
+	}
+
+	public <T extends RealType<T> & NativeType<T>> void setImageShape(RandomAccessibleInterval<T> result) {
+		AxisType[] axes = getFinalAxesArray();
+		image.clear();
+		for (int i = 0; i < result.numDimensions(); i++) {
+			image.add(new Dimension(axes[i], result.dimension(i)));
+		}
+	}
+
+	public void initialize(long[] dimensions, AxisType[] axisTypes) {
+		image = new ArrayList<>();
+		for (int i = 0; i < dimensions.length; i++) {
+			image.add(new Dimension(axisTypes[i], dimensions[i]));
 		}
 	}
 
@@ -120,7 +149,7 @@ public class ImageTensor {
 		finalMapping.clear();
 
 		for (int i = 0; i < node.size(); i++) {
-			finalMapping.add(getNodeDimByDatasetDim(i));
+			finalMapping.add(getDatasetDimIndexByNodeIndex(i));
 		}
 
 		// if a size is not set, assign an unused size
@@ -161,7 +190,6 @@ public class ImageTensor {
 				}
 			}
 		}
-		// printMapping();
 	}
 
 	public int numDimensions() {
@@ -239,6 +267,7 @@ public class ImageTensor {
 	}
 
 	public AxisType getNodeAxis(final int index) {
+		if(index >= node.size()) return null;
 		return node.get(index).getType();
 	}
 
@@ -283,6 +312,82 @@ public class ImageTensor {
 		return image.stream()
 				.map(Dimension::getSize)
 				.collect(Collectors.toList());
+	}
+
+	public AxisType[] getAxesArray() {
+		int numDim = getNodeShape().length;
+		boolean hasChannel = imageHasChannel();
+		if(!hasChannel && numDim <= image.size()) numDim = image.size()+1;
+		final AxisType[] res = new AxisType[numDim];
+		Arrays.fill(res, Axes.unknown());
+		if(!hasChannel) res[image.size()] = Axes.CHANNEL;
+		for (int i = 0; i < getMapping().length; i++) {
+			int nodeI = getNodeDimByDatasetDim(i);
+			if(nodeI >= 0) {
+				res[i] = node.get(nodeI).type;
+			}
+		}
+		return res;
+	}
+
+
+	public AxisType[] getFinalAxesArray() {
+		AxisType[] res = new AxisType[getNodeShape().length];
+		Arrays.fill(res, Axes.unknown());
+		for (int i = 0; i < res.length; i++) {
+			int imgI = finalMapping.indexOf(i);
+			if(imgI >= 0) res[i] = node.get(imgI).type;
+		}
+		return res;
+	}
+
+	private boolean imageHasChannel() {
+		for(Dimension d : image) {
+			if(d.type.equals(Axes.CHANNEL)) return true;
+		}
+		return false;
+	}
+
+	public Tiling.TilingAction[] getTilingActions() {
+
+		if(getNodeShape().length == 0) return null;
+		Tiling.TilingAction[] actions = new Tiling.TilingAction[Math.max(getImageDimensions().size(), getNodeShape().length)];
+		Arrays.fill(actions, Tiling.TilingAction.NO_TILING);
+		actions[0] = Tiling.TilingAction.TILE_WITHOUT_PADDING; // img batch dimension
+		for (int i = 1; i < getNodeShape().length-1; i++) {
+			if(getNodeShape()[i] < 0) {
+				actions[i] = Tiling.TilingAction.TILE_WITH_PADDING;
+			}
+		}
+		//permute
+		Tiling.TilingAction[] imgActions = new Tiling.TilingAction[actions.length];
+		Arrays.fill(imgActions, Tiling.TilingAction.NO_TILING);
+		for (int i = 0; i < finalMapping.size(); i++) {
+			imgActions[i] = actions[finalMapping.indexOf(i)];
+		}
+		return imgActions;
+	}
+
+	public boolean isImageDimUseless(int index) {
+		return image.size() <= index || image.get(index).size == 1L;
+	}
+
+	public List<Integer> dropSingletonDims() {
+		List<Integer> res = new ArrayList<>();
+		for (int i = image.size()-1; i >= 0; i--) {
+			if(isImageDimUseless(i)) {
+				res.add(i);
+				image.remove(i);
+				for (int j = i; j < image.size() ; j++) {
+					for (int k = 0; k < finalMapping.size(); k++) {
+						if(finalMapping.get(k) > i) {
+							finalMapping.set(k, finalMapping.get(k)-1);
+						}
+					}
+				}
+			}
+		}
+		return res;
 	}
 
 }

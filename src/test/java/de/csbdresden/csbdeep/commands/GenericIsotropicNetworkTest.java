@@ -31,6 +31,14 @@ public class GenericIsotropicNetworkTest extends CSBDeepTest {
 	}
 
 	@Test
+	// @Ignore
+	public void testNetIso2() {
+		launchImageJ();
+		testDataset(new FloatType(), new long[] { 10,15,6,1,2 }, new AxisType[] {
+				Axes.X, Axes.Y, Axes.Z, Axes.TIME, Axes.CHANNEL });
+	}
+
+	@Test
 	public void testIncompatibleInput() {
 		launchImageJ();
 
@@ -79,6 +87,7 @@ public class GenericIsotropicNetworkTest extends CSBDeepTest {
 		int i_output = 0;
 		for (int i = 0; i < input.numDimensions(); i++) {
 			final AxisType axis = input.axis(i).type();
+			if(input.dimension(i) == 1) continue;
 			if (axis == Axes.Z) {
 				assertTrue(
 						"Z axis dimension size output should be greater than input size ",

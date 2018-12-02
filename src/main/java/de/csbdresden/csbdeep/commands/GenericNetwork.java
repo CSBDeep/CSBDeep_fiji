@@ -33,7 +33,6 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -61,7 +60,6 @@ import de.csbdresden.csbdeep.io.DefaultOutputProcessor;
 import de.csbdresden.csbdeep.io.InputProcessor;
 import de.csbdresden.csbdeep.io.OutputProcessor;
 import de.csbdresden.csbdeep.network.*;
-import de.csbdresden.csbdeep.network.model.ImageTensor;
 import de.csbdresden.csbdeep.network.model.Network;
 import de.csbdresden.csbdeep.network.model.tensorflow.TensorFlowNetwork;
 import de.csbdresden.csbdeep.normalize.DefaultInputNormalizer;
@@ -75,7 +73,6 @@ import de.csbdresden.csbdeep.util.IOHelper;
 import net.imagej.Dataset;
 import net.imagej.DatasetService;
 import net.imagej.ImageJ;
-import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
 import net.imagej.ops.OpService;
 import net.imagej.tensorflow.TensorFlowService;
@@ -422,19 +419,12 @@ public class GenericNetwork implements
 		tryToInitialize();
 		taskManager.finalizeSetup();
 		solveModelSource();
-		initiateModelIfNeeded();
-		if(!networkAndInputCompatible) return;
 
 		updateCacheName();
 		savePreferences();
 
-		try {
-			tryToPrepareInputAndNetwork();
-		}
-		catch (Exception e) {
-			e.printStackTrace();
-			return;
-		}
+		initiateModelIfNeeded();
+		if(!networkAndInputCompatible) return;
 
 		final Dataset normalizedInput;
 		if (doInputNormalization()) {
@@ -446,7 +436,7 @@ public class GenericNetwork implements
 		}
 
 		final List<RandomAccessibleInterval> processedInput = inputProcessor.run(
-				normalizedInput, network.getInputNode().getNodeShape().length);
+				normalizedInput, network);
 
 		log("INPUT NODE: ");
 		network.getInputNode().printMapping(inputProcessor);
@@ -462,12 +452,12 @@ public class GenericNetwork implements
 		}
 		if(tiledOutput != null) {
 			final List<RandomAccessibleInterval<FloatType>> output = outputTiler.run(
-					tiledOutput, tiling, getAxesArray(network.getOutputNode()));
+					tiledOutput, tiling, network.getOutputNode().getFinalAxesArray());
 			for (AdvancedTiledView obj : tiledOutput) {
 				obj.dispose();
 			}
 			this.output = outputProcessor.run(output, getInput(),
-					getAxesArray(network.getOutputNode()), datasetService);
+					network.getOutputNode(), datasetService);
 		}
 
 	}
@@ -534,15 +524,6 @@ public class GenericNetwork implements
 		pool = null;
 	}
 
-	private AxisType[] getAxesArray(final ImageTensor outputNode) {
-		int numDim = outputNode.getNodeShape().length;
-		final AxisType[] res = new AxisType[numDim];
-		for (int i = 0; i < outputNode.getMapping().length; i++) {
-			res[i] = outputNode.getMapping()[outputNode.getMappingIndices()[i]];
-		}
-		return res;
-	}
-
 	protected List<AdvancedTiledView<FloatType>> tryToTileAndRunNetwork(
 		final List<RandomAccessibleInterval> normalizedInput)
 			throws OutOfMemoryError, ExecutionException {
@@ -553,13 +534,7 @@ public class GenericNetwork implements
 
 		while (isOutOfMemory && canHandleOutOfMemory) {
 			try {
-				AxisType[] finalInputAxes = getFinalAxesArray(getInput());
-				final List<AdvancedTiledView> tiledInput = inputTiler.run(
-					normalizedInput, finalInputAxes, tiling,
-					getTilingActions());
-				nTiles = tiling.getTilesNum();
-				if(tiledInput == null) return null;
-				tiledOutput = modelExecutor.run(tiledInput, network);
+				tiledOutput = tileAndRunNetwork(normalizedInput);
 				isOutOfMemory = false;
 			}
 			catch (final OutOfMemoryError e) {
@@ -574,68 +549,14 @@ public class GenericNetwork implements
 		return tiledOutput;
 	}
 
-	/*
-	no UNKNOWN dimensions
-	 */
-	protected AxisType[] getFinalAxesArray(Dataset input) {
-		if(network != null && network.getInputNode() != null && network.getInputNode().getNodeShape() != null) {
-			AxisType[] res = getAxesArray(input, network.getInputNode().getNodeShape().length);
-			for (int i = 0; i < res.length; i++) {
-				int nodeI = network.getInputNode().getMappingIndices()[i];
-				res[i] = network.getInputNode().getNodeAxis(nodeI);
-			}
-			return res;
-		}
-		return getAxesArray(input, input.numDimensions());
-	}
-
-	protected AxisType[] getAxesArray(Dataset input) {
-		if(network != null && network.getInputNode() != null && network.getInputNode().getNodeShape() != null) {
-			return getAxesArray(input, network.getInputNode().getNodeShape().length);
-		}
-		return getAxesArray(input, input.numDimensions());
-	}
-
-	protected AxisType[] getAxesArray(Dataset input, int size) {
-		boolean hasChannel = input.axis(Axes.CHANNEL).isPresent();
-		if(!hasChannel && size <= input.numDimensions()) size = input.numDimensions()+1;
-		AxisType[] res = new AxisType[size];
-		Arrays.fill(res, Axes.unknown());
-		for (int i = 0; i < input.numDimensions(); i++) {
-			res[i] = input.axis(i).type();
-		}
-		if(!hasChannel) res[input.numDimensions()] = Axes.CHANNEL;
-		return res;
-	}
-
-	public Tiling.TilingAction[] getTilingActions() {
-		return getTilingActionsForNode(network.getInputNode(), network.getInputNode().getMappingIndices());
-	}
-
-	public static Tiling.TilingAction[] getTilingActionsForNode(ImageTensor node, int[] mapping) {
-
-		if(node.getNodeShape().length == 0) return null;
-		Tiling.TilingAction[] actions = new Tiling.TilingAction[node.getNodeShape().length];
-		Arrays.fill(actions, Tiling.TilingAction.NO_TILING);
-		actions[0] = Tiling.TilingAction.TILE_WITHOUT_PADDING; // img batch dimension
-		for (int i = 1; i < node.getNodeShape().length-1; i++) {
-			if(node.getNodeShape()[i] < 0) {
-				actions[i] = Tiling.TilingAction.TILE_WITH_PADDING;
-			}
-		}
-		//permute
-		Tiling.TilingAction[] imgActions = new Tiling.TilingAction[node.getNodeShape().length];
-		for (int i = 0; i < actions.length; i++) {
-			imgActions[i] = actions[mapping[i]];
-		}
-		return imgActions;
-	}
-
-	private static int indexOf(Object[] array, Object item) {
-		for (int i = 0; i < array.length; i++) {
-			if(array[i].equals(item)) return i;
-		}
-		return -1;
+	protected List tileAndRunNetwork(List<RandomAccessibleInterval> input) throws ExecutionException {
+		AxisType[] finalInputAxes = network.getInputNode().getFinalAxesArray();
+		Tiling.TilingAction[] tilingActions = network.getInputNode().getTilingActions();
+		final List<AdvancedTiledView> tiledInput = inputTiler.run(
+				input, finalInputAxes, tiling, tilingActions);
+		nTiles = tiling.getTilesNum();
+		if(tiledInput == null) return null;
+		return modelExecutor.run(tiledInput, network);
 	}
 
 	public void setMapping(final AxisType[] mapping) {

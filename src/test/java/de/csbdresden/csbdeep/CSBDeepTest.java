@@ -70,15 +70,18 @@ public class CSBDeepTest {
 		printAxes("input", input);
 		printDim("output", output);
 		printAxes("output", output);
+		int j = 0;
 		for (int i = 0; i < input.numDimensions(); i++) {
+			if (input.dimension(i) == 1L) continue;
 			if (input.axis(i).type() == Axes.CHANNEL) {
 				assertTrue(
 						"Since the demo networks are probabilistic, the channels should double",
-						output.dimension(i) == input.dimension(i)*2);
+						output.dimension(j) == input.dimension(i)*2);
 			}else {
-				assertEquals(input.dimension(i), output.dimension(i));
+				assertEquals(input.dimension(i), output.dimension(j));
 			}
-			assertEquals(input.axis(i).type(), output.axis(i).type());
+			assertEquals(input.axis(i).type(), output.axis(j).type());
+			j++;
 		}
 		for (int i = 0; i < output.numDimensions(); i++) {
 			if (!input.axis(output.axis(i).type()).isPresent() && !output.axis(i).type().equals(Axes.CHANNEL)) {

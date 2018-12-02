@@ -39,7 +39,7 @@ public class DefaultInputValidator extends DefaultTask implements InputValidator
 
 	private void checkIfAxesWithFixedSizeExists(Dataset input, AxisType axis, long size) {
 		if(size > 1 && !input.axis(axis).isPresent()) {
-			throw new IncompatibleTypeException(input, "Input should have axis of type " + axis.getLabel());
+			throw new IncompatibleTypeException(input, "Input should have axis of type " + axis.getLabel() + " and size " + size);
 		}
 	}
 

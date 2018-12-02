@@ -154,6 +154,9 @@ public abstract class DefaultNetwork<T extends RealType<T>> implements
 	public abstract void initMapping();
 
 	@Override
+	public abstract List<Integer> dropSingletonDims();
+
+	@Override
 	public abstract boolean isInitialized();
 
 	@Override
