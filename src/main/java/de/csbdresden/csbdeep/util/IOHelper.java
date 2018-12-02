@@ -80,6 +80,8 @@ public class IOHelper {
 	public static String getUrlCacheName(Class<? extends GenericNetwork> parentClass, String modelUrl) throws IOException {
 		URL url = new URL(modelUrl);
 		HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+		connection.setReadTimeout(1000*10*1);
+		connection.setConnectTimeout(1000*10*1);
 		Long dateTime = connection.getLastModified();
 		connection.disconnect();
 		ZonedDateTime urlLastModified = ZonedDateTime.ofInstant(Instant.ofEpochMilli(dateTime), ZoneId.of("GMT"));
