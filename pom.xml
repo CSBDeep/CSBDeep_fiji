@@ -93,7 +93,8 @@
 		<url>https://github.com/imagej/CSBDeep/CSBDeep_fiji/issues</url>
 	</issueManagement>
 	<ciManagement>
-		<system>None</system>
+		<system>Travis CI</system>
+		<url>https://travis-ci.com/CSBDeep/CSBDeep_fiji</url>
 	</ciManagement>
 
 	<properties>
