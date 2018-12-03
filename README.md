@@ -1,3 +1,5 @@
+[![](https://travis-ci.com/CSBDeep/CSBDeep_fiji.svg?branch=master)](https://travis-ci.com/CSBDeep/CSBDeep_fiji)
+
 # CSBDeep Fiji Plugin
 
 ## Install
