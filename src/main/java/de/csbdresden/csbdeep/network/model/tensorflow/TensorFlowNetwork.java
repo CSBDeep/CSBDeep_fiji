@@ -139,7 +139,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 				model.close();
 			}
 			model = tensorFlowService.loadModel(source, modelName, MODEL_TAG);
-			loadNetworkSettingsFromJson(tensorFlowService.loadFile(source, modelName, "meta.json"));
+//			loadNetworkSettingsFromJson(tensorFlowService.loadFile(source, modelName, "meta.json"));
 		}
 		catch (TensorFlowException | IOException e) {
 			e.printStackTrace();
