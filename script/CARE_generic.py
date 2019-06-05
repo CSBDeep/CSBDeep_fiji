@@ -16,14 +16,16 @@
 from java.io import File
 import sys
 from de.csbdresden.csbdeep.commands import GenericNetwork
+from ij import IJ
+from ij.plugin import Duplicator
+import os
 
 def getFileName(path):
 	fileparts = path.split("/")
 	return fileparts[len(fileparts)-1]
 
-def runNetwork(inputPath, outputPath):
+def runNetwork(inputPath, outputPath, imp):
 	print("input: " + inputPath + ", output: " + outputPath)
-	imp = io.open(inputPath)
 	mymod = (command.run(GenericNetwork, False,
 		"input", imp,
 		"nTiles", nTiles,
@@ -39,16 +41,42 @@ def runNetwork(inputPath, outputPath):
 	io.save(myoutput, outputPath)
 
 
+
 input = str(input) # change object from file to str
 output = str(output)  # change object from file to str
 
 if input.endswith(".tif"):
 	if output.endswith(".tif"):
-		runNetwork(input, output)
+		impSource = io.open(input)
+		runNetwork(input, output, impSource)
 	else:
 		if not(output.endswith("/")):
 			output += "/"
-		runNetwork(input, output + getFileName(input))
+
+		impSource = IJ.openImage(input)
+
+		[width, height, nChannels, nSlices, nFrames] = impSource.getDimensions()
+
+		if nChannels > 1: # if more than 1 channel, exit
+			print("ERROR: please provide an image with a single channel")
+			sys.exit()	
+
+		print("Processing: " + getFileName(input))
+		print("Found "+str(impSource.getNFrames())+" frames to process")
+
+		for dt in xrange(nFrames): # For each frame
+			 # Frames in the movie will begin at 1
+			frame = dt+1
+			# Duplicate the frame of interest
+			impSingleTp = Duplicator().run(impSource, 1, 1, 1, nSlices, frame, frame)
+			# Create a new output fileName
+			root, ext = os.path.splitext(getFileName(input))
+			outputFileName = root + "_frame" + str(frame) + ".tif"
+			# Run the network
+			print("Processing: " + outputFileName)
+			runNetwork(input, output + outputFileName, impSingleTp)
+
+	
 else:
 	if output.endswith(".tif"):
 		print("ERROR: please provide a directory as output, because your input is also a directory")
@@ -65,4 +93,5 @@ else:
 
 	for file in listOfFilesInFolder:
 		if file.toString().endswith(".tif"):
-			runNetwork(file.toString(), output + getFileName(file.toString()))
+			impSource = io.open(file.toString())
+			runNetwork(file.toString(), output + getFileName(file.toString()), impSource)
