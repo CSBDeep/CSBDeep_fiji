@@ -50,6 +50,9 @@ if inputPath.endswith(".tif"): # If processing a single .tif file
 		sys.exit()	
 
 	if outputPath.endswith(".tif"):
+		if nFrames > 1: # If there is only 1 specified .tif file but multiple frames
+			print("ERROR: To process an hyperstack with multiple frames, please provide a directory as output")
+			sys.exit()
 		runNetwork(inputPath, outputPath, impSource)
 
 	else:
