@@ -20,7 +20,8 @@ from ij import IJ
 from ij.plugin import Duplicator
 import os
 
-def runNetwork(inputPath, outputPath, imp):
+def runNetwork(outputPath, imp):
+	inputPath = imp.getOriginalFileInfo().fileName
 	print("input: " + inputPath + ", output: " + outputPath)
 	mymod = (command.run(GenericNetwork, False,
 		"input", imp,
@@ -53,7 +54,7 @@ if inputPath.endswith(".tif"): # If processing a single .tif file
 		if nFrames > 1: # If there is only 1 specified .tif file but multiple frames
 			print("ERROR: To process an hyperstack with multiple frames, please provide a directory as output")
 			sys.exit()
-		runNetwork(inputPath, outputPath, impSource)
+		runNetwork(outputPath, impSource)
 
 	else:
 		print("Processing: " + input.getName())
@@ -68,7 +69,7 @@ if inputPath.endswith(".tif"): # If processing a single .tif file
 			outputFileName = root + "_frame" + str(frame) + ".tif"
 			# Run the network
 			print("Processing: " + outputFileName)
-			runNetwork(inputPath, os.path.join(outputPath, outputFileName), impSingleTp)
+			runNetwork(os.path.join(outputPath, outputFileName), impSingleTp)
 	
 elif input.isDirectory():
 	if outputPath.endswith(".tif"):
@@ -82,7 +83,7 @@ elif input.isDirectory():
 	for file in listOfFilesInFolder:
 		if file.getName().endswith(".tif"):
 			impSource = IJ.openImage(file.toString()) 
-			runNetwork(file.toString(), os.path.join(outputPath, file.getName()), impSource)
+			runNetwork(os.path.join(outputPath, file.getName()), impSource)
 
 else: # input is not a directory but not a .tif file either
 	print("ERROR: please provide a .tif file or directory for input")
