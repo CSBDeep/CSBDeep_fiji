@@ -81,7 +81,7 @@ elif input.isDirectory():
 	listOfFilesInFolder = input.listFiles();
 	for file in listOfFilesInFolder:
 		if file.getName().endswith(".tif"):
-			impSource = io.open(file.toString())
+			impSource = IJ.openImage(file.toString()) 
 			runNetwork(file.toString(), os.path.join(outputPath, file.getName()), impSource)
 
 else: # input is not a directory but not a .tif file either
