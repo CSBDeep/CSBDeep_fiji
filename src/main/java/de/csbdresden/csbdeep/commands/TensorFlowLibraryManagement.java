@@ -9,12 +9,12 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
 import de.csbdresden.csbdeep.network.model.tensorflow.LibraryVersion;
-import de.csbdresden.csbdeep.ui.TensorFlowLibraryManagementFrame;
 import de.csbdresden.csbdeep.network.model.tensorflow.TensorFlowInstallationService;
+import de.csbdresden.csbdeep.ui.TensorFlowLibraryManagementFrame;
 import net.imagej.ImageJ;
 import net.imagej.updater.util.UpdaterUtil;
 
-@Plugin(type = Command.class, menuPath = "Plugins>CSBDeep>TF library management tool")
+@Plugin(type = Command.class, menuPath = "Plugins>CSBDeep>TensorFlow library management")
 public class TensorFlowLibraryManagement implements Command {
 
 	@Parameter(required = false)
@@ -37,6 +37,7 @@ public class TensorFlowLibraryManagement implements Command {
 		initAvailableVersions();
 		frame.updateChoices(availableVersions);
 		frame.pack();
+		frame.setLocationRelativeTo(null);
 		frame.setMinimumSize(new Dimension(0, 200));
 		frame.setVisible(true);
 

@@ -58,4 +58,8 @@ public class LibraryVersion {
 		}
 		return orderableVersion;
 	}
+
+	public boolean usesGPU() {
+		return gpu.equals("GPU");
+	}
 }

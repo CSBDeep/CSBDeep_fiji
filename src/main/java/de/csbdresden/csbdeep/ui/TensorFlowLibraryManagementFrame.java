@@ -26,7 +26,7 @@ public class TensorFlowLibraryManagementFrame extends JFrame {
 	private JPanel installPanel;
 	private static String NOFILTER = "-";
 	private JLabel status;
-	private static Color listBackgroundColor = new Color(200,200,200);
+	private static Color listBackgroundColor = new Color(250,250,250);
 
 	public TensorFlowLibraryManagementFrame(TensorFlowInstallationService tensorFlowInstallationService) {
 		super("TensorFlow library version management");
@@ -138,7 +138,7 @@ public class TensorFlowLibraryManagementFrame extends JFrame {
 			buttons.add(btn);
 			btn.addActionListener(e -> {
 				if(btn.isSelected()) {
-					activateVersion(version);
+					new Thread(() -> activateVersion(version)).start();
 				}
 			});
 		}
@@ -155,6 +155,7 @@ public class TensorFlowLibraryManagementFrame extends JFrame {
 			System.out.println("[WARNING] Cannot activate version, already active: " + version);
 			return;
 		}
+		JDialog waitMsg = createWaitMessage();
 		if(!version.downloaded) {
 			try {
 				tensorFlowInstallationService.downloadLib(new URL(version.url));
@@ -166,7 +167,26 @@ public class TensorFlowLibraryManagementFrame extends JFrame {
 		if(!version.active) {
 			tensorFlowInstallationService.removeAllFromLib();
 			tensorFlowInstallationService.installLib(version);
+			JOptionPane.showMessageDialog(null,
+					"Installed selected TensorFlow version. Please restart Fiji to load it.",
+					"Please restart",
+					JOptionPane.PLAIN_MESSAGE);
 		}
+		waitMsg.dispose();
+	}
+
+	private JDialog createWaitMessage() {
+		JDialog dialog = new JDialog();
+		dialog.setLayout(new GridBagLayout());
+		dialog.add(new JLabel("Please wait..."));
+		dialog.setMinimumSize(new Dimension(150, 50));
+		dialog.setResizable(false);
+		dialog.setModal(false);
+		dialog.setUndecorated(true);
+		dialog.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+		dialog.setLocationRelativeTo(null);
+		dialog.setVisible(true);
+		return dialog;
 	}
 
 	public void updateCUDAChoices() {

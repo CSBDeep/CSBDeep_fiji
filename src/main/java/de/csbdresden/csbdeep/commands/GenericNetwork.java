@@ -320,9 +320,7 @@ public class GenericNetwork implements
 		network = new TensorFlowNetwork(modelExecutor);
 		context.inject(network);
 		network.loadLibrary();
-		if(network.libraryLoaded()) {
-			if(!network.supportsGPU()) taskManager.noGPUFound();
-		}else {
+		if(!network.libraryLoaded()) {
 			return false;
 		}
 		return true;
@@ -341,7 +339,8 @@ public class GenericNetwork implements
 	}
 
 	protected void initTaskManager() {
-		final TaskForceManager tfm = new TaskForceManager(isHeadless() || !showProgressDialog, log, status, threadService);
+		final TaskForceManager tfm = new TaskForceManager(isHeadless() || !showProgressDialog);
+		context.inject(tfm);
 		tfm.initialize();
 		tfm.createTaskForce("Preprocessing", modelLoader, inputValidator, inputMapper,
 			inputProcessor, inputNormalizer);

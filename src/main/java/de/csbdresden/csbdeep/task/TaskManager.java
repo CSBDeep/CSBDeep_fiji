@@ -21,7 +21,5 @@ public interface TaskManager extends Cancelable {
 
 	void close();
 
-	void noGPUFound();
-
 	void logWarning(String msg);
 }

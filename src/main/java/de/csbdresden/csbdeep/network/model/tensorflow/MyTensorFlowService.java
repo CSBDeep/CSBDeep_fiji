@@ -82,7 +82,7 @@ public class MyTensorFlowService extends DefaultTensorFlowService implements Ten
 	}
 
 	@Override
-	public void installLib(LibraryVersion version) {
+	public boolean installLib(LibraryVersion version) {
 		logService.info("Installing " + version);
 		if(version.localPath.contains(".zip")) {
 			unZip(version.localPath, getLibDir() + version.platform + "/");
@@ -91,6 +91,7 @@ public class MyTensorFlowService extends DefaultTensorFlowService implements Ten
 			unGZip(version.localPath, getLibDir() + version.platform + "/");
 		}
 		writeNativeVersionFile(version);
+		return true;
 	}
 
 	private void unGZip(String tarGzFile, String outputFolder) {

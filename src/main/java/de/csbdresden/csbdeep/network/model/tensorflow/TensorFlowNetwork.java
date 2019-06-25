@@ -10,7 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
-import de.csbdresden.csbdeep.commands.TensorFlowLibraryManagement;
+import javax.swing.*;
+
 import org.scijava.command.CommandService;
 import org.scijava.io.location.Location;
 import org.scijava.plugin.Parameter;
@@ -26,6 +27,7 @@ import com.google.gson.stream.JsonReader;
 import com.google.gson.stream.JsonToken;
 import com.google.protobuf.InvalidProtocolBufferException;
 
+import de.csbdresden.csbdeep.commands.TensorFlowLibraryManagement;
 import de.csbdresden.csbdeep.network.DefaultInputMapper;
 import de.csbdresden.csbdeep.network.model.DefaultNetwork;
 import de.csbdresden.csbdeep.network.model.NetworkSettings;
@@ -37,8 +39,6 @@ import net.imagej.axis.AxisType;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
-
-import javax.swing.*;
 
 public class TensorFlowNetwork<T extends RealType<T>> extends
 		DefaultNetwork<T>
@@ -83,8 +83,8 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 			foundJNI = false;
 			logError(tensorFlowService.getStatus());
 			JOptionPane.showMessageDialog(null,
-					"Eggs are not supposed to be green.",
-					"Inane error",
+					"Could not load TensorFlow. Please try to install a native TensorFlow library matching your setup.",
+					"Loading TensorFlow failed",
 					JOptionPane.ERROR_MESSAGE);
 			commandService.run(TensorFlowLibraryManagement.class, true);
 

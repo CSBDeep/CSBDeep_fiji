@@ -48,11 +48,15 @@ import javax.swing.text.StyleConstants;
 import org.scijava.app.StatusService;
 import org.scijava.thread.ThreadService;
 
+import de.csbdresden.csbdeep.network.model.tensorflow.LibraryVersion;
+import net.imagej.updater.util.UpdaterUtil;
+
 public class CSBDeepProgress extends JPanel {
 
 	private class GuiTask {
 
 		public JLabel status;
+
 		public JLabel title;
 		public int numIterations;
 		public int iteration;
@@ -60,32 +64,29 @@ public class CSBDeepProgress extends JPanel {
 		public int step;
 		public boolean taskDone;
 	}
-
 	private final StatusService status;
-	private final ThreadService threadService;
 
+	private final ThreadService threadService;
 	private final JButton okButton, cancelButton;
+
 	private final JProgressBar progressBar;
 	private final Component progressBarSpace;
 	private final JTextPane taskOutput;
-
 	public static final int STATUS_IDLE = -1;
+
 	public static final int STATUS_RUNNING = 0;
 	public static final int STATUS_DONE = 1;
 	public static final int STATUS_FAIL = 2;
-
 	private final List<GuiTask> tasks = new ArrayList<>();
+
 	private int currentTask;
 	private boolean currentTaskFailing;
-
 	private final JPanel taskContainer;
-	private final JFrame frame;
 
+	private final JFrame frame;
 	private JPanel note1;
 
-	private static JLabel noTensorFlow = new JLabel(
-		"<html>Couldn't load TensorFlow from library<br />path and will therefore use CPU<br />instead of GPU version.<br />This will affect performance.<br />See wiki for further details.</html>",
-		SwingConstants.RIGHT);
+	private JLabel tensorFlowStatus = new JLabel("", SwingConstants.RIGHT);
 
 	private final SimpleAttributeSet red = new SimpleAttributeSet();
 
@@ -129,19 +130,16 @@ public class CSBDeepProgress extends JPanel {
 		// WARNINGS
 		final JPanel notePanel = new JPanel();
 		notePanel.setLayout(new BoxLayout(notePanel, BoxLayout.Y_AXIS));
-		notePanel.setMinimumSize(new Dimension(280, 0));
-		notePanel.setPreferredSize(new Dimension(280, 0));
+		notePanel.setMinimumSize(new Dimension(350, 0));
+		notePanel.setPreferredSize(new Dimension(350, 0));
 		final Border borderline = BorderFactory.createLineBorder(Color.red);
 		final TitledBorder warningborder = BorderFactory.createTitledBorder(
 			borderline, "Warning");
 		warningborder.setTitleColor(Color.red);
 		note1 = new JPanel();
 		note1.setBorder(warningborder);
-		noTensorFlow.setBorder(new EmptyBorder(2, 5, 5, 5));
-		note1.add(noTensorFlow);
-		note1.setMinimumSize(new Dimension(280, 100));
-		note1.setMaximumSize(new Dimension(100000, (int) note1.getPreferredSize()
-			.getHeight()));
+		tensorFlowStatus.setBorder(new EmptyBorder(2, 5, 5, 5));
+		note1.add(tensorFlowStatus);
 		notePanel.add(note1);
 		note1.setVisible(false);
 
@@ -356,11 +354,32 @@ public class CSBDeepProgress extends JPanel {
 		}
 	}
 
-	public void showGPUWarning() {
+	private void showGPUWarning() {
 		try {
-			threadService.invoke(() -> note1.setVisible(true));
+			threadService.invoke(() -> {
+				note1.setMinimumSize(new Dimension(350, 200));
+				note1.setMaximumSize(new Dimension(100000, (int) note1.getPreferredSize()
+						.getHeight()));
+				note1.setVisible(true);
+			});
 		} catch (InterruptedException | InvocationTargetException e) {
 			e.printStackTrace();
+		}
+	}
+
+	public void updateTensorFlowStatus(LibraryVersion version) {
+		if(!version.usesGPU()) {
+			if(UpdaterUtil.getPlatform().equals("macosx")) {
+				tensorFlowStatus.setText("<html>Using TensorFlow version running on CPU.<br />" +
+										 "This will affect performance.<br /></html>");
+			} else {
+				tensorFlowStatus.setText("<html>Using TensorFlow version running on CPU.<br />" +
+										 "This will affect performance.<br />" +
+										 "Make sure you installed CUDA and CuDNN<br />" +
+										 "and run <i>Plugins > CSBDeep > TensorFlow<br />" +
+										 "library management</i>.</html>");
+			}
+			showGPUWarning();
 		}
 	}
 

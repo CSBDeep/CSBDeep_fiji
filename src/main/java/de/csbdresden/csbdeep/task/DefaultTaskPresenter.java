@@ -6,32 +6,37 @@ import java.awt.event.*;
 import javax.swing.*;
 
 import org.scijava.app.StatusService;
+import org.scijava.plugin.Parameter;
 import org.scijava.thread.ThreadService;
 
+import de.csbdresden.csbdeep.network.model.tensorflow.TensorFlowInstallationService;
 import de.csbdresden.csbdeep.ui.CSBDeepProgress;
 
 public class DefaultTaskPresenter extends WindowAdapter implements TaskPresenter, ActionListener {
 
 	private CSBDeepProgress progressWindow;
 	private final TaskManager taskManager;
-	private final ThreadService threadService;
-	private final StatusService status;
+	@Parameter
+	private ThreadService threadService;
+	@Parameter
+	private StatusService status;
+	@Parameter
+	private TensorFlowInstallationService tensorFlowService;
 	private final boolean headless;
 	private boolean initialized = false;
 	private boolean closing = false;
 
-	public DefaultTaskPresenter(final TaskManager taskManager, boolean headless, StatusService status, ThreadService threadService)
+	public DefaultTaskPresenter(final TaskManager taskManager, boolean headless)
 	{
 		this.headless = headless;
 		this.taskManager = taskManager;
-		this.status = status;
-		this.threadService = threadService;
 	}
 
 	@Override
 	public void initialize() {
 		if (!headless) {
 			progressWindow = CSBDeepProgress.create(status, threadService);
+			progressWindow.updateTensorFlowStatus(tensorFlowService.getCurrentVersion());
 			progressWindow.getCancelBtn().addActionListener(this);
 			progressWindow.getFrame().addWindowListener(this);
 			initialized = true;
@@ -55,13 +60,6 @@ public class DefaultTaskPresenter extends WindowAdapter implements TaskPresenter
 	public void show() {
 		if (inUse()) {
 			progressWindow.display();
-		}
-	}
-
-	@Override
-	public void showGPUWarning() {
-		if (inUse()) {
-			progressWindow.showGPUWarning();
 		}
 	}
 
