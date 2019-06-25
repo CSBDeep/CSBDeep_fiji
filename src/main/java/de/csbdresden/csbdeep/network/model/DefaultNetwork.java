@@ -38,9 +38,6 @@ public abstract class DefaultNetwork<T extends RealType<T>> implements
 		this.status = associatedTask;
 	}
 
-	@Override
-	public void testGPUSupport() {}
-
 	protected abstract boolean loadModel(Location source, String modelName);
 
 	@Override

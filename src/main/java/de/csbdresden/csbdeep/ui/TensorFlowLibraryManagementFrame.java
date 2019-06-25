@@ -10,10 +10,10 @@ import java.util.List;
 import javax.swing.*;
 
 import de.csbdresden.csbdeep.network.model.tensorflow.LibraryVersion;
-import javafx.scene.control.ChoiceBox;
+import de.csbdresden.csbdeep.network.model.tensorflow.TensorFlowInstallationService;
 import net.miginfocom.swing.MigLayout;
 
-public class GPUSettingsFrame extends JFrame {
+public class TensorFlowLibraryManagementFrame extends JFrame {
 
 	TensorFlowInstallationService tensorFlowInstallationService;
 
@@ -25,18 +25,21 @@ public class GPUSettingsFrame extends JFrame {
 	private List<JRadioButton> buttons = new ArrayList<>();
 	private JPanel installPanel;
 	private static String NOFILTER = "-";
+	private JLabel status;
+	private static Color listBackgroundColor = new Color(200,200,200);
 
-	public GPUSettingsFrame(TensorFlowInstallationService tensorFlowInstallationService) {
+	public TensorFlowLibraryManagementFrame(TensorFlowInstallationService tensorFlowInstallationService) {
 		super("TensorFlow library version management");
 		this.tensorFlowInstallationService = tensorFlowInstallationService;
 	}
 
 	public void init() {
 		JPanel panel = new JPanel();
-		panel.setLayout(new MigLayout());
+		panel.setLayout(new MigLayout("height 400"));
+		panel.add(new JLabel("Please select the TensorFlow version you would like to install."), "wrap");
 		panel.add(createFilterPanel(), "wrap");
-		panel.add(createInstallPanel(), "wrap, span, grow, h 200:500:");
-		panel.add(createActionPanel(), "");
+		panel.add(createInstallPanel(), "wrap, span, grow");
+		panel.add(createStatusPanel(), "span, grow");
 		setContentPane(panel);
 	}
 
@@ -67,14 +70,24 @@ public class GPUSettingsFrame extends JFrame {
 		});
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout());
-		panel.add(new JLabel("Filter by.."));
+		panel.add(makeLabel("Filter by.."));
 		panel.add(makeLabel("Mode: "));
 		panel.add(gpuChoiceBox);
 		panel.add(makeLabel("CUDA: "));
 		panel.add(cudaChoiceBox);
 		panel.add(makeLabel("TensorFlow: "));
 		panel.add(tfChoiceBox);
+		panel.setBackground(listBackgroundColor);
+//		panel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, Color.darkGray));
 		return panel;
+	}
+
+	private Component createStatusPanel() {
+		JPanel statusPanel = new JPanel(new MigLayout());
+		status = new JLabel();
+		status.setFont(status.getFont().deriveFont(Font.PLAIN));
+		statusPanel.add(status);
+		return statusPanel;
 	}
 
 	private void updateFilter() {
@@ -98,18 +111,15 @@ public class GPUSettingsFrame extends JFrame {
 		JLabel label = new JLabel(s);
 		label.setHorizontalAlignment(SwingConstants.RIGHT);
 		label.setHorizontalTextPosition(SwingConstants.RIGHT);
-		label.setBackground(Color.red);
 		return label;
 	}
 
 	private Component createInstallPanel() {
 		installPanel = new JPanel(new MigLayout("flowy"));
-		return new JScrollPane(installPanel);
-	}
-
-	private Component createActionPanel() {
-		JPanel panel = new JPanel();
-		return panel;
+		JScrollPane scroll = new JScrollPane(installPanel);
+		scroll.setBorder(BorderFactory.createEmptyBorder());
+		installPanel.setBackground(listBackgroundColor);
+		return scroll;
 	}
 
 	public void updateChoices(List<LibraryVersion> availableVersions) {
@@ -123,6 +133,7 @@ public class GPUSettingsFrame extends JFrame {
 			JRadioButton btn = new JRadioButton(version.toString());
 			btn.setToolTipText(version.getNote());
 			btn.setSelected(version.active);
+			btn.setOpaque(false);
 			versionGroup.add(btn);
 			buttons.add(btn);
 			btn.addActionListener(e -> {
@@ -132,6 +143,11 @@ public class GPUSettingsFrame extends JFrame {
 			});
 		}
 		updateFilter();
+		updateStatus();
+	}
+
+	private void updateStatus() {
+		status.setText(tensorFlowInstallationService.getStatus());
 	}
 
 	private void activateVersion(LibraryVersion version) {
@@ -169,7 +185,6 @@ public class GPUSettingsFrame extends JFrame {
 	public void updateTFChoices() {
 		Set<String> choices = new LinkedHashSet<>();
 		for(LibraryVersion version :availableVersions) {
-			System.out.println(version);
 			if(version.tfVersion != null) choices.add(version.tfVersion);
 		}
 		tfChoiceBox.removeAllItems();

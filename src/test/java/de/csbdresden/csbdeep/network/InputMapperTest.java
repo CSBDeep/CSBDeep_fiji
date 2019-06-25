@@ -9,7 +9,6 @@ import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
-import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.type.numeric.real.FloatType;
 
 public class InputMapperTest {
@@ -30,7 +29,8 @@ public class InputMapperTest {
 	public void network2D2D_input2D() {
 		ImageJ ij = new ImageJ();
 		Dataset input = ij.dataset().create(new FloatType(), new long[]{2,3}, "", new AxisType[]{Axes.X, Axes.Y});
-		Network network = new TestNetworkSingle2D2D(ij.get(TensorFlowService.class), ij.dataset());
+		Network network = new TestNetworkSingle2D2D();
+		ij.context().inject(network);
 
 		doMapping(input, network);
 
@@ -53,7 +53,8 @@ public class InputMapperTest {
 	public void network2D2D_input3D() {
 		ImageJ ij = new ImageJ();
 		Dataset input = ij.dataset().create(new FloatType(), new long[]{2,3,4}, "", new AxisType[]{Axes.X, Axes.Y, Axes.Z});
-		Network network = new TestNetworkSingle2D2D(ij.get(TensorFlowService.class), ij.dataset());
+		Network network = new TestNetworkSingle2D2D();
+		ij.context().inject(network);
 
 		doMapping(input, network);
 
@@ -77,7 +78,8 @@ public class InputMapperTest {
 	public void network3D2D_input3D() {
 		ImageJ ij = new ImageJ();
 		Dataset input = ij.dataset().create(new FloatType(), new long[]{2,3,4}, "", new AxisType[]{Axes.X, Axes.Y, Axes.Z});
-		Network network = new TestNetworkSingle3D2D(ij.get(TensorFlowService.class), ij.dataset());
+		Network network = new TestNetworkSingle3D2D();
+		ij.context().inject(network);
 
 		doMapping(input, network);
 
@@ -102,7 +104,8 @@ public class InputMapperTest {
 	public void single3D3DTest() {
 		ImageJ ij = new ImageJ();
 		Dataset input = ij.dataset().create(new FloatType(), new long[]{2,3,4}, "", new AxisType[]{Axes.X, Axes.Y, Axes.Z});
-		Network network = new TestNetworkSingle3D3D(ij.get(TensorFlowService.class), ij.dataset());
+		Network network = new TestNetworkSingle3D3D();
+		ij.context().inject(network);
 
 		doMapping(input, network);
 

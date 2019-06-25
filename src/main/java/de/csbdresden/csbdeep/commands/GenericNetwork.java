@@ -41,10 +41,7 @@ import java.util.concurrent.Future;
 
 import javax.swing.*;
 
-import org.scijava.Cancelable;
-import org.scijava.Disposable;
-import org.scijava.Initializable;
-import org.scijava.ItemIO;
+import org.scijava.*;
 import org.scijava.app.StatusService;
 import org.scijava.command.Command;
 import org.scijava.log.LogService;
@@ -87,6 +84,9 @@ public class GenericNetwork implements
 
 	@Parameter(type = ItemIO.INPUT, initializer = "input")
 	public Dataset input;
+
+	@Parameter
+	private Context context;
 
 	@Parameter
 	protected boolean normalizeInput = true;
@@ -317,10 +317,10 @@ public class GenericNetwork implements
 
 	protected boolean initNetwork() {
 		networkInitialized = true;
-		network = new TensorFlowNetwork(tensorFlowService, datasetService,
-			modelExecutor);
+		network = new TensorFlowNetwork(modelExecutor);
+		context.inject(network);
+		network.loadLibrary();
 		if(network.libraryLoaded()) {
-			network.testGPUSupport();
 			if(!network.supportsGPU()) taskManager.noGPUFound();
 		}else {
 			return false;

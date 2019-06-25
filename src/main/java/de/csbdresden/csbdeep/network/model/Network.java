@@ -18,8 +18,6 @@ public interface Network<T extends RealType<T>> extends
 	Callable<List<RandomAccessibleInterval<T>>>, Disposable, Cancelable
 {
 
-	void testGPUSupport();
-
 	boolean loadModel(String pathOrURL, String modelName)
 		throws FileNotFoundException;
 
@@ -47,6 +45,8 @@ public interface Network<T extends RealType<T>> extends
 	void resetTileCount();
 
 	void setTiledView(TiledView<T> tiledView);
+
+	default void loadLibrary(){}
 
 	/**
 	 * Set if singleton dimensions of the output image should be dropped. If the

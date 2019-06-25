@@ -26,13 +26,8 @@ public class PseudoNetwork<T extends RealType<T>> extends DefaultNetwork<T> {
 	public boolean loadModel(final String pathOrURL, final String modelName)
 		throws FileNotFoundException
 	{
-
 		return true;
-
 	}
-
-	@Override
-	public void testGPUSupport() {}
 
 	@Override
 	public void loadInputNode(final Dataset dataset) {

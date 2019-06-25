@@ -1,5 +1,6 @@
 package de.csbdresden.csbdeep.commands;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -8,13 +9,16 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
 import de.csbdresden.csbdeep.network.model.tensorflow.LibraryVersion;
-import de.csbdresden.csbdeep.ui.GPUSettingsFrame;
-import de.csbdresden.csbdeep.ui.TensorFlowInstallationService;
+import de.csbdresden.csbdeep.ui.TensorFlowLibraryManagementFrame;
+import de.csbdresden.csbdeep.network.model.tensorflow.TensorFlowInstallationService;
 import net.imagej.ImageJ;
 import net.imagej.updater.util.UpdaterUtil;
 
 @Plugin(type = Command.class, menuPath = "Plugins>CSBDeep>TF library management tool")
-public class GPUSettings implements Command {
+public class TensorFlowLibraryManagement implements Command {
+
+	@Parameter(required = false)
+	String errorMessage = "";
 
 	@Parameter
 	TensorFlowInstallationService tensorFlowInstallationService;
@@ -28,12 +32,14 @@ public class GPUSettings implements Command {
 	public void run() {
 		tensorFlowInstallationService.loadNativeLibrary();
 		currentVersion = getCurrentVersion();
-		GPUSettingsFrame frame = new GPUSettingsFrame(tensorFlowInstallationService);
+		TensorFlowLibraryManagementFrame frame = new TensorFlowLibraryManagementFrame(tensorFlowInstallationService);
 		frame.init();
 		initAvailableVersions();
 		frame.updateChoices(availableVersions);
 		frame.pack();
+		frame.setMinimumSize(new Dimension(0, 200));
 		frame.setVisible(true);
+
 	}
 
 	public List<LibraryVersion> initAvailableVersions() {
@@ -47,10 +53,10 @@ public class GPUSettings implements Command {
 				"CPU", "linux64", "1.3.0");
 		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-gpu-linux-x86_64-1.3.0.tar.gz",
 				"GPU", "linux64", "1.3.0", "8.0", "6");
-		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-cpu-linux-x86_64-1.4.0.tar.gz",
-				"CPU", "linux64", "1.4.0");
-		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-gpu-linux-x86_64-1.4.0.tar.gz",
-				"GPU", "linux64", "1.4.0", "8.0", "6");
+		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-cpu-linux-x86_64-1.4.1.tar.gz",
+				"CPU", "linux64", "1.4.1");
+		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-gpu-linux-x86_64-1.4.1.tar.gz",
+				"GPU", "linux64", "1.4.1", "8.0", "6");
 		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-cpu-linux-x86_64-1.5.0.tar.gz",
 				"CPU", "linux64", "1.5.0");
 		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-gpu-linux-x86_64-1.5.0.tar.gz",
@@ -92,8 +98,8 @@ public class GPUSettings implements Command {
 				"CPU", "win64", "1.2.0");
 		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-cpu-windows-x86_64-1.3.0.zip",
 				"CPU", "win64", "1.3.0");
-		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-cpu-windows-x86_64-1.4.0.zip",
-				"CPU", "win64", "1.4.0");
+		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-cpu-windows-x86_64-1.4.1.zip",
+				"CPU", "win64", "1.4.1");
 		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-cpu-windows-x86_64-1.5.0.zip",
 				"CPU", "win64", "1.5.0");
 		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-cpu-windows-x86_64-1.6.0.zip",
@@ -121,8 +127,8 @@ public class GPUSettings implements Command {
 				"CPU", "macosx", "1.2.0");
 		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-cpu-darwin-x86_64-1.3.0.tar.gz",
 				"CPU", "macosx", "1.3.0");
-		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-cpu-darwin-x86_64-1.4.0.tar.gz",
-				"CPU", "macosx", "1.4.0");
+		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-cpu-darwin-x86_64-1.4.1.tar.gz",
+				"CPU", "macosx", "1.4.1");
 		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-cpu-darwin-x86_64-1.5.0.tar.gz",
 				"CPU", "macosx", "1.5.0");
 		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-cpu-darwin-x86_64-1.6.0.tar.gz",
@@ -177,7 +183,7 @@ public class GPUSettings implements Command {
 
 	public static void main(String... args) {
 		ImageJ ij = new ImageJ();
-		ij.command().run(GPUSettings.class, true);
+		ij.command().run(TensorFlowLibraryManagement.class, true);
 	}
 
 }

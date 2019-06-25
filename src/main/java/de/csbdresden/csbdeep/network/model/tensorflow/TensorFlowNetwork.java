@@ -10,10 +10,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import de.csbdresden.csbdeep.commands.TensorFlowLibraryManagement;
+import org.scijava.command.CommandService;
 import org.scijava.io.location.Location;
+import org.scijava.plugin.Parameter;
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
-import org.tensorflow.TensorFlow;
 import org.tensorflow.TensorFlowException;
 import org.tensorflow.framework.MetaGraphDef;
 import org.tensorflow.framework.SignatureDef;
@@ -32,20 +34,28 @@ import net.imagej.Dataset;
 import net.imagej.DatasetService;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
-import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
+
+import javax.swing.*;
 
 public class TensorFlowNetwork<T extends RealType<T>> extends
 		DefaultNetwork<T>
 {
 
+	@Parameter
+	private TensorFlowInstallationService tensorFlowService;
+
+	@Parameter
+	private DatasetService datasetService;
+
+	@Parameter
+	private CommandService commandService;
+
 	private SavedModelBundle model;
 	private SignatureDef sig;
 	private Map meta;
-	private final TensorFlowService tensorFlowService;
-	private final DatasetService datasetService;
 	private TensorInfo inputTensorInfo, outputTensorInfo;
 	private boolean foundJNI = true;
 	private boolean gpuSupport = false;
@@ -59,44 +69,25 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	protected static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY =
 		"serving_default";
 
-	public TensorFlowNetwork(TensorFlowService tensorFlowService,
-		DatasetService datasetService, Task associatedTask)
+	public TensorFlowNetwork(Task associatedTask)
 	{
 		super(associatedTask);
-		this.tensorFlowService = tensorFlowService;
-		this.datasetService = datasetService;
-		log("imagej-tensorflow version: " + tensorFlowService.getVersion());
-		try {
-			log("tensorflow version: " + TensorFlow.version());
-		}
-		catch (final UnsatisfiedLinkError e){
-			foundJNI = false;
-			logError("Couldn't load TensorFlow.\n" +
-					"By default, CSBDeep will load TensorFlow for CPU. " +
-					"If you added a CSBDeep update site for CUDA " +
-					"to get GPU support, make sure you have the matching CUDA and cuDNN " +
-					"versions installed. \nIf you want to use the CPU, make sure " +
-					"the GPU tensorflow library file is removed from the lib folder.");
-			e.printStackTrace();
-		}
 	}
 
 	@Override
-	public void testGPUSupport() {
-		log("The current library path is: LD_LIBRARY_PATH=" + System.getenv(
-			"LD_LIBRARY_PATH"));
-		try {
-			System.loadLibrary("tensorflow_jni");
-			gpuSupport = true;
-		}
-		catch (final UnsatisfiedLinkError e) {
-			gpuSupport = false;
-		}
-		if (!gpuSupport) {
-			log("Couldn't load tensorflow GPU support.");
-			log(
-				"If the problem is CUDA related, make sure CUDA and cuDNN are in the LD_LIBRARY_PATH.");
-			log("Using CPU version.");
+	public void loadLibrary() {
+		if(tensorFlowService.libraryLoaded()) {
+			log(tensorFlowService.getStatus());
+			supportsGPU = tensorFlowService.getCurrentVersion().gpu.equals("GPU");
+		} else {
+			foundJNI = false;
+			logError(tensorFlowService.getStatus());
+			JOptionPane.showMessageDialog(null,
+					"Eggs are not supposed to be green.",
+					"Inane error",
+					JOptionPane.ERROR_MESSAGE);
+			commandService.run(TensorFlowLibraryManagement.class, true);
+
 		}
 	}
 

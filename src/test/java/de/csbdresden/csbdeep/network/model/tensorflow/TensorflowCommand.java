@@ -3,6 +3,7 @@ package de.csbdresden.csbdeep.network.model.tensorflow;
 import java.io.FileNotFoundException;
 import java.sql.Timestamp;
 
+import org.scijava.Context;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
@@ -31,6 +32,9 @@ public class TensorflowCommand implements Command {
     @Parameter
     private DatasetService datasetService;
 
+    @Parameter
+    private Context context;
+
     @Parameter(label="load network 3d", callback = "loadNetwork3d")
     private Button button3d;
 
@@ -42,9 +46,10 @@ public class TensorflowCommand implements Command {
     ModelLoader modelLoader = new DefaultModelLoader();
 
     private void initNetwork() {
-        if(network == null)
-            network = new TensorFlowNetwork(tensorFlowService, datasetService,
-                null);
+        if(network == null) {
+            network = new TensorFlowNetwork(null);
+            context.inject(network);
+        }
     }
 
     private void loadNetwork2d() throws FileNotFoundException {

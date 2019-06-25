@@ -5,8 +5,6 @@ import org.tensorflow.framework.TensorInfo;
 
 import de.csbdresden.csbdeep.network.model.tensorflow.TensorFlowNetwork;
 import net.imagej.Dataset;
-import net.imagej.DatasetService;
-import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.type.numeric.RealType;
 
 public abstract class TestNetwork<T extends RealType<T>> extends
@@ -18,10 +16,9 @@ public abstract class TestNetwork<T extends RealType<T>> extends
 	protected int inputCount = 1;
 	protected int outputCount = 1;
 
-	public TestNetwork(TensorFlowService tensorFlowService,
-	                   DatasetService datasetService)
+	public TestNetwork()
 	{
-		super(tensorFlowService, datasetService, null);
+		super(null);
 	}
 
 	@Override

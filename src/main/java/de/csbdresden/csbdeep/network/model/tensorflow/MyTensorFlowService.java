@@ -1,4 +1,4 @@
-package de.csbdresden.csbdeep.ui;
+package de.csbdresden.csbdeep.network.model.tensorflow;
 
 import java.io.*;
 import java.net.URL;
@@ -17,7 +17,6 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 import org.tensorflow.TensorFlow;
 
-import de.csbdresden.csbdeep.network.model.tensorflow.LibraryVersion;
 import net.imagej.tensorflow.DefaultTensorFlowService;
 import net.imagej.updater.util.UpdaterUtil;
 
@@ -36,18 +35,30 @@ public class MyTensorFlowService extends DefaultTensorFlowService implements Ten
 	@Parameter
 	LogService logService;
 
+	private boolean triedToLoadNativeLibrary = false;
+	private boolean usingNativeLibrary = false;
+	private boolean nativeLibraryFailed = false;
+	private String nativeLibraryError = "";
+	private boolean defaultLibraryFailed = false;
+	private String defaultLibraryError = "";
+
 	@Override
 	public void loadNativeLibrary() {
+		if(triedToLoadNativeLibrary) return;
+		triedToLoadNativeLibrary = true;
 //		log("The current library path is: LD_LIBRARY_PATH=" + System.getenv(
 //				"LD_LIBRARY_PATH"));
 		try {
 			System.loadLibrary("tensorflow_jni");
+			usingNativeLibrary = true;
 		}
 		catch (final UnsatisfiedLinkError e) {
 			if(e.getMessage().contains("no tensorflow_jni")) {
 				logService.info("No native TF library found.");
 			} else {
-				logService.error("Could not load native TF library " + e.getMessage());
+				nativeLibraryFailed = true;
+				nativeLibraryError = e.getMessage();
+				logService.error("Could not load native TF library " + nativeLibraryError);
 //				e.printStackTrace();
 				//TODO maybe ask if the native lib should be deleted from /lib
 //				removeAllFromLib();
@@ -208,25 +219,32 @@ public class MyTensorFlowService extends DefaultTensorFlowService implements Ten
 		}
 	}
 
-	private boolean hasNativeVersion() {
+	private boolean hasNativeVersionFile() {
 		return new File(getNativeVersionFile()).exists();
 	}
 
 	private LibraryVersion getNativeVersion() {
-		String versionstr = null;
-		try {
-			versionstr = new String(Files.readAllBytes(Paths.get(getNativeVersionFile())));
-		} catch (IOException e) {
-			e.printStackTrace();
-		}
-		String[] parts = versionstr.split(",");
 		LibraryVersion version = new LibraryVersion();
-		version.platform = parts[0];
-		version.gpu = parts[1];
-		version.tfVersion = parts[2];
-		version.url = parts[3];
-		logService.info("Active native TF version: " + version);
-		version.active = true;
+		if(!hasNativeVersionFile()) {
+			version.tfVersion = TensorFlow.version();
+			version.platform = platform;
+			version.localPath = "???";
+			version.url = "???";
+		} else {
+			String versionstr = null;
+			try {
+				versionstr = new String(Files.readAllBytes(Paths.get(getNativeVersionFile())));
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+			String[] parts = versionstr.split(",");
+			version.platform = parts[0];
+			version.gpu = parts[1];
+			version.tfVersion = parts[2];
+			version.url = parts[3];
+			logService.info("Active native TF version: " + version);
+			version.active = true;
+		}
 		return version;
 	}
 
@@ -260,9 +278,39 @@ public class MyTensorFlowService extends DefaultTensorFlowService implements Ten
 
 	@Override
 	public LibraryVersion getCurrentVersion() {
-		if(hasNativeVersion())
+		loadNativeLibrary();
+		if(usingNativeLibrary)
 			return getNativeVersion();
-		else return getJARVersion();
+		else {
+			try {
+				return getJARVersion();
+			}
+			catch(UnsatisfiedLinkError e) {
+				defaultLibraryFailed = true;
+				defaultLibraryError = "Error loading default TensorFlow library " + e.getMessage();
+			}
+		}
+		return null;
+	}
+
+	@Override
+	public String getStatus() {
+		if(nativeLibraryFailed) {
+			return "ERROR: Could not load native TensorFlow library " + nativeLibraryError + "\n"
+					+ "Falling back to default JAR TensorFlow library " + getCurrentVersion().toString();
+		}
+		if(usingNativeLibrary) {
+			return "Using native TensorFlow library " + getCurrentVersion().toString();
+		}
+		if(defaultLibraryFailed) {
+			return "ERROR: Could not load default TensorFlow library " + defaultLibraryError;
+		}
+		return "Using default JAR library " + getCurrentVersion().toString();
+	}
+
+	@Override
+	public boolean libraryLoaded() {
+		return usingNativeLibrary || !defaultLibraryFailed;
 	}
 
 	private String getNameFromURL(String url) {
