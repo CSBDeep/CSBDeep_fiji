@@ -111,7 +111,7 @@
 
 	<repositories>
 		<repository>
-			<id>imagej.public</id>
+			<id>scijava.public</id>
 			<url>https://maven.scijava.org/content/groups/public</url>
 		</repository>
 	</repositories>
@@ -159,48 +159,4 @@
             <version>1.11</version>
         </dependency>
     </dependencies>
-
-	<build>
-		<plugins>
-			<plugin>
-				<groupId>net.revelc.code.formatter</groupId>
-				<artifactId>formatter-maven-plugin</artifactId>
-				<version>2.7.3</version>
-				<configuration>
-					<configFile>${project.basedir}/.formatter/java-imagej-coding-style.xml</configFile>
-				</configuration>
-			</plugin>
-			<plugin>
-				<groupId>net.revelc.code</groupId>
-				<artifactId>impsort-maven-plugin</artifactId>
-				<version>1.2.0</version>
-				<configuration>
-					<groups>java.,javax.,org.,com.</groups>
-					<staticGroups>java,*</staticGroups>
-					<removeUnused>true</removeUnused>
-				</configuration>
-				<executions>
-					<execution>
-						<id>sort-imports</id>
-						<goals>
-							<goal>sort</goal><!-- runs at process-sources phase by default -->
-						</goals>
-					</execution>
-				</executions>
-			</plugin>
-		</plugins>
-	<!--
-		<plugins>
-			<plugin>
-				<groupId>org.apache.maven.plugins</groupId>
-				<artifactId>maven-surefire-plugin</artifactId>
-				<version>2.19</version>
-				<configuration>
-					<argLine>-Xmx8192m</argLine>
-				</configuration>
-			</plugin>
-		</plugins>
-		-->
-	</build>
-
 </project>
