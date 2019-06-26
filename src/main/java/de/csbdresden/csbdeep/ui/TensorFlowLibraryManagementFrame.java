@@ -37,7 +37,7 @@ public class TensorFlowLibraryManagementFrame extends JFrame {
 		JPanel panel = new JPanel();
 		panel.setLayout(new MigLayout("height 400"));
 		panel.add(new JLabel("Please select the TensorFlow version you would like to install."), "wrap");
-		panel.add(createFilterPanel(), "wrap");
+		panel.add(createFilterPanel(), "wrap, span, align right");
 		panel.add(createInstallPanel(), "wrap, span, grow");
 		panel.add(createStatusPanel(), "span, grow");
 		setContentPane(panel);
@@ -77,7 +77,6 @@ public class TensorFlowLibraryManagementFrame extends JFrame {
 		panel.add(cudaChoiceBox);
 		panel.add(makeLabel("TensorFlow: "));
 		panel.add(tfChoiceBox);
-		panel.setBackground(listBackgroundColor);
 //		panel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, Color.darkGray));
 		return panel;
 	}
@@ -148,6 +147,11 @@ public class TensorFlowLibraryManagementFrame extends JFrame {
 
 	private void updateStatus() {
 		status.setText(tensorFlowInstallationService.getStatus());
+		if(status.getText().toLowerCase().contains("error")) {
+			status.setForeground(Color.red);
+		} else {
+			status.setForeground(Color.black);
+		}
 	}
 
 	private void activateVersion(LibraryVersion version) {
@@ -155,7 +159,7 @@ public class TensorFlowLibraryManagementFrame extends JFrame {
 			System.out.println("[WARNING] Cannot activate version, already active: " + version);
 			return;
 		}
-		JDialog waitMsg = createWaitMessage();
+		showWaitMessage();
 		if(!version.downloaded) {
 			try {
 				tensorFlowInstallationService.downloadLib(new URL(version.url));
@@ -166,27 +170,36 @@ public class TensorFlowLibraryManagementFrame extends JFrame {
 		tensorFlowInstallationService.checkStatus(version);
 		if(!version.active) {
 			tensorFlowInstallationService.removeAllFromLib();
-			tensorFlowInstallationService.installLib(version);
+			try {
+				tensorFlowInstallationService.installLib(version);
+			} catch (IOException e) {
+				Object[] options = {"Yes",
+						"No",
+						"Cancel"};
+				int choice = JOptionPane.showOptionDialog(this,
+						"Error while unpacking library file " + version.localPath + ":\n"
+								+ e.getMessage() + "\nShould it be downloaded again?",
+						"Unpacking library error",
+						JOptionPane.YES_NO_CANCEL_OPTION,
+						JOptionPane.QUESTION_MESSAGE,
+						null,
+						options,
+						options[0]);
+				if(choice == 0) {
+					version.downloaded = false;
+					activateVersion(version);
+				}
+			}
 			JOptionPane.showMessageDialog(null,
 					"Installed selected TensorFlow version. Please restart Fiji to load it.",
 					"Please restart",
 					JOptionPane.PLAIN_MESSAGE);
+			dispose();
 		}
-		waitMsg.dispose();
 	}
 
-	private JDialog createWaitMessage() {
-		JDialog dialog = new JDialog();
-		dialog.setLayout(new GridBagLayout());
-		dialog.add(new JLabel("Please wait..."));
-		dialog.setMinimumSize(new Dimension(150, 50));
-		dialog.setResizable(false);
-		dialog.setModal(false);
-		dialog.setUndecorated(true);
-		dialog.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
-		dialog.setLocationRelativeTo(null);
-		dialog.setVisible(true);
-		return dialog;
+	private void showWaitMessage() {
+		status.setText("Please wait..");
 	}
 
 	public void updateCUDAChoices() {

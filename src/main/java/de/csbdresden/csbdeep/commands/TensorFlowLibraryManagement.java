@@ -17,9 +17,6 @@ import net.imagej.updater.util.UpdaterUtil;
 @Plugin(type = Command.class, menuPath = "Plugins>CSBDeep>TensorFlow library management")
 public class TensorFlowLibraryManagement implements Command {
 
-	@Parameter(required = false)
-	String errorMessage = "";
-
 	@Parameter
 	TensorFlowInstallationService tensorFlowInstallationService;
 
@@ -30,7 +27,7 @@ public class TensorFlowLibraryManagement implements Command {
 
 	@Override
 	public void run() {
-		tensorFlowInstallationService.loadNativeLibrary();
+		tensorFlowInstallationService.loadLibrary();
 		currentVersion = getCurrentVersion();
 		TensorFlowLibraryManagementFrame frame = new TensorFlowLibraryManagementFrame(tensorFlowInstallationService);
 		frame.init();
@@ -44,7 +41,8 @@ public class TensorFlowLibraryManagement implements Command {
 	}
 
 	public List<LibraryVersion> initAvailableVersions() {
-		addAvailableVersion(currentVersion);
+		if(currentVersion != null) addAvailableVersion(currentVersion);
+		addAvailableVersion(tensorFlowInstallationService.getDefaultVersion());
 		//linux64
 		addAvailableVersion("https://storage.googleapis.com/tensorflow/libtensorflow/libtensorflow_jni-cpu-linux-x86_64-1.2.0.tar.gz",
 				"CPU", "linux64", "1.2.0");
