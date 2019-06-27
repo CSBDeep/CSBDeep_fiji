@@ -54,11 +54,6 @@ public class PseudoNetwork<T extends RealType<T>> extends DefaultNetwork<T> {
 	}
 
 	@Override
-	public boolean supportsGPU() {
-		return false;
-	}
-
-	@Override
 	public void initMapping() {
 		inputNode.setMappingDefaults();
 	}

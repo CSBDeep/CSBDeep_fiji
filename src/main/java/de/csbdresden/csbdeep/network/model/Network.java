@@ -23,8 +23,6 @@ public interface Network<T extends RealType<T>> extends
 
 	void preprocess();
 
-	boolean supportsGPU();
-
 	RandomAccessibleInterval<T> execute(RandomAccessibleInterval<T> tile)
 		throws Exception;
 
@@ -54,11 +52,6 @@ public interface Network<T extends RealType<T>> extends
 	 * dimension. Default value is true.
 	 */
 	void setDropSingletonDims(final boolean dropSingletonDims);
-//
-//	void setDoDimensionReduction(boolean doDimensionReduction);
-//
-//	void setDoDimensionReduction(boolean doDimensionReduction,
-//		AxisType axisToRemove);
 
 	void calculateMapping();
 

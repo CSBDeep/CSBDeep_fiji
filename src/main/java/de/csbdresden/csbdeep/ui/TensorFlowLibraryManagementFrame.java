@@ -35,7 +35,7 @@ public class TensorFlowLibraryManagementFrame extends JFrame {
 
 	public void init() {
 		JPanel panel = new JPanel();
-		panel.setLayout(new MigLayout("height 400"));
+		panel.setLayout(new MigLayout("height 400, wmax 600"));
 		panel.add(new JLabel("Please select the TensorFlow version you would like to install."), "wrap");
 		panel.add(createFilterPanel(), "wrap, span, align right");
 		panel.add(createInstallPanel(), "wrap, span, grow");
@@ -146,7 +146,7 @@ public class TensorFlowLibraryManagementFrame extends JFrame {
 	}
 
 	private void updateStatus() {
-		status.setText(tensorFlowInstallationService.getStatus());
+		status.setText("<html>" + tensorFlowInstallationService.getStatus().replace("\n", "<br>") + "</html>");
 		if(status.getText().toLowerCase().contains("error")) {
 			status.setForeground(Color.red);
 		} else {
@@ -169,7 +169,7 @@ public class TensorFlowLibraryManagementFrame extends JFrame {
 		}
 		tensorFlowInstallationService.checkStatus(version);
 		if(!version.active) {
-			tensorFlowInstallationService.removeAllFromLib();
+			tensorFlowInstallationService.removeNativeLibraries();
 			try {
 				tensorFlowInstallationService.installLib(version);
 			} catch (IOException e) {

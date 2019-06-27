@@ -368,6 +368,7 @@ public class CSBDeepProgress extends JPanel {
 	}
 
 	public void updateTensorFlowStatus(LibraryVersion version) {
+		if(version == null) return;
 		if(!version.usesGPU()) {
 			if(UpdaterUtil.getPlatform().equals("macosx")) {
 				tensorFlowStatus.setText("<html>Using TensorFlow version running on CPU.<br />" +
@@ -400,7 +401,7 @@ public class CSBDeepProgress extends JPanel {
 
 	public void dispose() {
 		status.showProgress(1,1);
-		frame.dispose();
+		if(frame.isVisible()) frame.dispose();
 	}
 
 }

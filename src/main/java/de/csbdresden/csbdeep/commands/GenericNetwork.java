@@ -34,10 +34,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
+import java.util.concurrent.*;
 
 import javax.swing.*;
 
@@ -193,6 +190,8 @@ public class GenericNetwork implements
 	private int oldNTiles;
 	private int oldBatchesSize;
 
+	private boolean canceled = false;
+
 	protected void openTFMappingDialog() {
 		threadService.run(() -> {
 			tryToInitialize();
@@ -303,6 +302,9 @@ public class GenericNetwork implements
 		initTasks();
 		initTaskManager();
 		initNetwork();
+		if (!network.libraryLoaded()) {
+			this.cancel("TensorFlow library could not be loaded");
+		}
 	}
 
 	public String getModelFileKey() {
@@ -392,6 +394,8 @@ public class GenericNetwork implements
 
 	public void run() {
 
+		if(isCanceled()) return;
+
 		final long startTime = System.currentTimeMillis();
 
 		if (noInputData()) return;
@@ -403,8 +407,10 @@ public class GenericNetwork implements
 			future = pool.submit(this::mainThread);
 			if(future != null) future.get();
 
-		} catch (OutOfMemoryError | InterruptedException | ExecutionException e) {
+		} catch (OutOfMemoryError | ExecutionException e) {
 			e.printStackTrace();
+		} catch(CancellationException | InterruptedException e) {
+			log.warn("GenericNetwork got interrupted.");
 		}
 
 		dispose();
@@ -416,6 +422,7 @@ public class GenericNetwork implements
 	protected void mainThread() throws OutOfMemoryError {
 
 		tryToInitialize();
+		if(isCanceled()) return;
 		taskManager.finalizeSetup();
 		solveModelSource();
 
@@ -626,11 +633,12 @@ public class GenericNetwork implements
 
 	@Override
 	public boolean isCanceled() {
-		return false;
+		return canceled;
 	}
 
 	@Override
 	public void cancel(final String reason) {
+		canceled = true;
 		if(future != null) {
 			future.cancel(true);
 		}

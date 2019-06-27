@@ -52,28 +52,55 @@ public class MyTensorFlowService extends DefaultTensorFlowService implements Ten
 		triedLoadingLibrary = true;
 //		log("The current library path is: LD_LIBRARY_PATH=" + System.getenv(
 //				"LD_LIBRARY_PATH"));
-		boolean previousCrash = getCrashFile().exists();
-		boolean nativeLibInstalled = getNativeVersionFile().exists();
-		if(previousCrash) {
-			removeAllFromLib();
-			if(nativeLibInstalled) {
-				testDefaultLibrary();
-				deleteCrashFile();
-			}
-		} else {
+		if(getCrashFile().exists()) {
+			handleCrash();
+		}
+		else {
 			createCrashFile();
 			loadNativeLibrary();
+			if(!usingNativeLibrary) {
+				setDefaultLibraryActive();
+			}
 			deleteCrashFile();
+		}
+		logService.info("Active TF version: " + currentVersion);
+	}
+
+	/**
+	 * In case a native library is installed, it is deleted and the default JAR library is loaded.
+	 * In case there is no native library, nothing is loaded. The user is supposed to select a different version.
+	 */
+	private void handleCrash() {
+		if(getNativeVersionFile().exists()) {
+			removeNativeLibraries();
+			setDefaultLibraryActive();
+			deleteCrashFile();
+		} else {
+			defaultLibraryFailed = true;
 		}
 	}
 
-	private void testDefaultLibrary() {
-		TensorFlow.version();
+	private void setDefaultLibraryActive() {
+		try {
+			currentVersion = getDefaultVersion();
+			currentVersion.active = true;
+			String realVersion = TensorFlow.version();
+			if(!currentVersion.tfVersion.equals(realVersion)) {
+				logService.warn("Something weird is happening. According to the classpath we should be using TensorFlow version "
+						+ currentVersion.tfVersion + " but we are actually using version " + realVersion + ".");
+			}
+		}
+		catch(UnsatisfiedLinkError e) {
+			defaultLibraryFailed = true;
+			defaultLibraryError = "Error loading default TensorFlow library " + e.getMessage();
+		}
 	}
 
 	private boolean loadNativeLibrary() {
 		try {
 			System.loadLibrary("tensorflow_jni");
+			currentVersion = getNativeVersion();
+			currentVersion.active = true;
 			usingNativeLibrary = true;
 			return true;
 		}
@@ -85,7 +112,7 @@ public class MyTensorFlowService extends DefaultTensorFlowService implements Ten
 				nativeLibraryError = e.getMessage();
 				logService.error("Could not load native TF library " + nativeLibraryError);
 				//TODO maybe ask if the native lib should be deleted from /lib
-//				removeAllFromLib();
+//				removeNativeLibraries();
 			}
 			return false;
 		}
@@ -106,7 +133,7 @@ public class MyTensorFlowService extends DefaultTensorFlowService implements Ten
 	}
 
 	@Override
-	public void removeAllFromLib()  {
+	public void removeNativeLibraries()  {
 		File folder = new File(getLibDir() + "/" + platform);
 		if(!folder.exists()) {
 			return;
@@ -135,6 +162,7 @@ public class MyTensorFlowService extends DefaultTensorFlowService implements Ten
 			//using default JAR version. nothing to do.
 			logService.info("Using default JAR TensorFlow version.");
 		}
+		getCrashFile().delete();
 		return true;
 	}
 
@@ -276,8 +304,6 @@ public class MyTensorFlowService extends DefaultTensorFlowService implements Ten
 			version.gpu = parts[1];
 			version.tfVersion = parts[2];
 			version.url = parts[3];
-			logService.info("Active native TF version: " + version);
-			version.active = true;
 		}
 		return version;
 	}
@@ -305,8 +331,6 @@ public class MyTensorFlowService extends DefaultTensorFlowService implements Ten
 		} else {
 			version.gpu = "CPU";
 		}
-		version.active = true;
-		logService.info("Active JAR TF version: " + version);
 		return version;
 	}
 
@@ -324,26 +348,6 @@ public class MyTensorFlowService extends DefaultTensorFlowService implements Ten
 
 	@Override
 	public LibraryVersion getCurrentVersion() {
-		if(currentVersion == null) {
-			if(getCrashFile().exists()) return null;
-			loadLibrary();
-			if(usingNativeLibrary)
-				currentVersion = getNativeVersion();
-			else {
-				createCrashFile();
-				try {
-					currentVersion = getJARVersion();
-					currentVersion.active = true;
-				}
-				catch(UnsatisfiedLinkError e) {
-					defaultLibraryFailed = true;
-					defaultLibraryError = "Error loading default TensorFlow library " + e.getMessage();
-				}
-				finally {
-					deleteCrashFile();
-				}
-			}
-		}
 		return currentVersion;
 	}
 

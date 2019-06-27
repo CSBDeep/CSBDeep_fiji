@@ -14,6 +14,7 @@ import javax.swing.*;
 
 import org.scijava.command.CommandService;
 import org.scijava.io.location.Location;
+import org.scijava.log.LogService;
 import org.scijava.plugin.Parameter;
 import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
@@ -53,12 +54,14 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	@Parameter
 	private CommandService commandService;
 
+	@Parameter
+	private LogService logService;
+
 	private SavedModelBundle model;
 	private SignatureDef sig;
 	private Map meta;
 	private TensorInfo inputTensorInfo, outputTensorInfo;
-	private boolean foundJNI = true;
-	private boolean gpuSupport = false;
+	private boolean tensorFlowLoaded = false;
 	protected boolean isDoingDimensionReduction = false;
 	protected AxisType axisToRemove;
 	// Same as
@@ -76,18 +79,18 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 
 	@Override
 	public void loadLibrary() {
+		tensorFlowService.loadLibrary();
 		if(tensorFlowService.libraryLoaded()) {
 			log(tensorFlowService.getStatus());
-			supportsGPU = tensorFlowService.getCurrentVersion().gpu.equals("GPU");
+			tensorFlowLoaded = true;
 		} else {
-			foundJNI = false;
-			logError(tensorFlowService.getStatus());
+			tensorFlowLoaded = false;
+			logService.error(tensorFlowService.getStatus());
 			JOptionPane.showMessageDialog(null,
 					"Could not load TensorFlow. Please try to install a native TensorFlow library matching your setup.",
 					"Loading TensorFlow failed",
 					JOptionPane.ERROR_MESSAGE);
 			commandService.run(TensorFlowLibraryManagement.class, true);
-
 		}
 	}
 
@@ -123,7 +126,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 
 	@Override
 	protected boolean loadModel(final Location source, final String modelName) {
-		if(!foundJNI) return false;
+		if(!tensorFlowLoaded) return false;
 		log("Loading TensorFlow model " + modelName + " from source file " + source.getURI());
 		try {
 			if (model != null) {
@@ -270,12 +273,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 
 	@Override
 	public boolean libraryLoaded() {
-		return foundJNI;
-	}
-
-	@Override
-	public boolean supportsGPU() {
-		return gpuSupport;
+		return tensorFlowLoaded;
 	}
 
 	private void generateMapping() {
@@ -406,8 +404,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	@Override
 	public void dispose() {
 		super.dispose();
-		foundJNI = true;
-		gpuSupport = false;
+		tensorFlowLoaded = false;
 		clear();
 	}
 

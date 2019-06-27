@@ -7,7 +7,7 @@ import net.imagej.tensorflow.TensorFlowService;
 
 public interface TensorFlowInstallationService extends TensorFlowService {
 	void loadLibrary();
-	void removeAllFromLib();
+	void removeNativeLibraries();
 	boolean installLib(LibraryVersion version) throws IOException;
 	void downloadLib(URL url) throws IOException;
 	void checkStatus(LibraryVersion version);

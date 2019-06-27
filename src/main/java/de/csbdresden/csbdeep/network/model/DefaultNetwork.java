@@ -28,7 +28,6 @@ public abstract class DefaultNetwork<T extends RealType<T>> implements
 	protected ImageTensor inputNode = null;
 	protected ImageTensor outputNode = null;
 	protected TiledView<T> tiledView;
-	protected boolean supportsGPU = false;
 	protected Integer doneTileCount;
 	protected boolean dropSingletonDims = false;
 	protected NetworkSettings networkSettings;
@@ -92,7 +91,7 @@ public abstract class DefaultNetwork<T extends RealType<T>> implements
 				}
 				catch (final InterruptedException exc) {
 					pool.shutdownNow();
-					fail();
+//					fail();
 					return null;
 				}
 			}
