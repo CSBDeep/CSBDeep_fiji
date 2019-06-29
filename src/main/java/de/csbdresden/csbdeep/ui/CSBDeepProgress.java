@@ -29,13 +29,10 @@
 
 package de.csbdresden.csbdeep.ui;
 
-import java.awt.*;
-import java.lang.reflect.InvocationTargetException;
-import java.text.DateFormat;
-import java.text.SimpleDateFormat;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.List;
+import net.imagej.tensorflow.TensorFlowVersion;
+import net.imagej.updater.util.UpdaterUtil;
+import org.scijava.app.StatusService;
+import org.scijava.thread.ThreadService;
 
 import javax.swing.*;
 import javax.swing.border.Border;
@@ -44,12 +41,13 @@ import javax.swing.border.TitledBorder;
 import javax.swing.text.BadLocationException;
 import javax.swing.text.SimpleAttributeSet;
 import javax.swing.text.StyleConstants;
-
-import org.scijava.app.StatusService;
-import org.scijava.thread.ThreadService;
-
-import de.csbdresden.csbdeep.network.model.tensorflow.LibraryVersion;
-import net.imagej.updater.util.UpdaterUtil;
+import java.awt.*;
+import java.lang.reflect.InvocationTargetException;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
 
 public class CSBDeepProgress extends JPanel {
 
@@ -367,7 +365,7 @@ public class CSBDeepProgress extends JPanel {
 		}
 	}
 
-	public void updateTensorFlowStatus(LibraryVersion version) {
+	public void updateTensorFlowStatus(TensorFlowVersion version) {
 		if(version == null) return;
 		if(!version.usesGPU()) {
 			if(UpdaterUtil.getPlatform().equals("macosx")) {

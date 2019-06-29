@@ -1,17 +1,22 @@
 
 package de.csbdresden.csbdeep.network.model.tensorflow;
 
-import java.io.File;
-import java.io.FileReader;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.concurrent.ExecutionException;
-
-import javax.swing.*;
-
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
+import com.google.protobuf.InvalidProtocolBufferException;
+import de.csbdresden.csbdeep.network.DefaultInputMapper;
+import de.csbdresden.csbdeep.network.model.DefaultNetwork;
+import de.csbdresden.csbdeep.network.model.NetworkSettings;
+import de.csbdresden.csbdeep.task.Task;
+import net.imagej.Dataset;
+import net.imagej.DatasetService;
+import net.imagej.axis.Axes;
+import net.imagej.axis.AxisType;
+import net.imagej.tensorflow.TensorFlowLibraryManagementCommand;
+import net.imagej.tensorflow.TensorFlowService;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.type.numeric.RealType;
+import net.imglib2.type.numeric.real.FloatType;
 import org.scijava.command.CommandService;
 import org.scijava.io.location.Location;
 import org.scijava.log.LogService;
@@ -24,29 +29,22 @@ import org.tensorflow.framework.SignatureDef;
 import org.tensorflow.framework.TensorInfo;
 import org.tensorflow.framework.TensorShapeProto;
 
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonToken;
-import com.google.protobuf.InvalidProtocolBufferException;
-
-import de.csbdresden.csbdeep.commands.TensorFlowLibraryManagement;
-import de.csbdresden.csbdeep.network.DefaultInputMapper;
-import de.csbdresden.csbdeep.network.model.DefaultNetwork;
-import de.csbdresden.csbdeep.network.model.NetworkSettings;
-import de.csbdresden.csbdeep.task.Task;
-import net.imagej.Dataset;
-import net.imagej.DatasetService;
-import net.imagej.axis.Axes;
-import net.imagej.axis.AxisType;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.type.numeric.RealType;
-import net.imglib2.type.numeric.real.FloatType;
+import javax.swing.*;
+import java.io.File;
+import java.io.FileReader;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.ExecutionException;
 
 public class TensorFlowNetwork<T extends RealType<T>> extends
 		DefaultNetwork<T>
 {
 
 	@Parameter
-	private TensorFlowInstallationService tensorFlowService;
+	private TensorFlowService tensorFlowService;
 
 	@Parameter
 	private DatasetService datasetService;
@@ -90,7 +88,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 					"Could not load TensorFlow. Please try to install a native TensorFlow library matching your setup.",
 					"Loading TensorFlow failed",
 					JOptionPane.ERROR_MESSAGE);
-			commandService.run(TensorFlowLibraryManagement.class, true);
+			commandService.run(TensorFlowLibraryManagementCommand.class, true);
 		}
 	}
 
