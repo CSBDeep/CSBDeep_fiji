@@ -300,8 +300,8 @@ public class GenericNetwork implements
 		cacheName = this.getClass().getSimpleName();
 		modelFileKey = getModelFileKey();
 		initTasks();
-		initTaskManager();
 		initNetwork();
+		initTaskManager();
 		if (!network.libraryLoaded()) {
 			this.cancel("TensorFlow library could not be loaded");
 		}

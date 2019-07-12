@@ -367,16 +367,16 @@ public class CSBDeepProgress extends JPanel {
 
 	public void updateTensorFlowStatus(TensorFlowVersion version) {
 		if(version == null) return;
-		if(!version.usesGPU()) {
+		if(!version.usesGPU().isPresent() || !version.usesGPU().get()) {
 			if(UpdaterUtil.getPlatform().equals("macosx")) {
-				tensorFlowStatus.setText("<html>Using TensorFlow version running on CPU.<br />" +
+				tensorFlowStatus.setText("<html>Using CPU TensorFlow version.<br />" +
 										 "This will affect performance.<br /></html>");
 			} else {
-				tensorFlowStatus.setText("<html>Using TensorFlow version running on CPU.<br />" +
-										 "This will affect performance.<br />" +
-										 "Make sure you installed CUDA and CuDNN<br />" +
-										 "and run <i>Plugins > CSBDeep > TensorFlow<br />" +
-										 "library management</i>.</html>");
+				tensorFlowStatus.setText("<html>Using CPU TensorFlow version. This will<br />" +
+										 "affect performance. For GPU support<br />" +
+										 "please make sure CUDA and CuDNN are<br />" +
+										 "linked and run:<br/>" +
+										 "<i>Edit > Options > TensorFlow...</i>.</html>");
 			}
 			showGPUWarning();
 		}

@@ -12,8 +12,8 @@ import net.imagej.Dataset;
 import net.imagej.DatasetService;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
-import net.imagej.tensorflow.TensorFlowLibraryManagementCommand;
 import net.imagej.tensorflow.TensorFlowService;
+import net.imagej.tensorflow.ui.TensorFlowLibraryManagementCommand;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
@@ -78,8 +78,8 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	@Override
 	public void loadLibrary() {
 		tensorFlowService.loadLibrary();
-		if(tensorFlowService.libraryLoaded()) {
-			log(tensorFlowService.getStatus());
+		if(tensorFlowService.getStatus().isLoaded()) {
+			log(tensorFlowService.getStatus().getInfo());
 			tensorFlowLoaded = true;
 		} else {
 			tensorFlowLoaded = false;
