@@ -45,8 +45,8 @@ import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
 
 import de.csbdresden.csbdeep.imglib2.TiledView;
+import de.csbdresden.csbdeep.io.DatasetOutputProcessor;
 import de.csbdresden.csbdeep.io.DefaultInputProcessor;
-import de.csbdresden.csbdeep.io.DefaultOutputProcessor;
 import de.csbdresden.csbdeep.io.InputProcessor;
 import de.csbdresden.csbdeep.io.OutputProcessor;
 import de.csbdresden.csbdeep.network.model.ImageTensor;
@@ -102,7 +102,7 @@ public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwo
 
 	@Override
 	protected OutputProcessor initOutputProcessor() {
-		return new IsoOutputProcessor();
+		return new IsoOutputProcessor(datasetService, input);
 	}
 
 	private class IsoInputProcessor extends DefaultInputProcessor
@@ -168,13 +168,18 @@ public class GenericIsotropicNetwork<T extends RealType<T>> extends GenericNetwo
 	}
 
 	private class IsoOutputProcessor<T extends RealType<T> & NativeType<T>>
-		extends DefaultOutputProcessor<T>
+		extends DatasetOutputProcessor<T>
 	{
 
+		private final Dataset dataset;
+
+		public IsoOutputProcessor(DatasetService datasetService, Dataset input) {
+			super(datasetService);
+			this.dataset = input;
+		}
+
 		@Override
-		public Dataset run(final List<RandomAccessibleInterval<T>> result,
-			final Dataset dataset, final ImageTensor node,
-			final DatasetService datasetService)
+		public Dataset run(final List<RandomAccessibleInterval<T>> result, final ImageTensor node)
 		{
 			setStarted();
 

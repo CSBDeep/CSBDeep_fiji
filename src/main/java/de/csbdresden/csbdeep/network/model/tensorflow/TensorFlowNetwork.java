@@ -49,14 +49,13 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	private TensorInfo inputTensorInfo, outputTensorInfo;
 	private boolean foundJNI = true;
 	private boolean gpuSupport = false;
-	protected boolean isDoingDimensionReduction = false;
-	protected AxisType axisToRemove;
+	private AxisType axisToRemove;
 	// Same as
 	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
 	// in Python. Perhaps this should be an exported constant in TensorFlow's Java
 	// API.
 	private static final String MODEL_TAG = "serve";
-	protected static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY =
+	private static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY =
 		"serving_default";
 
 	public TensorFlowNetwork(TensorFlowService tensorFlowService,
@@ -267,14 +266,28 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 		int diff = getOutputNode().getNodeShape().length - getInputNode().getNodeShape().length;
 		if(diff == 0) return;
 		if(diff > 0) status.logError("Cannot handle case INPUT TENSOR SIZE < OUTPUT TENSOR SIZE");
-		if(diff < -1) status.logError("OUTPUT TENSOR SIZE can only be one dimension smaller than INPUT TENSOR SIZE");
-		isDoingDimensionReduction = true;
+		if(diff == -1) {
+			doSingleDimensionReduction();
+		} else {
+			status.logWarning("Cannot apply axes from input tensor to output tensor because more than one dimension got reduced.");
+			getInputNode().setTilingAllowed(false);
+			getOutputNode().setTilingAllowed(false);
+		}
+	}
+
+	private void doSingleDimensionReduction() {
 		if(getInputNode().getImageAxes().contains(Axes.TIME)) {
 			axisToRemove = Axes.TIME;
 		} else {
 			axisToRemove = Axes.Z;
 		}
-		handleDimensionReduction();
+		final Dataset outputDummy = createEmptyDuplicateWithoutAxis(inputNode
+			.getImageAxes(), inputNode.getImageDimensions(), axisToRemove);
+		getOutputNode().initialize(outputDummy);
+		List<AxisType> mapping = new ArrayList<>();
+		mapping.addAll(getInputNode().getNodeAxes());
+		mapping.remove(axisToRemove);
+		getOutputNode().setMapping(mapping.toArray(new AxisType[0]));
 	}
 
 	@Override
@@ -290,23 +303,6 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	private void generateMapping() {
 		inputNode.generateMapping();
 		outputNode.generateMapping();
-	}
-
-	private void handleDimensionReduction() {
-		if (isDoingDimensionReduction) {
-			final Dataset outputDummy = createEmptyDuplicateWithoutAxis(inputNode
-				.getImageAxes(), inputNode.getImageDimensions(), axisToRemove);
-			getOutputNode().initialize(outputDummy);
-			List<AxisType> mapping = new ArrayList<>();
-			mapping.addAll(getInputNode().getNodeAxes());
-			mapping.remove(axisToRemove);
-			getOutputNode().setMapping(mapping.toArray(new AxisType[0]));
-//			getOutputNode().removeAxisFromMapping(axisToRemove);
-		}
-		else {
-			getOutputNode().initialize(inputNode.getImage());
-			getOutputNode().setMapping(getInputNode().getMapping());
-		}
 	}
 
 	private Dataset createEmptyDuplicateWithoutAxis(List<AxisType> imageAxes, List<Long> imageDimensions, AxisType axisToRemove)
@@ -408,7 +404,6 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 		model = null;
 		inputTensorInfo = null;
 		outputTensorInfo = null;
-		isDoingDimensionReduction = false;
 		axisToRemove = null;
 	}
 

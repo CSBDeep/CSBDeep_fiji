@@ -2,7 +2,7 @@
  * #%L
  * CSBDeep: CNNs for image restoration of fluorescence microscopy.
  * %%
- * Copyright (C) 2017 - 2018 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
+ * Copyright (C) 2017 - 2019 Deborah Schmidt, Florian Jug, Benjamin Wilhelm
  * %%
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -36,29 +36,32 @@ import org.scijava.ItemIO;
 import org.scijava.command.Command;
 import org.scijava.plugin.Parameter;
 import org.scijava.plugin.Plugin;
+import org.scijava.table.GenericTable;
 
-import de.csbdresden.csbdeep.io.DatasetOutputProcessor;
 import de.csbdresden.csbdeep.io.OutputProcessor;
+import de.csbdresden.csbdeep.io.TableOutputProcessor;
 import net.imagej.Dataset;
 import net.imagej.ImageJ;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.real.FloatType;
 
-@Plugin(type = Command.class, menuPath = "Plugins>CSBDeep>Run your network")
-public class GenericNetwork extends GenericCoreNetwork {
+@Plugin(type = Command.class, headless = true)
+public class GenericTableNetwork extends GenericCoreNetwork {
 
 	@Parameter(type = ItemIO.OUTPUT)
-	protected Dataset output;
+	protected GenericTable output;
 
 	@Override
 	protected OutputProcessor initOutputProcessor() {
-		return new DatasetOutputProcessor(datasetService);
+		return new TableOutputProcessor();
 	}
 
 	@Override
 	protected void computeOutput(List<RandomAccessibleInterval<FloatType>> output) {
-		this.output = (Dataset) outputProcessor.run(output, network.getOutputNode());
+
+		this.output = (GenericTable) outputProcessor.run(output, network.getOutputNode());
 	}
+
 
 	/**
 	 * This main function serves for development purposes. It allows you to run
@@ -88,7 +91,7 @@ public class GenericNetwork extends GenericCoreNetwork {
 			ij.ui().show(dataset);
 
 			// invoke the plugin
-			ij.command().run(GenericNetwork.class, true);
+			ij.command().run(GenericTableNetwork.class, true);
 		}
 
 	}
