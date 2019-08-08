@@ -1,9 +1,9 @@
 
 package de.csbdresden.csbdeep.network.model;
 
-import static java.lang.Math.max;
-
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -18,21 +18,20 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 
-// TODO rename
 public class ImageTensor {
 
 	private class Dimension {
-		public Dimension(AxisType type, long size) {
+
+		Dimension(AxisType type, long size) {
 			this.type = type;
 			this.size = size;
 		}
+
 		private AxisType type;
 		private long size;
-
 		public long getSize() {
 			return size;
 		}
-
 		public AxisType getType() {
 			return type;
 		}
@@ -40,18 +39,21 @@ public class ImageTensor {
 		public String toString() {
 			return "(" + type + ", " + size + ")";
 		}
-	}
 
+
+	}
 	// I do not use the following line because it was returning the axes in a
 	// different order in different setups
 	// AxisType[] axes = Axes.knownTypes();
+
 	AxisType[] availableAxes = { Axes.X, Axes.Y, Axes.Z, Axes.TIME,
 		Axes.CHANNEL };
-
 	private String name;
+
 	private List<Dimension> image;
 	private List<Dimension> node;
 	private final List<Integer> finalMapping = new ArrayList<>();
+	private boolean tilingAllowed = true;
 
 	public ImageTensor() {
 	}
@@ -71,7 +73,7 @@ public class ImageTensor {
 		}
 	}
 
-	public void setNode(long[] dimensions, AxisType[] axisTypes) {
+	void setNode(long[] dimensions, AxisType[] axisTypes) {
 		if(node != null) node.clear();
 		else node = new ArrayList<>();
 		for (int i = 0; i < dimensions.length; i++) {
@@ -234,7 +236,7 @@ public class ImageTensor {
 		return (long) 1;
 	}
 
-	public Integer getDatasetDimIndexByNodeIndex(final int nodeDim) {
+	private Integer getDatasetDimIndexByNodeIndex(final int nodeDim) {
 		if (node.size() > nodeDim) {
 			final AxisType axis = node.get(nodeDim).getType();
 			for (int i = 0; i < image.size(); i++) {
@@ -251,10 +253,10 @@ public class ImageTensor {
 		return null;
 	}
 
-	public Integer getNodeDimByDatasetDim(final int datasetDim) {
+	private Integer getNodeDimByDatasetDim(final int datasetDim) {
 		if (image.size() > datasetDim) {
 			for (int i = 0; i < node.size(); i++) {
-				if(node.get(i).getType().equals(image.get(datasetDim).getType())) return i;
+				if(node.get(i).getType() != null && node.get(i).getType().equals(image.get(datasetDim).getType())) return i;
 			}
 		}
 		return -1;
@@ -343,7 +345,7 @@ public class ImageTensor {
 
 	private boolean imageHasChannel() {
 		for(Dimension d : image) {
-			if(d.type.equals(Axes.CHANNEL)) return true;
+			if(d != null && d.type != null && d.type.equals(Axes.CHANNEL)) return true;
 		}
 		return false;
 	}
@@ -368,7 +370,7 @@ public class ImageTensor {
 		return imgActions;
 	}
 
-	public boolean isImageDimUseless(int index) {
+	private boolean isImageDimUseless(int index) {
 		return image.size() <= index || image.get(index).size == 1L;
 	}
 
@@ -388,6 +390,14 @@ public class ImageTensor {
 			}
 		}
 		return res;
+	}
+
+	public void setTilingAllowed(boolean allowed) {
+		this.tilingAllowed = allowed;
+	}
+
+	public boolean getTilingAllowed() {
+		return tilingAllowed;
 	}
 
 }

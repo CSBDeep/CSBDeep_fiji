@@ -152,6 +152,10 @@
 			<artifactId>junit</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<dependency>
+			<groupId>org.scijava</groupId>
+			<artifactId>scijava-plugins-io-table</artifactId>
+		</dependency>
 	</dependencies>
 
 	<build>

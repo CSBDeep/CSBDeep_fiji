@@ -15,22 +15,24 @@ import net.imglib2.type.NativeType;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.view.Views;
 
-public class DefaultOutputProcessor<T extends RealType<T> & NativeType<T>>
-	extends DefaultTask implements OutputProcessor<T>
+public class DatasetOutputProcessor<T extends RealType<T> & NativeType<T>>
+	extends DefaultTask implements OutputProcessor<T, Dataset>
 {
 
 	public static String[] OUTPUT_NAMES = { "result" };
+	private final DatasetService datasetService;
+
+	public DatasetOutputProcessor(DatasetService datasetService) {
+		this.datasetService = datasetService;
+	}
 
 	@Override
-	public Dataset run(final List<RandomAccessibleInterval<T>> result,
-		final Dataset dataset, final ImageTensor node,
-		final DatasetService datasetService)
+	public Dataset run(final List<RandomAccessibleInterval<T>> result, final ImageTensor node)
 	{
 		setStarted();
 
 		final List<Dataset> output = new ArrayList<>();
-		result.forEach(image -> output.addAll(_run(image, node,
-			datasetService)));
+		result.forEach(image -> output.addAll(_run(image, node)));
 
 		setFinished();
 
@@ -39,8 +41,7 @@ public class DefaultOutputProcessor<T extends RealType<T> & NativeType<T>>
 		return output.get(0);
 	}
 
-	private List<Dataset> _run(RandomAccessibleInterval<T> result,
-	                           final ImageTensor node, DatasetService datasetService)
+	private List<Dataset> _run(RandomAccessibleInterval<T> result, final ImageTensor node)
 	{
 
 		final List<Dataset> output = new ArrayList<>();
@@ -51,9 +52,15 @@ public class DefaultOutputProcessor<T extends RealType<T> & NativeType<T>>
 			List<Integer> droppedDims = node.dropSingletonDims();
 			result = dropSingletonDimensions(result, droppedDims);
 
-			log("Displaying " + OUTPUT_NAMES[0] + " image..");
-			output.add(wrapIntoDataset(OUTPUT_NAMES[0], result,
-				node.getAxesArray(), datasetService));
+			if(result.numDimensions() > 1) {
+				log("Displaying " + OUTPUT_NAMES[0] + " image..");
+				output.add(wrapIntoDataset(OUTPUT_NAMES[0], result,
+						node.getAxesArray(), datasetService));
+			} else {
+				log("Displaying " + OUTPUT_NAMES[0] + " table..");
+
+			}
+
 			return output;
 		}
 
