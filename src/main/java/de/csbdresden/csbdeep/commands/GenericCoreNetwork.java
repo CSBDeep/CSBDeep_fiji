@@ -79,7 +79,7 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.exception.IncompatibleTypeException;
 import net.imglib2.type.numeric.real.FloatType;
 
-@Plugin(type = Command.class, menuPath = "Plugins>CSBDeep>Run your network")
+@Plugin(type = Command.class)
 public abstract class GenericCoreNetwork implements
 		Command, Cancelable, Initializable, Disposable
 {
