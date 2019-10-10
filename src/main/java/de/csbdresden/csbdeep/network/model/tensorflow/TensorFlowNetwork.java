@@ -11,7 +11,6 @@ import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.scijava.io.location.Location;
-import org.tensorflow.SavedModelBundle;
 import org.tensorflow.Tensor;
 import org.tensorflow.TensorFlow;
 import org.tensorflow.TensorFlowException;
@@ -32,6 +31,7 @@ import net.imagej.Dataset;
 import net.imagej.DatasetService;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
+import net.imagej.tensorflow.CachedModelBundle;
 import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
@@ -41,7 +41,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 		DefaultNetwork<T>
 {
 
-	private SavedModelBundle model;
+	private CachedModelBundle model;
 	private SignatureDef sig;
 	private Map meta;
 	private final TensorFlowService tensorFlowService;
@@ -137,7 +137,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 			if (model != null) {
 				model.close();
 			}
-			model = tensorFlowService.loadModel(source, modelName, MODEL_TAG);
+			model = tensorFlowService.loadCachedModel(source, modelName, MODEL_TAG);
 //			loadNetworkSettingsFromJson(tensorFlowService.loadFile(source, modelName, "meta.json"));
 		}
 		catch (TensorFlowException | IOException e) {
@@ -148,7 +148,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 		// The strings "input", "probabilities" and "patches" are meant to be
 		// in sync with the model exporter (export_saved_model()) in Python.
 		try {
-			sig = MetaGraphDef.parseFrom(model.metaGraphDef()).getSignatureDefOrThrow(
+			sig = MetaGraphDef.parseFrom(model.model().metaGraphDef()).getSignatureDefOrThrow(
 				DEFAULT_SERVING_SIGNATURE_DEF_KEY);
 		}
 		catch (final InvalidProtocolBufferException e) {
@@ -231,10 +231,6 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 			reader.endArray();
 		}
 		return res;
-	}
-
-	protected void setModel(final SavedModelBundle model) {
-		this.model = model;
 	}
 
 	@Override
@@ -338,7 +334,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 			convertNodeMappingToImgMapping(getInputNode().getMappingIndices()));
 		if (inputTensor != null) {
 			RandomAccessibleInterval<T> output = null;
-			Tensor outputTensor = TensorFlowRunner.executeGraph(model, inputTensor,
+			Tensor outputTensor = TensorFlowRunner.executeGraph(model.model(), inputTensor,
 				getInputTensorInfo(), getOutputTensorInfo());
 
 			if (outputTensor != null) {
