@@ -7,6 +7,7 @@ import static org.junit.Assert.*;
 import java.util.Arrays;
 import java.util.concurrent.Future;
 
+import org.junit.After;
 import org.scijava.command.Command;
 import org.scijava.command.CommandModule;
 import org.scijava.module.Module;
@@ -25,6 +26,11 @@ import net.imglib2.type.numeric.real.FloatType;
 public class CSBDeepTest {
 
 	protected ImageJ ij;
+
+	@After
+	public void disposeIJ() {
+		if(ij != null) ij.context().dispose();
+	}
 
 	public void testCSBDeepTest() {
 		launchImageJ();
