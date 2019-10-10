@@ -85,6 +85,7 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.List;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -121,12 +122,13 @@ public abstract class GenericCoreNetwork implements
 	@Parameter(label = "Overlap between tiles", min = "0", stepSize = "16")
 	protected int overlap = 32;
 
-
 	@Parameter(label = "Batch size", min = "1")
 	protected int batchSize = 1;
 
 	@Parameter
 	private Context context;
+
+	private boolean canceled = false;
 	private boolean modelNeedsInitialization = false;
 	private boolean networkInitialized;
 	private boolean networkAndInputCompatible;
@@ -311,8 +313,12 @@ public abstract class GenericCoreNetwork implements
 		cacheName = this.getClass().getSimpleName();
 		modelFileKey = getModelFileKey();
 		initTasks();
-		initTaskManager();
 		initNetwork();
+		if (!network.libraryLoaded()) {
+			this.cancel("TensorFlow library could not be loaded");
+			return;
+		}
+		initTaskManager();
 	}
 
 	public String getModelFileKey() {
@@ -329,10 +335,8 @@ public abstract class GenericCoreNetwork implements
 		networkInitialized = true;
 		network = new TensorFlowNetwork(modelExecutor);
 		context.inject(network);
-		if(network.libraryLoaded()) {
-			network.testGPUSupport();
-			if (!network.supportsGPU()) taskManager.noGPUFound();
-		} else {
+		network.loadLibrary();
+		if(!network.libraryLoaded()) {
 			return false;
 		}
 		return true;
@@ -402,6 +406,8 @@ public abstract class GenericCoreNetwork implements
 
 	public void run() {
 
+		if(isCanceled()) return;
+
 		final long startTime = System.currentTimeMillis();
 
 		if (noInputData()) return;
@@ -413,7 +419,11 @@ public abstract class GenericCoreNetwork implements
 			future = pool.submit(this::mainThread);
 			if(future != null) future.get();
 
-		} catch (OutOfMemoryError | InterruptedException | ExecutionException e) {
+		} catch(CancellationException e) {
+			log.warn("CSBDeep canceled.");
+			dispose();
+			return;
+		} catch(OutOfMemoryError | InterruptedException | ExecutionException e) {
 			e.printStackTrace();
 		}
 
@@ -443,8 +453,6 @@ public abstract class GenericCoreNetwork implements
 		} else {
 			normalizedInput = getInput();
 		}
-
-		System.out.println("normalized input first element: " + normalizedInput.firstElement());
 
 		final List<RandomAccessibleInterval> processedInput = inputProcessor.run(
 				normalizedInput, network);
@@ -663,11 +671,12 @@ public abstract class GenericCoreNetwork implements
 
 	@Override
 	public boolean isCanceled() {
-		return false;
+		return canceled;
 	}
 
 	@Override
 	public void cancel(final String reason) {
+		canceled = true;
 		if(future != null) {
 			future.cancel(true);
 		}

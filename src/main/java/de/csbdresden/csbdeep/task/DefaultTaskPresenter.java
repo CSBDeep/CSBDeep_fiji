@@ -37,6 +37,7 @@ public class DefaultTaskPresenter extends WindowAdapter implements TaskPresenter
 	public void initialize() {
 		if (!headless) {
 			progressWindow = CSBDeepProgress.create(status, threadService);
+			progressWindow.updateTensorFlowStatus(tensorFlowService.getTensorFlowVersion());
 			progressWindow.getCancelBtn().addActionListener(this);
 			progressWindow.getFrame().addWindowListener(this);
 			initialized = true;
@@ -60,13 +61,6 @@ public class DefaultTaskPresenter extends WindowAdapter implements TaskPresenter
 	public void show() {
 		if (inUse()) {
 			progressWindow.display();
-		}
-	}
-
-	@Override
-	public void showGPUWarning() {
-		if (inUse()) {
-			progressWindow.showGPUWarning();
 		}
 	}
 

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import net.imagej.tensorflow.ui.TensorFlowLibraryManagementCommand;
 import org.scijava.command.CommandService;
 import org.scijava.io.location.Location;
 import org.scijava.log.LogService;
@@ -40,6 +41,8 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 
+import javax.swing.*;
+
 public class TensorFlowNetwork<T extends RealType<T>> extends
 		DefaultNetwork<T>
 {
@@ -58,9 +61,8 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	private CachedModelBundle model;
 	private SignatureDef sig;
 	private Map meta;
+	private boolean tensorFlowLoaded = false;
 	private TensorInfo inputTensorInfo, outputTensorInfo;
-	private boolean foundJNI = true;
-	private boolean gpuSupport = false;
 	private AxisType axisToRemove;
 	// Same as
 	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
@@ -76,21 +78,19 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	}
 
 	@Override
-	public void testGPUSupport() {
-		log("The current library path is: LD_LIBRARY_PATH=" + System.getenv(
-			"LD_LIBRARY_PATH"));
-		try {
-			System.loadLibrary("tensorflow_jni");
-			gpuSupport = true;
-		}
-		catch (final UnsatisfiedLinkError e) {
-			gpuSupport = false;
-		}
-		if (!gpuSupport) {
-			log("Couldn't load tensorflow GPU support.");
-			log(
-				"If the problem is CUDA related, make sure CUDA and cuDNN are in the LD_LIBRARY_PATH.");
-			log("Using CPU version.");
+	public void loadLibrary() {
+		tensorFlowService.loadLibrary();
+		if (tensorFlowService.getStatus().isLoaded()) {
+			log(tensorFlowService.getStatus().getInfo());
+			tensorFlowLoaded = true;
+		} else {
+			tensorFlowLoaded = false;
+			logService.error("Could not load TensorFlow. Check previous errors and warnings for details.");
+			JOptionPane.showMessageDialog(null,
+					"<html>Could not load TensorFlow.<br/>Opening the TensorFlow Library Management tool.</html>",
+					"Loading TensorFlow failed",
+					JOptionPane.ERROR_MESSAGE);
+			commandService.run(TensorFlowLibraryManagementCommand.class, true);
 		}
 	}
 
@@ -126,7 +126,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 
 	@Override
 	protected boolean loadModel(final Location source, final String modelName) {
-		if(!foundJNI) return false;
+		if(!tensorFlowLoaded) return false;
 		log("Loading TensorFlow model " + modelName + " from source file " + source.getURI());
 		try {
 			if (model != null) {
@@ -283,12 +283,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 
 	@Override
 	public boolean libraryLoaded() {
-		return foundJNI;
-	}
-
-	@Override
-	public boolean supportsGPU() {
-		return gpuSupport;
+		return tensorFlowLoaded;
 	}
 
 	private void generateMapping() {
@@ -401,8 +396,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	@Override
 	public void dispose() {
 		super.dispose();
-		foundJNI = true;
-		gpuSupport = false;
+		tensorFlowLoaded = false;
 		clear();
 	}
 

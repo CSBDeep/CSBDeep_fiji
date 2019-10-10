@@ -29,7 +29,5 @@ public interface TaskPresenter {
 
 	void show();
 
-	void showGPUWarning();
-
 	void logWarning(String msg);
 }

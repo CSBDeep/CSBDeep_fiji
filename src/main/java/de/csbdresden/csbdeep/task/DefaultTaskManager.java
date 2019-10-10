@@ -31,11 +31,6 @@ public class DefaultTaskManager implements TaskManager {
 	}
 
 	@Override
-	public void noGPUFound() {
-		taskPresenter.showGPUWarning();
-	}
-
-	@Override
 	public void logWarning(String msg) {
 		taskPresenter.logWarning(msg);
 		logger.warn(msg);

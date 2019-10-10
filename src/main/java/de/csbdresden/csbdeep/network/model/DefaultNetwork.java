@@ -28,7 +28,6 @@ public abstract class DefaultNetwork<T extends RealType<T>> implements
 	protected ImageTensor inputNode = null;
 	protected ImageTensor outputNode = null;
 	protected TiledView<T> tiledView;
-	protected boolean supportsGPU = false;
 	protected Integer doneTileCount;
 	protected boolean dropSingletonDims = false;
 	protected NetworkSettings networkSettings;
@@ -37,9 +36,6 @@ public abstract class DefaultNetwork<T extends RealType<T>> implements
 	public DefaultNetwork(Task associatedTask) {
 		this.status = associatedTask;
 	}
-
-	@Override
-	public void testGPUSupport() {}
 
 	protected abstract boolean loadModel(Location source, String modelName);
 
@@ -95,7 +91,7 @@ public abstract class DefaultNetwork<T extends RealType<T>> implements
 				}
 				catch (final InterruptedException exc) {
 					pool.shutdownNow();
-					fail();
+//					fail();
 					return null;
 				}
 			}

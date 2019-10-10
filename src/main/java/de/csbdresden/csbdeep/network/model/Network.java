@@ -18,14 +18,10 @@ public interface Network<T extends RealType<T>> extends
 	Callable<List<RandomAccessibleInterval<T>>>, Disposable, Cancelable
 {
 
-	void testGPUSupport();
-
 	boolean loadModel(String pathOrURL, String modelName)
 		throws FileNotFoundException;
 
 	void preprocess();
-
-	boolean supportsGPU();
 
 	RandomAccessibleInterval<T> execute(RandomAccessibleInterval<T> tile)
 		throws Exception;
@@ -48,17 +44,14 @@ public interface Network<T extends RealType<T>> extends
 
 	void setTiledView(TiledView<T> tiledView);
 
+	default void loadLibrary(){}
+
 	/**
 	 * Set if singleton dimensions of the output image should be dropped. If the
 	 * tile size in one dimension is only one this could remove an important
 	 * dimension. Default value is true.
 	 */
 	void setDropSingletonDims(final boolean dropSingletonDims);
-//
-//	void setDoDimensionReduction(boolean doDimensionReduction);
-//
-//	void setDoDimensionReduction(boolean doDimensionReduction,
-//		AxisType axisToRemove);
 
 	void calculateMapping();
 
