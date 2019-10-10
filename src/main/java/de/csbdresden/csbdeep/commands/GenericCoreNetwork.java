@@ -29,20 +29,43 @@
 
 package de.csbdresden.csbdeep.commands;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.util.concurrent.Future;
-import java.util.stream.Collectors;
-
-import javax.swing.*;
-
+import de.csbdresden.csbdeep.io.DefaultInputProcessor;
+import de.csbdresden.csbdeep.io.InputProcessor;
+import de.csbdresden.csbdeep.io.OutputProcessor;
+import de.csbdresden.csbdeep.network.DefaultInputMapper;
+import de.csbdresden.csbdeep.network.DefaultInputValidator;
+import de.csbdresden.csbdeep.network.DefaultModelExecutor;
+import de.csbdresden.csbdeep.network.DefaultModelLoader;
+import de.csbdresden.csbdeep.network.InputMapper;
+import de.csbdresden.csbdeep.network.InputValidator;
+import de.csbdresden.csbdeep.network.ModelExecutor;
+import de.csbdresden.csbdeep.network.ModelLoader;
+import de.csbdresden.csbdeep.network.model.Network;
+import de.csbdresden.csbdeep.network.model.tensorflow.TensorFlowNetwork;
+import de.csbdresden.csbdeep.normalize.DefaultInputNormalizer;
+import de.csbdresden.csbdeep.normalize.InputNormalizer;
+import de.csbdresden.csbdeep.task.Task;
+import de.csbdresden.csbdeep.task.TaskForceManager;
+import de.csbdresden.csbdeep.task.TaskManager;
+import de.csbdresden.csbdeep.tiling.AdvancedTiledView;
+import de.csbdresden.csbdeep.tiling.DefaultInputTiler;
+import de.csbdresden.csbdeep.tiling.DefaultOutputTiler;
+import de.csbdresden.csbdeep.tiling.DefaultTiling;
+import de.csbdresden.csbdeep.tiling.InputTiler;
+import de.csbdresden.csbdeep.tiling.OutputTiler;
+import de.csbdresden.csbdeep.tiling.Tiling;
+import de.csbdresden.csbdeep.ui.MappingDialog;
+import de.csbdresden.csbdeep.util.IOHelper;
+import net.imagej.Dataset;
+import net.imagej.DatasetService;
+import net.imagej.axis.AxisType;
+import net.imagej.ops.OpService;
+import net.imagej.tensorflow.TensorFlowService;
+import net.imglib2.RandomAccessibleInterval;
+import net.imglib2.exception.IncompatibleTypeException;
+import net.imglib2.type.numeric.real.FloatType;
 import org.scijava.Cancelable;
+import org.scijava.Context;
 import org.scijava.Disposable;
 import org.scijava.Initializable;
 import org.scijava.ItemIO;
@@ -56,28 +79,17 @@ import org.scijava.thread.ThreadService;
 import org.scijava.ui.UIService;
 import org.scijava.widget.Button;
 
-import de.csbdresden.csbdeep.io.DefaultInputProcessor;
-import de.csbdresden.csbdeep.io.InputProcessor;
-import de.csbdresden.csbdeep.io.OutputProcessor;
-import de.csbdresden.csbdeep.network.*;
-import de.csbdresden.csbdeep.network.model.Network;
-import de.csbdresden.csbdeep.network.model.tensorflow.TensorFlowNetwork;
-import de.csbdresden.csbdeep.normalize.DefaultInputNormalizer;
-import de.csbdresden.csbdeep.normalize.InputNormalizer;
-import de.csbdresden.csbdeep.task.Task;
-import de.csbdresden.csbdeep.task.TaskForceManager;
-import de.csbdresden.csbdeep.task.TaskManager;
-import de.csbdresden.csbdeep.tiling.*;
-import de.csbdresden.csbdeep.ui.MappingDialog;
-import de.csbdresden.csbdeep.util.IOHelper;
-import net.imagej.Dataset;
-import net.imagej.DatasetService;
-import net.imagej.axis.AxisType;
-import net.imagej.ops.OpService;
-import net.imagej.tensorflow.TensorFlowService;
-import net.imglib2.RandomAccessibleInterval;
-import net.imglib2.exception.IncompatibleTypeException;
-import net.imglib2.type.numeric.real.FloatType;
+import javax.swing.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.util.List;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.stream.Collectors;
 
 @Plugin(type = Command.class)
 public abstract class GenericCoreNetwork implements
@@ -113,6 +125,8 @@ public abstract class GenericCoreNetwork implements
 	@Parameter(label = "Batch size", min = "1")
 	protected int batchSize = 1;
 
+	@Parameter
+	private Context context;
 	private boolean modelNeedsInitialization = false;
 	private boolean networkInitialized;
 	private boolean networkAndInputCompatible;
@@ -313,12 +327,12 @@ public abstract class GenericCoreNetwork implements
 
 	protected boolean initNetwork() {
 		networkInitialized = true;
-		network = new TensorFlowNetwork(tensorFlowService, datasetService,
-			modelExecutor);
+		network = new TensorFlowNetwork(modelExecutor);
+		context.inject(network);
 		if(network.libraryLoaded()) {
 			network.testGPUSupport();
-			if(!network.supportsGPU()) taskManager.noGPUFound();
-		}else {
+			if (!network.supportsGPU()) taskManager.noGPUFound();
+		} else {
 			return false;
 		}
 		return true;
@@ -337,7 +351,8 @@ public abstract class GenericCoreNetwork implements
 	}
 
 	protected void initTaskManager() {
-		final TaskForceManager tfm = new TaskForceManager(isHeadless() || !showProgressDialog, log, status, threadService);
+		final TaskForceManager tfm = new TaskForceManager(isHeadless() || !showProgressDialog);
+		context.inject(tfm);
 		tfm.initialize();
 		tfm.createTaskForce("Preprocessing", modelLoader, inputValidator, inputMapper,
 			inputProcessor, inputNormalizer);

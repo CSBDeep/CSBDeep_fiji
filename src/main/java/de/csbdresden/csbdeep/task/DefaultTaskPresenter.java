@@ -1,31 +1,36 @@
 
 package de.csbdresden.csbdeep.task;
 
-import java.awt.event.*;
-
-import javax.swing.*;
-
+import de.csbdresden.csbdeep.ui.CSBDeepProgress;
+import net.imagej.tensorflow.TensorFlowService;
 import org.scijava.app.StatusService;
+import org.scijava.plugin.Parameter;
 import org.scijava.thread.ThreadService;
 
-import de.csbdresden.csbdeep.ui.CSBDeepProgress;
+import javax.swing.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 
 public class DefaultTaskPresenter extends WindowAdapter implements TaskPresenter, ActionListener {
 
 	private CSBDeepProgress progressWindow;
 	private final TaskManager taskManager;
-	private final ThreadService threadService;
-	private final StatusService status;
+	@Parameter
+	private ThreadService threadService;
+	@Parameter
+	private StatusService status;
+	@Parameter
+	private TensorFlowService tensorFlowService;
 	private final boolean headless;
 	private boolean initialized = false;
 	private boolean closing = false;
 
-	public DefaultTaskPresenter(final TaskManager taskManager, boolean headless, StatusService status, ThreadService threadService)
+	public DefaultTaskPresenter(final TaskManager taskManager, boolean headless)
 	{
 		this.headless = headless;
 		this.taskManager = taskManager;
-		this.status = status;
-		this.threadService = threadService;
 	}
 
 	@Override

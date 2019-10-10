@@ -10,7 +10,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import org.scijava.command.CommandService;
 import org.scijava.io.location.Location;
+import org.scijava.log.LogService;
+import org.scijava.plugin.Parameter;
 import org.tensorflow.Tensor;
 import org.tensorflow.TensorFlow;
 import org.tensorflow.TensorFlowException;
@@ -40,12 +43,21 @@ import net.imglib2.type.numeric.real.FloatType;
 public class TensorFlowNetwork<T extends RealType<T>> extends
 		DefaultNetwork<T>
 {
+	@Parameter
+	private TensorFlowService tensorFlowService;
+
+	@Parameter
+	private DatasetService datasetService;
+
+	@Parameter
+	private CommandService commandService;
+
+	@Parameter
+	private LogService logService;
 
 	private CachedModelBundle model;
 	private SignatureDef sig;
 	private Map meta;
-	private final TensorFlowService tensorFlowService;
-	private final DatasetService datasetService;
 	private TensorInfo inputTensorInfo, outputTensorInfo;
 	private boolean foundJNI = true;
 	private boolean gpuSupport = false;
@@ -58,26 +70,9 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	private static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY =
 		"serving_default";
 
-	public TensorFlowNetwork(TensorFlowService tensorFlowService,
-		DatasetService datasetService, Task associatedTask)
+	public TensorFlowNetwork(Task associatedTask)
 	{
 		super(associatedTask);
-		this.tensorFlowService = tensorFlowService;
-		this.datasetService = datasetService;
-		log("imagej-tensorflow version: " + tensorFlowService.getVersion());
-		try {
-			log("tensorflow version: " + TensorFlow.version());
-		}
-		catch (final UnsatisfiedLinkError e){
-			foundJNI = false;
-			logError("Couldn't load TensorFlow.\n" +
-					"By default, CSBDeep will load TensorFlow for CPU. " +
-					"If you added a CSBDeep update site for CUDA " +
-					"to get GPU support, make sure you have the matching CUDA and cuDNN " +
-					"versions installed. \nIf you want to use the CPU, make sure " +
-					"the GPU tensorflow library file is removed from the lib folder.");
-			e.printStackTrace();
-		}
 	}
 
 	@Override
