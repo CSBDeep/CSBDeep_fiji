@@ -43,11 +43,21 @@ See the [CSBDeep Wiki Page](https://github.com/CSBDeep/CSBDeep_website/wiki/Your
 
 If you use eclipse you can import our code formatter `doc/eclipse-code-formatter.xml`, code cleanup (`doc/eclipse-code-clean-up.xml`) and import order (`eclipse-import-order.importorder`) settings.
 
+## Switching the TensorFlow version
+
+For supporting a model trained with a specific TensorFlow version or for GPU support, one has to install a specific native TensorFlow JNI. In order to achieve that, do the following:
+1. Open `Edit > Options > TensorFlow...`
+- Choose the version matching your system / model
+- Wait until a message opens telling you that the library was installed
+- Restart Fiji
+
 ## GPU support
 
-For GPU support we load the TensorFlow JNI with GPU support manually when a command is initialized. This means that the GPU version of the TensorFLow JNI must be accessible in the java library path (For example `Fiji.app/lib/linux64` in a Fiji installation).
+For GPU support, two things have to be done:
+- install CUDA and CuDNN and make sure Fiji knows about the installation paths
+- install a TensorFlow version with GPU support (see section above)
 
-See the according [CSBDeep Wiki page](https://github.com/CSBDeep/CSBDeep_website/wiki/CSBDeep-in-Fiji-–-Installation#gpu-support) for a detailed installation guide.
+For further details please refer to the [CSBDeep Wiki page](https://github.com/CSBDeep/CSBDeep_website/wiki/CSBDeep-in-Fiji-–-Installation#gpu-support).
 
 ### Muliple GPUs
 
@@ -56,4 +66,3 @@ See the according [CSBDeep Wiki page](https://github.com/CSBDeep/CSBDeep_website
 ## License
 
 This project is licensed under the BSD 2-clause "Simplified" License -- see the [LICENSE.txt](LICENSE.txt) file for details.
-
