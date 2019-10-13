@@ -135,7 +135,7 @@ public class DefaultTask implements Task {
 			manager.debug(msg);
 		}
 		else {
-			System.out.println(msg);
+			System.out.println("[DEBUG] " + msg);
 		}
 	}
 
@@ -145,7 +145,7 @@ public class DefaultTask implements Task {
 			manager.log(msg);
 		}
 		else {
-			System.out.println(msg);
+			System.out.println("[INFO] " + msg);
 		}
 	}
 
@@ -155,7 +155,7 @@ public class DefaultTask implements Task {
 			manager.logError(msg);
 		}
 		else {
-			System.out.println("ERROR: " + msg);
+			System.out.println("[ERROR] " + msg);
 		}
 	}
 

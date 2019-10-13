@@ -10,8 +10,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
+import net.imagej.tensorflow.ui.TensorFlowLibraryManagementCommand;
+import org.scijava.command.CommandService;
 import org.scijava.io.location.Location;
-import org.tensorflow.SavedModelBundle;
+import org.scijava.log.LogService;
+import org.scijava.plugin.Parameter;
 import org.tensorflow.Tensor;
 import org.tensorflow.TensorFlow;
 import org.tensorflow.TensorFlowException;
@@ -32,23 +35,34 @@ import net.imagej.Dataset;
 import net.imagej.DatasetService;
 import net.imagej.axis.Axes;
 import net.imagej.axis.AxisType;
+import net.imagej.tensorflow.CachedModelBundle;
 import net.imagej.tensorflow.TensorFlowService;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.type.numeric.RealType;
 import net.imglib2.type.numeric.real.FloatType;
 
+import javax.swing.*;
+
 public class TensorFlowNetwork<T extends RealType<T>> extends
 		DefaultNetwork<T>
 {
+	@Parameter
+	private TensorFlowService tensorFlowService;
 
-	private SavedModelBundle model;
+	@Parameter
+	private DatasetService datasetService;
+
+	@Parameter
+	private CommandService commandService;
+
+	@Parameter
+	private LogService logService;
+
+	private CachedModelBundle model;
 	private SignatureDef sig;
 	private Map meta;
-	private final TensorFlowService tensorFlowService;
-	private final DatasetService datasetService;
+	private boolean tensorFlowLoaded = false;
 	private TensorInfo inputTensorInfo, outputTensorInfo;
-	private boolean foundJNI = true;
-	private boolean gpuSupport = false;
 	private AxisType axisToRemove;
 	// Same as
 	// tf.saved_model.signature_constants.DEFAULT_SERVING_SIGNATURE_DEF_KEY
@@ -58,44 +72,25 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	private static final String DEFAULT_SERVING_SIGNATURE_DEF_KEY =
 		"serving_default";
 
-	public TensorFlowNetwork(TensorFlowService tensorFlowService,
-		DatasetService datasetService, Task associatedTask)
+	public TensorFlowNetwork(Task associatedTask)
 	{
 		super(associatedTask);
-		this.tensorFlowService = tensorFlowService;
-		this.datasetService = datasetService;
-		log("imagej-tensorflow version: " + tensorFlowService.getVersion());
-		try {
-			log("tensorflow version: " + TensorFlow.version());
-		}
-		catch (final UnsatisfiedLinkError e){
-			foundJNI = false;
-			logError("Couldn't load TensorFlow.\n" +
-					"By default, CSBDeep will load TensorFlow for CPU. " +
-					"If you added a CSBDeep update site for CUDA " +
-					"to get GPU support, make sure you have the matching CUDA and cuDNN " +
-					"versions installed. \nIf you want to use the CPU, make sure " +
-					"the GPU tensorflow library file is removed from the lib folder.");
-			e.printStackTrace();
-		}
 	}
 
 	@Override
-	public void testGPUSupport() {
-		log("The current library path is: LD_LIBRARY_PATH=" + System.getenv(
-			"LD_LIBRARY_PATH"));
-		try {
-			System.loadLibrary("tensorflow_jni");
-			gpuSupport = true;
-		}
-		catch (final UnsatisfiedLinkError e) {
-			gpuSupport = false;
-		}
-		if (!gpuSupport) {
-			log("Couldn't load tensorflow GPU support.");
-			log(
-				"If the problem is CUDA related, make sure CUDA and cuDNN are in the LD_LIBRARY_PATH.");
-			log("Using CPU version.");
+	public void loadLibrary() {
+		tensorFlowService.loadLibrary();
+		if (tensorFlowService.getStatus().isLoaded()) {
+			log(tensorFlowService.getStatus().getInfo());
+			tensorFlowLoaded = true;
+		} else {
+			tensorFlowLoaded = false;
+			logService.error("Could not load TensorFlow. Check previous errors and warnings for details.");
+			JOptionPane.showMessageDialog(null,
+					"<html>Could not load TensorFlow.<br/>Opening the TensorFlow Library Management tool.</html>",
+					"Loading TensorFlow failed",
+					JOptionPane.ERROR_MESSAGE);
+			commandService.run(TensorFlowLibraryManagementCommand.class, true);
 		}
 	}
 
@@ -131,13 +126,13 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 
 	@Override
 	protected boolean loadModel(final Location source, final String modelName) {
-		if(!foundJNI) return false;
+		if(!tensorFlowLoaded) return false;
 		log("Loading TensorFlow model " + modelName + " from source file " + source.getURI());
 		try {
 			if (model != null) {
 				model.close();
 			}
-			model = tensorFlowService.loadModel(source, modelName, MODEL_TAG);
+			model = tensorFlowService.loadCachedModel(source, modelName, MODEL_TAG);
 //			loadNetworkSettingsFromJson(tensorFlowService.loadFile(source, modelName, "meta.json"));
 		}
 		catch (TensorFlowException | IOException e) {
@@ -148,7 +143,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 		// The strings "input", "probabilities" and "patches" are meant to be
 		// in sync with the model exporter (export_saved_model()) in Python.
 		try {
-			sig = MetaGraphDef.parseFrom(model.metaGraphDef()).getSignatureDefOrThrow(
+			sig = MetaGraphDef.parseFrom(model.model().metaGraphDef()).getSignatureDefOrThrow(
 				DEFAULT_SERVING_SIGNATURE_DEF_KEY);
 		}
 		catch (final InvalidProtocolBufferException e) {
@@ -233,10 +228,6 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 		return res;
 	}
 
-	protected void setModel(final SavedModelBundle model) {
-		this.model = model;
-	}
-
 	@Override
 	public void preprocess() {
 		initMapping();
@@ -292,12 +283,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 
 	@Override
 	public boolean libraryLoaded() {
-		return foundJNI;
-	}
-
-	@Override
-	public boolean supportsGPU() {
-		return gpuSupport;
+		return tensorFlowLoaded;
 	}
 
 	private void generateMapping() {
@@ -338,7 +324,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 			convertNodeMappingToImgMapping(getInputNode().getMappingIndices()));
 		if (inputTensor != null) {
 			RandomAccessibleInterval<T> output = null;
-			Tensor outputTensor = TensorFlowRunner.executeGraph(model, inputTensor,
+			Tensor outputTensor = TensorFlowRunner.executeGraph(model.model(), inputTensor,
 				getInputTensorInfo(), getOutputTensorInfo());
 
 			if (outputTensor != null) {
@@ -410,8 +396,7 @@ public class TensorFlowNetwork<T extends RealType<T>> extends
 	@Override
 	public void dispose() {
 		super.dispose();
-		foundJNI = true;
-		gpuSupport = false;
+		tensorFlowLoaded = false;
 		clear();
 	}
 

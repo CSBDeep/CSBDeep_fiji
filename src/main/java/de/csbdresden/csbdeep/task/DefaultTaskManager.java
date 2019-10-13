@@ -1,33 +1,33 @@
 
 package de.csbdresden.csbdeep.task;
 
+import org.scijava.Context;
+import org.scijava.log.LogService;
+import org.scijava.plugin.Parameter;
+
 import java.util.ArrayList;
 import java.util.List;
-
-import org.scijava.app.StatusService;
-import org.scijava.log.Logger;
-import org.scijava.thread.ThreadService;
 
 public class DefaultTaskManager implements TaskManager {
 
 	protected final List<Task> tasks;
 	protected final TaskPresenter taskPresenter;
-	protected final Logger logger;
 
-	public DefaultTaskManager(boolean headless, Logger logger, StatusService status, ThreadService threadService) {
-		this.logger = logger;
-		taskPresenter = new DefaultTaskPresenter(this, headless, status, threadService);
+	@Parameter
+	protected LogService logger;
+
+	@Parameter
+	private Context context;
+
+	public DefaultTaskManager(boolean headless) {
 		tasks = new ArrayList<>();
+		taskPresenter = new DefaultTaskPresenter(this, headless);
 	}
 
 	@Override
 	public void initialize() {
+		context.inject(taskPresenter);
 		taskPresenter.initialize();
-	}
-
-	@Override
-	public void noGPUFound() {
-		taskPresenter.showGPUWarning();
 	}
 
 	@Override

@@ -24,15 +24,9 @@ public class PseudoNetwork<T extends RealType<T>> extends DefaultNetwork<T> {
 
 	@Override
 	public boolean loadModel(final String pathOrURL, final String modelName)
-		throws FileNotFoundException
-	{
-
+		throws FileNotFoundException {
 		return true;
-
 	}
-
-	@Override
-	public void testGPUSupport() {}
 
 	@Override
 	public void loadInputNode(final Dataset dataset) {
@@ -56,11 +50,6 @@ public class PseudoNetwork<T extends RealType<T>> extends DefaultNetwork<T> {
 	public void preprocess() {
 		initMapping();
 		calculateMapping();
-	}
-
-	@Override
-	public boolean supportsGPU() {
-		return false;
 	}
 
 	@Override
