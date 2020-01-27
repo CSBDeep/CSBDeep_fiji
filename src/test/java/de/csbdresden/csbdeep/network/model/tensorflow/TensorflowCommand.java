@@ -43,8 +43,7 @@ public class TensorflowCommand implements Command {
 
     private void initNetwork() {
         if(network == null)
-            network = new TensorFlowNetwork(tensorFlowService, datasetService,
-                null);
+            network = new TensorFlowNetwork(null);
     }
 
     private void loadNetwork2d() throws FileNotFoundException {
@@ -61,21 +60,6 @@ public class TensorflowCommand implements Command {
 
     @Override
     public void run() {
-        System.out.println("jo");
-//        Location model3d = null, model2d = null;
-//        try {
-//            model3d = IOHelper.loadFileOrURL("/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise3D/model.zip");
-//            model2d = IOHelper.loadFileOrURL("/home/random/Development/imagej/project/CSBDeep/tests/generic_test2/denoise2D/model.zip");
-//        } catch (FileNotFoundException e) {
-//            e.printStackTrace();
-//        }
-//        try {
-//            System.out.println("blub");
-//            tensorFlowService.loadModel(model3d, "tmp_3dmodel", "serve");
-//            tensorFlowService.loadModel(model2d, "tmp_2dmodel", "serve");
-//        } catch (IOException e) {
-//            e.printStackTrace();
-//        }
 
         initNetwork();
 

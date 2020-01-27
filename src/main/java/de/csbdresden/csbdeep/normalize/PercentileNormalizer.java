@@ -69,7 +69,8 @@ public class PercentileNormalizer<T extends RealType<T> & NativeType<T>>
 			.getImgPlus(), percentiles, opService);
 		min = destValues[0];
 		max = destValues[1];
-		factor = (destValues[1] - destValues[0]) / (resValues[1] - resValues[0]);
+		if(resValues[1] - resValues[0] < 0.0000001) factor = 1;
+		else factor = (destValues[1] - destValues[0]) / (resValues[1] - resValues[0]);
 
 		long[] dims = new long[im.numDimensions()];
 		im.dimensions(dims);

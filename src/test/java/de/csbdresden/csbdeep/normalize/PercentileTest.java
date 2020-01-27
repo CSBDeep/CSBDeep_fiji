@@ -181,6 +181,8 @@ public class PercentileTest {
 			assertEquals((float) res2, res1[j], 0.001);
 		}
 
+		ij.context().dispose();
+
 	}
 
 }
