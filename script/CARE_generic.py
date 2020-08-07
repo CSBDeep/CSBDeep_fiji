@@ -1,7 +1,7 @@
 # @String(label="Input path (.tif or folder with .tifs)", required=false, value='/home/random/Development/imagej/project/CSBDeep/script') input
 # @String(label="Output path (.tif or folder)", required=false, value='/home/random/Development/imagej/project/CSBDeep/script/out') output
 # @String(label="Model file", required=false, value='/home/random/Development/imagej/project/CSBDeep/data/Tobias Boothe/models/phago_C2_no_transform_model.zip') modelFile
-# @String(label="Model file", required=false, value='phago_C2_no_transform_model') _modelName
+# @String(label="Model name", required=false, value='phago_C2_no_transform_model') _modelName
 # @Integer(label="Number of tiles", required=false, value=8) nTiles
 # @Integer(label="Tile overlap", required=false, value=32) overlap
 # @Boolean(label="Normalize input", required=false, value=true) normalizeInput
