@@ -48,6 +48,8 @@ public class InputMapperTest {
 		assertEquals(4, network.getInputNode().getMappingIndices().length);
 		assertEquals(2, network.getInputNode().getMappingIndices()[0]);
 		assertEquals(1, network.getInputNode().getMappingIndices()[1]);
+
+		ij.context().dispose();
 	}
 
 	@Test
@@ -73,6 +75,8 @@ public class InputMapperTest {
 		assertEquals(2, network.getInputNode().getMappingIndices()[0]);
 		assertEquals(1, network.getInputNode().getMappingIndices()[1]);
 		assertEquals(0, network.getInputNode().getMappingIndices()[2]);
+
+		ij.context().dispose();
 	}
 
 	@Test
@@ -99,6 +103,8 @@ public class InputMapperTest {
 		assertEquals(3, network.getInputNode().getMappingIndices()[0]);
 		assertEquals(2, network.getInputNode().getMappingIndices()[1]);
 		assertEquals(1, network.getInputNode().getMappingIndices()[2]);
+
+		ij.context().dispose();
 	}
 
 	@Test
@@ -126,5 +132,7 @@ public class InputMapperTest {
 		assertEquals(3, network.getInputNode().getMappingIndices()[0]);
 		assertEquals(2, network.getInputNode().getMappingIndices()[1]);
 		assertEquals(1, network.getInputNode().getMappingIndices()[2]);
+
+		ij.context().dispose();
 	}
 }
