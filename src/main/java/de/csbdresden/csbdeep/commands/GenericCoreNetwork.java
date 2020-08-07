@@ -452,6 +452,7 @@ public abstract class GenericCoreNetwork implements
 					datasetService);
 		} else {
 			normalizedInput = getInput();
+			inputNormalizer.setFinished();
 		}
 
 		final List<RandomAccessibleInterval> processedInput = inputProcessor.run(
